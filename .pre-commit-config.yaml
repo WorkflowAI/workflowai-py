@@ -2,6 +2,12 @@ fail_fast: true
 repos:
   - repo: local
     hooks:
+      - id: poetry-lock
+        name: poetry lock
+        entry: poetry check --lock 
+        language: system
+        pass_filenames: false
+        always_run: true
       - id: ruff
         name: formatting and linting (ruff)
         entry: ruff check
