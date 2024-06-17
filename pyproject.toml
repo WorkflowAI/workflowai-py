@@ -18,6 +18,7 @@ pytest-asyncio = "^0.23.7"
 ruff = "^0.4.9"
 freezegun = "^1.5.1"
 pre-commit = "^3.7.1"
+pytest-httpx = "^0.30.0"
 
 [tool.poetry.scripts]
 workflowai = "workflowai.cli.main:main"

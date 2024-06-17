@@ -2,7 +2,7 @@ from typing import Any, Optional, Self
 
 from pydantic import BaseModel, Field, model_validator
 
-from workflowai.lib.domain.task_version_properties import TaskVersionProperties
+from workflowai.core.domain.task_version_properties import TaskVersionProperties
 
 
 class TaskVersionReference(BaseModel):

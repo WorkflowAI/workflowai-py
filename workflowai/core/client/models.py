@@ -3,13 +3,13 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
-from workflowai.lib.domain.cache_usage import CacheUsage
-from workflowai.lib.domain.llm_completion import LLMCompletion
-from workflowai.lib.domain.task import Task, TaskInput, TaskOutput
-from workflowai.lib.domain.task_evaluation import TaskEvaluation
-from workflowai.lib.domain.task_run import TaskRun
-from workflowai.lib.domain.task_version import TaskVersion
-from workflowai.lib.domain.task_version_reference import TaskVersionReference
+from workflowai.core.domain.cache_usage import CacheUsage
+from workflowai.core.domain.llm_completion import LLMCompletion
+from workflowai.core.domain.task import Task, TaskInput, TaskOutput
+from workflowai.core.domain.task_evaluation import TaskEvaluation
+from workflowai.core.domain.task_run import TaskRun
+from workflowai.core.domain.task_version import TaskVersion
+from workflowai.core.domain.task_version_reference import TaskVersionReference
 
 
 class CreateTaskRequest(BaseModel):

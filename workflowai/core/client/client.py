@@ -1,17 +1,17 @@
 import os
 from typing import Any, AsyncIterator, Optional
 
-from workflowai.lib.client.api import APIClient
-from workflowai.lib.client.models import (
+from workflowai.core.client.api import APIClient
+from workflowai.core.client.models import (
     CreateTaskRequest,
     CreateTaskResponse,
     RunRequest,
     TaskRunResponse,
 )
-from workflowai.lib.domain.cache_usage import CacheUsage
-from workflowai.lib.domain.task import Task, TaskInput, TaskOutput
-from workflowai.lib.domain.task_run import TaskRun
-from workflowai.lib.domain.task_version_reference import TaskVersionReference
+from workflowai.core.domain.cache_usage import CacheUsage
+from workflowai.core.domain.task import Task, TaskInput, TaskOutput
+from workflowai.core.domain.task_run import TaskRun
+from workflowai.core.domain.task_version_reference import TaskVersionReference
 
 
 class WorkflowAIClient:

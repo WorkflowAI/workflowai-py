@@ -2,7 +2,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel
 
-from workflowai.lib.domain.llm_usage import LLMUsage
+from workflowai.core.domain.llm_usage import LLMUsage
 
 
 class LLMCompletion(BaseModel):

@@ -4,10 +4,10 @@ from typing import Any, Generic, Optional
 
 from pydantic import BaseModel, Field
 
-from workflowai.lib.domain.llm_completion import LLMCompletion
-from workflowai.lib.domain.task import Task, TaskInput, TaskOutput
-from workflowai.lib.domain.task_evaluation import TaskEvaluation
-from workflowai.lib.domain.task_version import TaskVersion
+from workflowai.core.domain.llm_completion import LLMCompletion
+from workflowai.core.domain.task import Task, TaskInput, TaskOutput
+from workflowai.core.domain.task_evaluation import TaskEvaluation
+from workflowai.core.domain.task_version import TaskVersion
 
 
 class TaskRun(BaseModel, Generic[TaskInput, TaskOutput]):

@@ -1,10 +1,9 @@
 from datetime import datetime
 from typing import Generic, Optional, TypeVar
 
-from openai import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
-from workflowai.lib.domain.task_version_reference import TaskVersionReference
+from workflowai.core.domain.task_version_reference import TaskVersionReference
 
 TaskInput = TypeVar("TaskInput", bound=BaseModel)
 TaskOutput = TypeVar("TaskOutput", bound=BaseModel)

@@ -1,0 +1,68 @@
+{
+    "id": "8f635b73-f403-47ee-bff9-18320616c6cc",
+    "task_id": "citytocapital",
+    "task_schema_id": 1,
+    "task_input": {
+        "name": "Houston"
+    },
+    "task_input_hash": "403c3739ab1c20643336dde3ad2950bb",
+    "task_input_preview": "city: \"Houston\"",
+    "task_output": {
+        "message": "Austin"
+    },
+    "task_output_hash": "41a00820c2d20f738de5cc6bcb02b550",
+    "task_output_preview": "capital: \"Austin\"",
+    "group": {
+        "id": "a037be0c5f716bcf55dce3176985026d",
+        "iteration": 4,
+        "properties": {
+            "model": "gpt-4o-2024-05-13",
+            "provider": "openai",
+            "temperature": 0,
+            "instructions": "",
+            "max_tokens": null,
+            "runner_name": "WorkflowAI",
+            "runner_version": "e7fe9d4850d8b8189ad38f51b1cf30e5",
+            "few_shot": null,
+            "task_schema_id": 1,
+            "task_variant_id": "4cfd201057b7fe56c00a8de5cbf42f1f"
+        },
+        "tags": [
+            "model=gpt-4o-2024-05-13",
+            "provider=openai",
+            "temperature=0"
+        ],
+        "aliases": null,
+        "is_external": null
+    },
+    "start_time": "2024-05-31T01:38:47.887000Z",
+    "end_time": "2024-05-31T01:38:48.688000Z",
+    "duration_seconds": 0.800467,
+    "cost_usd": 0.0014550000000000001,
+    "created_at": "2024-05-31T01:38:48.688000Z",
+    "example_id": "663bc35f4957be930844dc35",
+    "corrections": null,
+    "parent_task_ids": null,
+    "scores": null,
+    "labels": [
+        "bid=66592a1f4c1b7ce40bac3c59"
+    ],
+    "metadata": null,
+    "llm_completions": [
+        {
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "Your goal is to generate a valid output based on the input data.\n\nThe task instructions are:\n\n\nThe input that will be passed in the user message is a json following the schema:\n```json\n{\n  \"properties\": {\n    \"city\": {\n      \"description\": \"The name of the city for which the capital is to be found\",\n      \"examples\": [\n        \"Tokyo\"\n      ],\n      \"title\": \"City\",\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"city\"\n  ],\n  \"title\": \"CityToCapitalTaskInput\",\n  \"type\": \"object\"\n}\n```\nThe output that you will return must be a JSON object equivalent to the following json shema:\n```json\n{\n  \"properties\": {\n    \"capital\": {\n      \"description\": \"The capital of the specified city\",\n      \"examples\": [\n        \"Tokyo\"\n      ],\n      \"title\": \"Capital\",\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"capital\"\n  ],\n  \"title\": \"CityToCapitalTaskOutput\",\n  \"type\": \"object\"\n}\n```"
+                },
+                {
+                    "role": "user",
+                    "content": "Input data:\n```json\n{\n  \"city\": \"Houston\"\n}\n```"
+                }
+            ],
+            "response": "{\n  \"capital\": \"Austin\"\n}",
+            "usage": null
+        }
+    ],
+    "config_id": null
+}

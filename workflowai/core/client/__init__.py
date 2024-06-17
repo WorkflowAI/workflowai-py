@@ -1,6 +1,6 @@
 from typing import Any, AsyncIterator, Literal, Optional, Protocol, overload
 
-from workflowai.lib.domain import cache_usage, task, task_run, task_version_reference
+from workflowai.core.domain import cache_usage, task, task_run, task_version_reference
 
 
 class Client(Protocol):
