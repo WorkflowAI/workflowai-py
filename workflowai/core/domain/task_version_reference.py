@@ -1,6 +1,7 @@
-from typing import Any, Optional, Self
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, model_validator
+from typing_extensions import Self
 
 from workflowai.core.domain.task_version_properties import TaskVersionProperties
 

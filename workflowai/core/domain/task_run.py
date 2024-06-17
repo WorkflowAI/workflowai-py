@@ -52,7 +52,7 @@ class TaskRun(BaseModel, Generic[TaskInput, TaskOutput]):
         description="A list of labels ",
     )
 
-    metadata: dict[str, Any] | None = None
+    metadata: Optional[dict[str, Any]] = None
 
     llm_completions: Optional[list[LLMCompletion]] = Field(
         default=None,

@@ -1,4 +1,4 @@
-from typing import Any, AsyncIterator, Literal, Optional, Protocol, overload
+from typing import Any, AsyncIterator, Literal, Optional, Protocol, Union, overload
 
 from workflowai.core.domain import cache_usage, task, task_run, task_version_reference
 
@@ -39,7 +39,7 @@ class Client(Protocol):
         use_cache: "cache_usage.CacheUsage" = "when_available",
         labels: Optional[set[str]] = None,
         metadata: Optional[dict[str, Any]] = None,
-    ) -> (
-        "task_run.TaskRun[task.TaskInput, task.TaskOutput]"
-        | AsyncIterator["task.TaskOutput"]
-    ): ...
+    ) -> Union[
+        "task_run.TaskRun[task.TaskInput, task.TaskOutput]",
+        AsyncIterator["task.TaskOutput"],
+    ]: ...

@@ -1,4 +1,4 @@
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -36,23 +36,23 @@ class TaskVersionProperties(BaseModel):
         default=None, description="The version of the runner used"
     )
 
-    few_shot: "FewShotConfiguration | None" = Field(
+    few_shot: "Optional[FewShotConfiguration]" = Field(
         default=None, description="Few shot configuration"
     )
 
 
 class FewShotConfiguration(BaseModel):
-    count: int | None = Field(
+    count: Optional[int] = Field(
         default=None,
         description="The number of few-shot examples to use for the task",
     )
 
-    selection: Literal["latest", "manual"] | str | None = Field(
+    selection: Union[Literal["latest", "manual"], str, None] = Field(
         default=None,
         description="The selection method to use for few-shot examples",
     )
 
-    examples: list["FewShotExample"] | None = Field(
+    examples: Optional[list["FewShotExample"]] = Field(
         default=None,
         description="The few-shot examples used for the task. If provided, count and selection are ignored. "
         "If not provided, count and selection are used to select examples and the examples list will be set "

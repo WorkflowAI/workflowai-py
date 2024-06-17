@@ -40,6 +40,11 @@ unfixable = []
 # in bin we use rich.print
 "bin/*" = ["T201"]
 
+[tool.pyright]
+pythonVersion = "3.9"
+
+exclude = ["dist"]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

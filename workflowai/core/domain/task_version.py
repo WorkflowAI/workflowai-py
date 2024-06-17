@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 from workflowai.core.domain.task_version_properties import TaskVersionProperties
@@ -21,13 +23,13 @@ class TaskVersion(BaseModel):
         description="A list of tags associated with the group. When empty, tags are computed from the properties.",
     )
 
-    aliases: set[str] | None = Field(
+    aliases: Optional[set[str]] = Field(
         default=None,
         description="A list of aliases to use in place of iteration or id. "
         "An alias can be used to uniquely identify a group for a given task. ",
     )
 
-    is_external: bool | None = Field(
+    is_external: Optional[bool] = Field(
         default=None,
         description="Whether the group is external, i-e not creating by internal runners",
     )

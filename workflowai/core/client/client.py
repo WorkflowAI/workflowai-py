@@ -1,5 +1,5 @@
 import os
-from typing import Any, AsyncIterator, Optional
+from typing import Any, AsyncIterator, Optional, Union
 
 from workflowai.core.client.api import APIClient
 from workflowai.core.client.models import (
@@ -44,7 +44,7 @@ class WorkflowAIClient:
         use_cache: CacheUsage = "when_available",
         labels: Optional[set[str]] = None,
         metadata: Optional[dict[str, Any]] = None,
-    ) -> TaskRun[TaskInput, TaskOutput] | AsyncIterator[TaskOutput]:
+    ) -> Union[TaskRun[TaskInput, TaskOutput], AsyncIterator[TaskOutput]]:
         if not task.id or not task.schema_id:
             await self.register(task)
 
