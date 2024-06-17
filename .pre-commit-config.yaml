@@ -1,0 +1,21 @@
+fail_fast: true
+repos:
+  - repo: local
+    hooks:
+      - id: ruff
+        name: formatting and linting (ruff)
+        entry: ruff check
+        language: system
+        pass_filenames: true
+        types: [file, python]
+      - id: pyright
+        name: type checking (pyright)
+        entry: pyright
+        language: system
+        pass_filenames: true
+        types: [file, python]
+      - id: pytest
+        name: testing (pytest)
+        entry: pytest .
+        language: system
+        pass_filenames: false
