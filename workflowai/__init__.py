@@ -14,9 +14,17 @@ from workflowai.core.domain.task_version_reference import (
 )
 
 
-def start(
-    endpoint: Optional[str] = None, api_key: Optional[str] = None
-) -> "client.Client":
+def start(url: Optional[str] = None, api_key: Optional[str] = None) -> "client.Client":
+    """Create a new workflowai client
+
+    Args:
+        url (Optional[str], optional): The API endpoint to use.
+            If not provided, the env variable WORKFLOWAI_API_URL is used. Otherwise defaults to https://api.workflowai.ai
+        api_key (Optional[str], optional): _description_. If not provided, the env variable WORKFLOWAI_API_KEY is used.
+
+    Returns:
+        client.Client: a client instance
+    """
     from workflowai.core.client.client import WorkflowAIClient
 
-    return WorkflowAIClient(endpoint, api_key)
+    return WorkflowAIClient(url, api_key)

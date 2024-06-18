@@ -1,14 +1,24 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class LLMUsage(BaseModel):
-    prompt_token_count: Optional[int] = None
-    prompt_cost_usd: Optional[float] = None
+    """An object to store usage information for the LLM provider"""
 
-    completion_token_count: Optional[int] = None
-    completion_cost_usd: Optional[float] = None
+    prompt_token_count: Optional[int] = Field(
+        default=None, description="The number of tokens in the prompt"
+    )
+    prompt_cost_usd: Optional[float] = Field(
+        default=None, description="The cost of the prompt in USD"
+    )
+
+    completion_token_count: Optional[int] = Field(
+        default=None, description="The number of tokens in the completion"
+    )
+    completion_cost_usd: Optional[float] = Field(
+        default=None, description="The cost of the completion in USD"
+    )
 
     @property
     def cost_usd(self) -> Optional[float]:

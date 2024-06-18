@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field
 
-from workflowai import Task
-from workflowai.core.domain.task_version_reference import TaskVersionReference
+from workflowai import Task, TaskVersionReference
 
 
 class CityToCapitalTaskInput(BaseModel):
