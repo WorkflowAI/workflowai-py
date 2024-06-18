@@ -1,6 +1,12 @@
 from typing import Any, AsyncIterator, Literal, Optional, Protocol, Union, overload
 
-from workflowai.core.domain import cache_usage, task, task_run, task_version_reference
+from workflowai.core.domain import (
+    cache_usage,
+    task,
+    task_example,
+    task_run,
+    task_version_reference,
+)
 
 
 class Client(Protocol):
@@ -43,3 +49,11 @@ class Client(Protocol):
         "task_run.TaskRun[task.TaskInput, task.TaskOutput]",
         AsyncIterator["task.TaskOutput"],
     ]: ...
+
+    async def import_run(
+        self, run: "task_run.TaskRun[task.TaskInput, task.TaskOutput]"
+    ) -> "task_run.TaskRun[task.TaskInput, task.TaskOutput]": ...
+
+    async def import_example(
+        self, example: "task_example.TaskExample[task.TaskInput, task.TaskOutput]"
+    ) -> "task_example.TaskExample[task.TaskInput, task.TaskOutput]": ...

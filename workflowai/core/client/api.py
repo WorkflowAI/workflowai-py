@@ -40,7 +40,9 @@ class APIClient:
     ) -> Optional[_R]:
         async with self._client() as client:
             response = await client.post(
-                path, json=data.model_dump_json(exclude_none=True)
+                path,
+                content=data.model_dump_json(exclude_none=True),
+                headers={"Content-Type": "application/json"},
             )
             response.raise_for_status()
             if not returns:
@@ -53,11 +55,20 @@ class APIClient:
             response.raise_for_status()
 
     async def stream(
-        self, method: Literal["GET", "POST"], path: str, returns: type[_M]
+        self,
+        method: Literal["GET", "POST"],
+        path: str,
+        data: BaseModel,
+        returns: type[_M],
     ) -> AsyncIterator[_M]:
         # TODO: error handling
         async with self._client() as client:
-            async with client.stream(method, path) as response:
+            async with client.stream(
+                method,
+                path,
+                content=data.model_dump_json(exclude_none=True),
+                headers={"Content-Type": "application/json"},
+            ) as response:
                 async for chunk in response.aiter_bytes():
                     stripped = chunk.removeprefix(b"data: ").removesuffix(b"\n\n")
                     parsed = json.loads(stripped)

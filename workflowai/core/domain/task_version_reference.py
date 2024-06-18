@@ -3,6 +3,7 @@ from typing import Any, Optional
 from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Self
 
+from workflowai.core.domain.task_version import TaskVersion
 from workflowai.core.domain.task_version_properties import TaskVersionProperties
 
 
@@ -20,6 +21,11 @@ class TaskVersionReference(BaseModel):
     )
     alias: Optional[str] = Field(description="An alias for the group", default=None)
 
+    environment: Optional[str] = Field(
+        description="The environment the group was deployed to",
+        default=None,
+    )
+
     is_external: Optional[bool] = Field(
         description="Whether the group is external, i-e not created by internal runners",
         default=None,
@@ -27,12 +33,21 @@ class TaskVersionReference(BaseModel):
 
     @model_validator(mode="after")
     def post_validate(self) -> Self:
-        if not self.id and not self.iteration and self.properties is None:
-            raise ValueError("One of id, iteration or properties must be provided")
-
-        count = sum(1 for x in [self.id, self.iteration, self.properties] if x)
-        if count > 1:
-            raise ValueError("Only one of id, iteration or properties must be provided")
+        count = sum(
+            1
+            for x in [
+                self.id,
+                self.iteration,
+                self.properties,
+                self.alias,
+                self.environment,
+            ]
+            if x
+        )
+        if count != 1:
+            raise ValueError(
+                "Exactly one of id, iteration or properties must be provided"
+            )
         return self
 
     @classmethod
@@ -56,3 +71,13 @@ class TaskVersionReference(BaseModel):
                 **kwargs,
             )
         )
+
+    @classmethod
+    def from_version(cls, version: TaskVersion):
+        if version.iteration:
+            return cls(iteration=version.iteration)
+        if version.id:
+            return cls(id=version.id)
+        if version.aliases:
+            return cls(alias=next(iter(version.aliases)))
+        return cls(properties=version.properties)

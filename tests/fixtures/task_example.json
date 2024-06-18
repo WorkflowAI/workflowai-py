@@ -1,0 +1,16 @@
+{
+    "id": "8f635b73-f403-47ee-bff9-18320616c6cc",
+    "task_id": "citytocapital",
+    "task_schema_id": 1,
+    "task_input": {
+        "name": "Houston"
+    },
+    "task_input_hash": "403c3739ab1c20643336dde3ad2950bb",
+    "task_input_preview": "city: \"Houston\"",
+    "task_output": {
+        "message": "Austin"
+    },
+    "task_output_hash": "41a00820c2d20f738de5cc6bcb02b550",
+    "task_output_preview": "capital: \"Austin\"",
+    "created_at": "2024-05-31T01:38:48.688000Z"
+}

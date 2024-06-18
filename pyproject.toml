@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "workflowai"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Guillaume Aquilina <guillaume@workflowai.com>"]
 readme = "README.md"
@@ -11,6 +11,8 @@ python = "^3.9"
 pydantic = "^2.7.4"
 httpx = "^0.27.0"
 typer = { version = "^0.12.3", optional = true, extras = ["cli"] }
+rich = { version = "^13.7.1", optional = true, extras = ["cli"] }
+
 
 [tool.poetry.group.dev.dependencies]
 pyright = "^1.1.367"

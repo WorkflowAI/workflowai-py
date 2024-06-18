@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from pytest_httpx import HTTPXMock, IteratorStream
 
@@ -5,6 +7,10 @@ from tests.models.hello_task import HelloTask, HelloTaskInput, HelloTaskOutput
 from tests.utils import fixtures_json
 from workflowai.core.client import Client
 from workflowai.core.client.client import WorkflowAIClient
+from workflowai.core.domain.llm_completion import LLMCompletion
+from workflowai.core.domain.task_example import TaskExample
+from workflowai.core.domain.task_run import TaskRun
+from workflowai.core.domain.task_version import TaskVersion
 
 
 @pytest.fixture(scope="function")
@@ -43,6 +49,18 @@ class TestRun:
 
         assert task_run.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
 
+        reqs = httpx_mock.get_requests()
+        assert len(reqs) == 1
+        assert reqs[0].url == "http://localhost:8000/tasks/123/schemas/1/run"
+
+        body = json.loads(reqs[0].content)
+        assert body == {
+            "task_input": {"name": "Alice"},
+            "group": {"properties": {}},
+            "stream": False,
+            "use_cache": "when_available",
+        }
+
     async def test_stream(self, httpx_mock: HTTPXMock, client: Client):
         httpx_mock.add_response(
             stream=IteratorStream(
@@ -65,3 +83,69 @@ class TestRun:
             HelloTaskOutput(message="hel"),
             HelloTaskOutput(message="hello"),
         ]
+
+
+class TestImportRun:
+    async def test_success(self, httpx_mock: HTTPXMock, client: Client):
+        httpx_mock.add_response(json=fixtures_json("task_run.json"))
+        task = HelloTask(id="123", schema_id=1)
+
+        run = TaskRun(
+            task=task,
+            task_input=HelloTaskInput(name="Alice"),
+            task_output=HelloTaskOutput(message="hello"),
+            version=TaskVersion(iteration=1),
+            llm_completions=[
+                LLMCompletion(messages=[{"content": "hello"}], response="world"),
+            ],
+        )
+
+        imported = await client.import_run(run)
+        assert imported.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
+
+        reqs = httpx_mock.get_requests()
+        assert len(reqs) == 1
+        assert reqs[0].url == "http://localhost:8000/tasks/123/schemas/1/runs"
+
+        body = json.loads(reqs[0].content)
+        assert body == {
+            "id": run.id,
+            "task_input": {"name": "Alice"},
+            "task_output": {"message": "hello"},
+            "group": {"iteration": 1},
+            "llm_completions": [
+                {
+                    "messages": [
+                        {
+                            "content": "hello",
+                        },
+                    ],
+                    "response": "world",
+                },
+            ],
+        }
+
+
+class TestImportExample:
+    async def test_success(self, httpx_mock: HTTPXMock, client: Client):
+        httpx_mock.add_response(json=fixtures_json("task_example.json"))
+        task = HelloTask(id="123", schema_id=1)
+
+        example = TaskExample(
+            task=task,
+            task_input=HelloTaskInput(name="Alice"),
+            task_output=HelloTaskOutput(message="hello"),
+        )
+
+        imported = await client.import_example(example)
+        assert imported.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
+
+        reqs = httpx_mock.get_requests()
+        assert len(reqs) == 1
+        assert reqs[0].url == "http://localhost:8000/tasks/123/schemas/1/examples"
+
+        body = json.loads(reqs[0].content)
+        assert body == {
+            "task_input": {"name": "Alice"},
+            "task_output": {"message": "hello"},
+        }
