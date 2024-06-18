@@ -43,7 +43,7 @@ unfixable = []
 [tool.pyright]
 pythonVersion = "3.9"
 
-exclude = ["dist"]
+exclude = ["dist", ".venv"]
 
 [build-system]
 requires = ["poetry-core"]
