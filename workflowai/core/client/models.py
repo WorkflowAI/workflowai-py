@@ -135,7 +135,6 @@ class ExampleResponse(BaseModel):
     id: str
     task_input: dict[str, Any]
     task_output: dict[str, Any]
-    created_at: datetime
 
     def to_domain(self, task: Task[TaskInput, TaskOutput]):
         return TaskExample[TaskInput, TaskOutput](
@@ -143,5 +142,4 @@ class ExampleResponse(BaseModel):
             task=task,
             task_input=task.input_class.model_validate(self.task_input),
             task_output=task.output_class.model_validate(self.task_output),
-            created_at=self.created_at,
         )
