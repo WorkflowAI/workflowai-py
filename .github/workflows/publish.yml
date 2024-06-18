@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: |
           poetry config virtualenvs.in-project true
-          poetry install
+          poetry install --all-extras
 
       - name: Build Python package
         run: poetry build

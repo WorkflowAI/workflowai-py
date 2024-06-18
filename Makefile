@@ -14,7 +14,7 @@ install.pre-commit:
 
 .PHONY: install.deps
 install.deps:
-	poetry install
+	poetry install --all-extras
 
 .PHONY:
 install: install.deps install.pre-commit
