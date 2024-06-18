@@ -52,6 +52,7 @@ class WorkflowAIClient:
         task: Task[TaskInput, TaskOutput],
         task_input: TaskInput,
         version: Optional[TaskVersionReference] = None,
+        iteration: Optional[int] = None,
         stream: Literal[False] = False,
         use_cache: CacheUsage = "when_available",
         labels: Optional[set[str]] = None,
@@ -64,6 +65,7 @@ class WorkflowAIClient:
         task: Task[TaskInput, TaskOutput],
         task_input: TaskInput,
         version: Optional[TaskVersionReference] = None,
+        iteration: Optional[int] = None,
         stream: Literal[True] = True,
         use_cache: CacheUsage = "when_available",
         labels: Optional[set[str]] = None,
@@ -75,6 +77,7 @@ class WorkflowAIClient:
         task: Task[TaskInput, TaskOutput],
         task_input: TaskInput,
         version: Optional[TaskVersionReference] = None,
+        iteration: Optional[int] = None,
         stream: bool = False,
         use_cache: CacheUsage = "when_available",
         labels: Optional[set[str]] = None,
@@ -82,9 +85,16 @@ class WorkflowAIClient:
     ) -> Union[TaskRun[TaskInput, TaskOutput], AsyncIterator[TaskOutput]]:
         await self._auto_register(task)
 
+        if version:
+            group_ref = version
+        elif iteration:
+            group_ref = TaskVersionReference(iteration=iteration)
+        else:
+            group_ref = task.version
+
         request = RunRequest(
             task_input=task_input.model_dump(),
-            group=version or task.version,
+            group=group_ref,
             stream=stream,
             use_cache=use_cache,
             labels=labels,
