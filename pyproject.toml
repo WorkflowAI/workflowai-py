@@ -10,8 +10,8 @@ exclude = ["**/*_test.py", "tests/**/*"]
 python = "^3.9"
 pydantic = "^2.7.4"
 httpx = "^0.27.0"
-typer = { version = "^0.12.3", optional = true, extras = ["cli"] }
-rich = { version = "^13.7.1", optional = true, extras = ["cli"] }
+typer = { version = "^0.12.3", optional = true }
+rich = { version = "^13.7.1", optional = true }
 
 
 [tool.poetry.group.dev.dependencies]
@@ -22,6 +22,9 @@ ruff = "^0.4.9"
 freezegun = "^1.5.1"
 pre-commit = "^3.7.1"
 pytest-httpx = "^0.30.0"
+
+[tool.poetry.extras]
+cli = ["typer", "rich"]
 
 [tool.poetry.scripts]
 workflowai = "workflowai.cli.main:main"
