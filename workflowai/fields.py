@@ -6,4 +6,4 @@ from workflowai.core.fields.image import Image as Image
 from workflowai.core.fields.local_date_time import DatetimeLocal as DatetimeLocal
 from workflowai.core.fields.price import Price as Price
 from workflowai.core.fields.surface_area import SurfaceArea as SurfaceArea
-from workflowai.core.fields.zone_info import ZoneInfo as ZoneInfo
+from workflowai.core.fields.zone_info import TimezoneInfo as TimezoneInfo
