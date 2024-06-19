@@ -65,9 +65,9 @@ class TestRun:
         httpx_mock.add_response(
             stream=IteratorStream(
                 [
-                    b'data: {"message": ""}',
-                    b'data: {"message": "hel"}',
-                    b'data: {"message": "hello"}',
+                    b'data: {"run_id":"1","task_output":{"message":""}}',
+                    b'data: {"run_id":"1","task_output":{"message":"hel"}}',
+                    b'data: {"run_id":"1","task_output":{"message":"hello"}}',
                 ]
             )
         )

@@ -1,4 +1,3 @@
-import json
 from typing import Any, AsyncIterator, Literal, Optional, TypeVar, overload
 
 import httpx
@@ -71,5 +70,4 @@ class APIClient:
             ) as response:
                 async for chunk in response.aiter_bytes():
                     stripped = chunk.removeprefix(b"data: ").removesuffix(b"\n\n")
-                    parsed = json.loads(stripped)
-                    yield returns.model_construct(None, **parsed)
+                    yield returns.model_validate_json(stripped)

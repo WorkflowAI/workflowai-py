@@ -11,6 +11,7 @@ from workflowai.core.client.models import (
     ImportExampleRequest,
     ImportRunRequest,
     RunRequest,
+    RunTaskStreamChunk,
     TaskRunResponse,
 )
 from workflowai.core.domain.cache_usage import CacheUsage
@@ -113,9 +114,13 @@ class WorkflowAIClient:
 
             return res.to_domain(task)
 
-        return self.api.stream(
-            method="POST", path=route, data=request, returns=task.output_class
-        )
+        async def _stream():
+            async for chunk in self.api.stream(
+                method="POST", path=route, data=request, returns=RunTaskStreamChunk
+            ):
+                yield task.output_class.model_construct(None, **chunk.task_output)
+
+        return _stream()
 
     async def import_run(
         self, run: TaskRun[TaskInput, TaskOutput]

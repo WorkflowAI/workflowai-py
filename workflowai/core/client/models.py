@@ -80,6 +80,11 @@ class ImportRunRequest(_RunRequestCommon):
         )
 
 
+class RunTaskStreamChunk(BaseModel):
+    run_id: str
+    task_output: dict[str, Any]
+
+
 class TaskRunResponse(BaseModel):
     id: str
     task_id: str
