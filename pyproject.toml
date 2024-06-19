@@ -1,0 +1,55 @@
+[tool.poetry]
+name = "workflowai"
+version = "0.1.1"
+description = ""
+authors = ["Guillaume Aquilina <guillaume@workflowai.com>"]
+readme = "README.md"
+exclude = ["**/*_test.py", "tests/**/*"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+pydantic = "^2.7.4"
+httpx = "^0.27.0"
+typer = { version = "^0.12.3", optional = true }
+rich = { version = "^13.7.1", optional = true }
+
+
+[tool.poetry.group.dev.dependencies]
+pyright = "^1.1.367"
+pytest = "^8.2.2"
+pytest-asyncio = "^0.23.7"
+ruff = "^0.4.9"
+freezegun = "^1.5.1"
+pre-commit = "^3.7.1"
+pytest-httpx = "^0.30.0"
+
+[tool.poetry.extras]
+cli = ["typer", "rich"]
+
+[tool.poetry.scripts]
+workflowai = "workflowai.cli.main:main"
+
+[tool.ruff.lint]
+# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
+# Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
+# McCabe complexity (`C901`) by default.
+# TODO: enable C901 and other rules about documentation
+select = ["E4", "E7", "E9", "F", "T201", "TID251"]
+ignore = []
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+# in bin we use rich.print
+"bin/*" = ["T201"]
+
+[tool.pyright]
+pythonVersion = "3.9"
+
+exclude = ["dist", ".venv"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,138 @@
+import os
+from typing import Any, AsyncIterator, Literal, Optional, Union, overload
+
+from httpx import HTTPStatusError
+
+from workflowai.core.client.api import APIClient
+from workflowai.core.client.models import (
+    CreateTaskRequest,
+    CreateTaskResponse,
+    ExampleResponse,
+    ImportExampleRequest,
+    ImportRunRequest,
+    RunRequest,
+    TaskRunResponse,
+)
+from workflowai.core.domain.cache_usage import CacheUsage
+from workflowai.core.domain.errors import NotFoundError
+from workflowai.core.domain.task import Task, TaskInput, TaskOutput
+from workflowai.core.domain.task_example import TaskExample
+from workflowai.core.domain.task_run import TaskRun
+from workflowai.core.domain.task_version_reference import TaskVersionReference
+
+
+class WorkflowAIClient:
+    def __init__(self, endpoint: Optional[str] = None, api_key: Optional[str] = None):
+        self.api = APIClient(
+            endpoint or os.getenv("WORKFLOWAI_API_URL", "https://api.workflowai.ai"),
+            api_key or os.getenv("WORKFLOWAI_API_KEY", ""),
+        )
+
+    async def register(self, task: Task[TaskInput, TaskOutput]):
+        request = CreateTaskRequest(
+            task_id=task.id or None,
+            name=task.__class__.__name__.removesuffix("Task"),
+            input_schema=task.input_class.model_json_schema(),
+            output_schema=task.output_class.model_json_schema(),
+        )
+
+        res = await self.api.post("/tasks", request, returns=CreateTaskResponse)
+
+        task.id = res.task_id
+        task.schema_id = res.task_schema_id
+        task.created_at = res.created_at
+
+    async def _auto_register(self, task: Task[TaskInput, TaskOutput]):
+        if not task.id or not task.schema_id:
+            await self.register(task)
+
+    @overload
+    async def run(
+        self,
+        task: Task[TaskInput, TaskOutput],
+        task_input: TaskInput,
+        version: Optional[TaskVersionReference] = None,
+        iteration: Optional[int] = None,
+        stream: Literal[False] = False,
+        use_cache: CacheUsage = "when_available",
+        labels: Optional[set[str]] = None,
+        metadata: Optional[dict[str, Any]] = None,
+    ) -> TaskRun[TaskInput, TaskOutput]: ...
+
+    @overload
+    async def run(
+        self,
+        task: Task[TaskInput, TaskOutput],
+        task_input: TaskInput,
+        version: Optional[TaskVersionReference] = None,
+        iteration: Optional[int] = None,
+        stream: Literal[True] = True,
+        use_cache: CacheUsage = "when_available",
+        labels: Optional[set[str]] = None,
+        metadata: Optional[dict[str, Any]] = None,
+    ) -> AsyncIterator[TaskOutput]: ...
+
+    async def run(
+        self,
+        task: Task[TaskInput, TaskOutput],
+        task_input: TaskInput,
+        version: Optional[TaskVersionReference] = None,
+        iteration: Optional[int] = None,
+        stream: bool = False,
+        use_cache: CacheUsage = "when_available",
+        labels: Optional[set[str]] = None,
+        metadata: Optional[dict[str, Any]] = None,
+    ) -> Union[TaskRun[TaskInput, TaskOutput], AsyncIterator[TaskOutput]]:
+        await self._auto_register(task)
+
+        if version:
+            group_ref = version
+        elif iteration:
+            group_ref = TaskVersionReference(iteration=iteration)
+        else:
+            group_ref = task.version
+
+        request = RunRequest(
+            task_input=task_input.model_dump(),
+            group=group_ref,
+            stream=stream,
+            use_cache=use_cache,
+            labels=labels,
+            metadata=metadata,
+        )
+
+        route = f"/tasks/{task.id}/schemas/{task.schema_id}/run"
+
+        if not stream:
+            try:
+                res = await self.api.post(route, request, returns=TaskRunResponse)
+            except HTTPStatusError as e:
+                if e.response.status_code == 404:
+                    raise NotFoundError("Task not found")
+                raise e
+
+            return res.to_domain(task)
+
+        return self.api.stream(
+            method="POST", path=route, data=request, returns=task.output_class
+        )
+
+    async def import_run(
+        self, run: TaskRun[TaskInput, TaskOutput]
+    ) -> TaskRun[TaskInput, TaskOutput]:
+        await self._auto_register(run.task)
+
+        request = ImportRunRequest.from_domain(run)
+        route = f"/tasks/{run.task.id}/schemas/{run.task.schema_id}/runs"
+        res = await self.api.post(route, request, returns=TaskRunResponse)
+        return res.to_domain(run.task)
+
+    async def import_example(
+        self, example: TaskExample[TaskInput, TaskOutput]
+    ) -> TaskExample[TaskInput, TaskOutput]:
+        await self._auto_register(example.task)
+
+        request = ImportExampleRequest.from_domain(example)
+        route = f"/tasks/{example.task.id}/schemas/{example.task.schema_id}/examples"
+        res = await self.api.post(route, request, returns=ExampleResponse)
+        return res.to_domain(example.task)
