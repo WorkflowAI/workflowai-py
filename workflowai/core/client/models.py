@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from workflowai.core.domain.cache_usage import CacheUsage
 from workflowai.core.domain.llm_completion import LLMCompletion
@@ -148,3 +148,24 @@ class ExampleResponse(BaseModel):
             task_input=task.input_class.model_validate(self.task_input),
             task_output=task.output_class.model_validate(self.task_output),
         )
+
+
+class PatchGroupRequest(BaseModel):
+    add_alias: Optional[str] = Field(
+        default=None,
+        description="A new alias for the group. If the alias is already used in another group of the task schema"
+        "it will be removed from the other group.",
+    )
+
+    remove_alias: Optional[str] = Field(
+        default=None,
+        description="An alias to remove from the group. The request is a noop if the group does not have the alias",
+    )
+
+    @model_validator(mode="after")
+    def post_validate(self):
+        if not self.add_alias and not self.remove_alias:
+            raise ValueError("At least one of add_alias or remove_alias must be set")
+        if self.add_alias == self.remove_alias:
+            raise ValueError("Cannot add and remove the same alias")
+        return self

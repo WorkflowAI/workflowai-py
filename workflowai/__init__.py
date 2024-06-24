@@ -1,6 +1,6 @@
 from typing import Optional
 
-from workflowai.core import client
+from workflowai.core.client import Client as Client
 from workflowai.core.domain.cache_usage import CacheUsage as CacheUsage
 from workflowai.core.domain.errors import NotFoundError as NotFoundError
 from workflowai.core.domain.llm_completion import LLMCompletion as LLMCompletion
@@ -14,7 +14,7 @@ from workflowai.core.domain.task_version_reference import (
 )
 
 
-def start(url: Optional[str] = None, api_key: Optional[str] = None) -> "client.Client":
+def start(url: Optional[str] = None, api_key: Optional[str] = None) -> Client:
     """Create a new workflowai client
 
     Args:

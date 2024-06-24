@@ -4,7 +4,7 @@ repos:
     hooks:
       - id: poetry-lock
         name: poetry lock
-        entry: poetry check --lock 
+        entry: poetry check --lock
         language: system
         pass_filenames: false
         always_run: true
@@ -22,6 +22,6 @@ repos:
         types: [file, python]
       - id: pytest
         name: testing (pytest)
-        entry: pytest .
+        entry: pytest . --ignore tests/e2e
         language: system
         pass_filenames: false

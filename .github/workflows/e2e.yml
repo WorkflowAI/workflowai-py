@@ -1,0 +1,101 @@
+name: E2E tests
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    # Every night at midnight
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+env:
+  WORKFLOWAI_TEST_API_URL: https://api.workflowai.dev
+
+jobs:
+  e2e-tests:
+    # TODO: we should run on multiple environments
+    environment: staging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Poetry
+        run: pipx install poetry==1.8.0
+
+      - name: Install dependencies
+        run: |
+          poetry config virtualenvs.in-project true
+          poetry install --all-extras
+
+      - name: Run tests
+        run: poetry run pytest tests/e2e
+        env:
+          WORKFLOWAI_TEST_API_KEY: ${{ secrets.WORKFLOWAI_TEST_API_KEY }}
+
+      - name: Send Slack Notification
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{
+            "blocks": [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*:white_check_mark: Python E2E Tests Completed*"
+                    }
+                }
+            ]
+          }' $SLACK_WEBHOOK_URL
+
+      - name: Notify Slack on Failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GITHUB_RUN_URL: ${{ github.server_url }}/{{ github.repository }}/actions/runs/{{ github.run_id }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": ":warning: *Python E2E Tests Failed!* \n <!channel>"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Job:* ${{ github.job }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Run Number:* ${{ github.run_number }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Repository:* ${{ github.repository }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Branch:* ${{ github.ref }}"
+                  }
+                ]
+              },
+              {
+                "type": "actions",
+                "elements": [
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Action"
+                    },
+                    "url": "${{ env.GITHUB_RUN_URL }}"
+                  }
+                ]
+              }
+            ]
+          }' $SLACK_WEBHOOK_URL

@@ -84,6 +84,28 @@ class TestRun:
             HelloTaskOutput(message="hello"),
         ]
 
+    async def test_run_with_env(self, httpx_mock: HTTPXMock, client: Client):
+        httpx_mock.add_response(json=fixtures_json("task_run.json"))
+        task = HelloTask(id="123", schema_id=1)
+
+        await client.run(
+            task,
+            task_input=HelloTaskInput(name="Alice"),
+            environment="dev",
+        )
+
+        reqs = httpx_mock.get_requests()
+        assert len(reqs) == 1
+        assert reqs[0].url == "http://localhost:8000/tasks/123/schemas/1/run"
+
+        body = json.loads(reqs[0].content)
+        assert body == {
+            "task_input": {"name": "Alice"},
+            "group": {"alias": "environment=dev"},
+            "stream": False,
+            "use_cache": "when_available",
+        }
+
 
 class TestImportRun:
     async def test_success(self, httpx_mock: HTTPXMock, client: Client):
@@ -148,4 +170,21 @@ class TestImportExample:
         assert body == {
             "task_input": {"name": "Alice"},
             "task_output": {"message": "hello"},
+        }
+
+class TestDeployVersion:
+    async def test_success(self, httpx_mock: HTTPXMock, client: Client):
+        httpx_mock.add_response(json=fixtures_json("task_version.json"))
+        task = HelloTask(id="123", schema_id=1)
+
+        version = await client.deploy_version(task, iteration=1, environment="dev")
+        assert version.iteration == 1
+
+        reqs = httpx_mock.get_requests()
+        assert len(reqs) == 1
+        assert reqs[0].url == "http://localhost:8000/tasks/123/schemas/1/groups/1"
+
+        body = json.loads(reqs[0].content)
+        assert body == {
+            "add_alias": "environment=dev",
         }

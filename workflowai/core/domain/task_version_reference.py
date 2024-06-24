@@ -21,11 +21,6 @@ class TaskVersionReference(BaseModel):
     )
     alias: Optional[str] = Field(description="An alias for the group", default=None)
 
-    environment: Optional[str] = Field(
-        description="The environment the group was deployed to",
-        default=None,
-    )
-
     is_external: Optional[bool] = Field(
         description="Whether the group is external, i-e not created by internal runners",
         default=None,
@@ -40,7 +35,6 @@ class TaskVersionReference(BaseModel):
                 self.iteration,
                 self.properties,
                 self.alias,
-                self.environment,
             ]
             if x
         )

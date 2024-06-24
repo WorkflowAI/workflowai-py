@@ -10,6 +10,7 @@ from workflowai.core.client.models import (
     ExampleResponse,
     ImportExampleRequest,
     ImportRunRequest,
+    PatchGroupRequest,
     RunRequest,
     RunTaskStreamChunk,
     TaskRunResponse,
@@ -19,6 +20,7 @@ from workflowai.core.domain.errors import NotFoundError
 from workflowai.core.domain.task import Task, TaskInput, TaskOutput
 from workflowai.core.domain.task_example import TaskExample
 from workflowai.core.domain.task_run import TaskRun
+from workflowai.core.domain.task_version import TaskVersion
 from workflowai.core.domain.task_version_reference import TaskVersionReference
 
 
@@ -53,6 +55,7 @@ class WorkflowAIClient:
         task: Task[TaskInput, TaskOutput],
         task_input: TaskInput,
         version: Optional[TaskVersionReference] = None,
+        environment: Optional[str] = None,
         iteration: Optional[int] = None,
         stream: Literal[False] = False,
         use_cache: CacheUsage = "when_available",
@@ -66,6 +69,7 @@ class WorkflowAIClient:
         task: Task[TaskInput, TaskOutput],
         task_input: TaskInput,
         version: Optional[TaskVersionReference] = None,
+        environment: Optional[str] = None,
         iteration: Optional[int] = None,
         stream: Literal[True] = True,
         use_cache: CacheUsage = "when_available",
@@ -78,6 +82,7 @@ class WorkflowAIClient:
         task: Task[TaskInput, TaskOutput],
         task_input: TaskInput,
         version: Optional[TaskVersionReference] = None,
+        environment: Optional[str] = None,
         iteration: Optional[int] = None,
         stream: bool = False,
         use_cache: CacheUsage = "when_available",
@@ -88,6 +93,8 @@ class WorkflowAIClient:
 
         if version:
             group_ref = version
+        elif environment:
+            group_ref = TaskVersionReference(alias=f"environment={environment}")
         elif iteration:
             group_ref = TaskVersionReference(iteration=iteration)
         else:
@@ -141,3 +148,16 @@ class WorkflowAIClient:
         route = f"/tasks/{example.task.id}/schemas/{example.task.schema_id}/examples"
         res = await self.api.post(route, request, returns=ExampleResponse)
         return res.to_domain(example.task)
+
+    async def deploy_version(
+        self,
+        task: Task[TaskInput, TaskOutput],
+        iteration: int,
+        environment: str,
+    ) -> TaskVersion:
+        await self._auto_register(task)
+
+        route = f"/tasks/{task.id}/schemas/{task.schema_id}/groups/{iteration}"
+        req = PatchGroupRequest(add_alias=f"environment={environment}")
+        res = await self.api.patch(route, req, returns=TaskVersion)
+        return res

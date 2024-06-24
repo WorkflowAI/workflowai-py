@@ -48,6 +48,26 @@ class APIClient:
                 return None
             return TypeAdapter(returns).validate_python(response.json())
 
+    @overload
+    async def patch(self, path: str, data: BaseModel, returns: type[_R]) -> _R: ...
+
+    @overload
+    async def patch(self, path: str, data: BaseModel) -> None: ...
+
+    async def patch(
+        self, path: str, data: BaseModel, returns: Optional[type[_R]] = None
+    ) -> Optional[_R]:
+        async with self._client() as client:
+            response = await client.patch(
+                path,
+                content=data.model_dump_json(exclude_none=True),
+                headers={"Content-Type": "application/json"},
+            )
+            response.raise_for_status()
+            if not returns:
+                return None
+            return TypeAdapter(returns).validate_python(response.json())
+
     async def delete(self, path: str) -> None:
         async with self._client() as client:
             response = await client.delete(path)

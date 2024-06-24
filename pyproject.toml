@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "workflowai"
-version = "0.1.2"
+version = "0.1.3"
 description = ""
 authors = ["Guillaume Aquilina <guillaume@workflowai.com>"]
 readme = "README.md"
@@ -22,6 +22,7 @@ ruff = "^0.4.9"
 freezegun = "^1.5.1"
 pre-commit = "^3.7.1"
 pytest-httpx = "^0.30.0"
+python-dotenv = "^1.0.1"
 
 [tool.poetry.extras]
 cli = ["typer", "rich"]
