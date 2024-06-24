@@ -32,17 +32,70 @@ jobs:
         env:
           WORKFLOWAI_TEST_API_KEY: ${{ secrets.WORKFLOWAI_TEST_API_KEY }}
 
-      - name: Set Slack message
-        id: slack_message
-        run: |
-          if [ "${{ job.status }}" == "failure" ]; then
-            echo "::set-output name=message:::{\"blocks\":[{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\":warning: *GitHub Action Failed!* :warning:\\nHey <!channel>, the GitHub Action has failed in the repository *${{ github.repository }}*.\"}},{\"type\":\"section\",\"fields\":[{\"type\":\"mrkdwn\",\"text\":\"*Job:* ${{ github.job }}\"},{\"type\":\"mrkdwn\",\"text\":\"*Run Number:* ${{ github.run_number }}\"},{\"type\":\"mrkdwn\",\"text\":\"*Repository:* ${{ github.repository }}\"},{\"type\":\"mrkdwn\",\"text\":\"*Branch:* ${{ github.ref }}\"}]},{\"type\":\"actions\",\"elements\":[{\"type\":\"button\",\"text\":{\"type\":\"plain_text\",\"text\":\"View Action\"},\"url\":\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}]}";
-          else
-            echo "::set-output name=message:::{\"blocks\":[{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*GitHub Action Completed* :white_check_mark:\\nThe GitHub Action has completed in the repository *${{ github.repository }}*.\"}},{\"type\":\"section\",\"fields\":[{\"type\":\"mrkdwn\",\"text\":\"*Job:* ${{ github.job }}\"},{\"type\":\"mrkdwn\",\"text\":\"*Run Number:* ${{ github.run_number }}\"},{\"type\":\"mrkdwn\",\"text\":\"*Repository:* ${{ github.repository }}\"},{\"type\":\"mrkdwn\",\"text\":\"*Branch:* ${{ github.ref }}\"}]},{\"type\":\"actions\",\"elements\":[{\"type\":\"button\",\"text\":{\"type\":\"plain_text\",\"text\":\"View Action\"},\"url\":\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}]}";
-          fi
-
-      - name: Notify Slack
+      - name: Send Slack Notification
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          curl -X POST -H 'Content-type: application/json' --data "${{ steps.slack_message.outputs.message }}" $SLACK_WEBHOOK_URL
+          curl -X POST -H 'Content-type: application/json' --data '{
+            "blocks": [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*Python E2E Tests Completed* :white_check_mark:\\nThe GitHub Action has completed in the repository *${{ github.repository }}*."
+                    }
+                }
+            ]
+          }' $SLACK_WEBHOOK_URL
+
+      - name: Notify Slack on Failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GITHUB_RUN_URL: ${{ github.server_url }}/{{ github.repository }}/actions/runs/{{ github.run_id }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": ":warning: *Python E2E Tests Failed!* :warning:\<!channel>, your GitHub Action has failed in the repository *${{ github.repository }}*."
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Job:* ${{ github.job }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Run Number:* ${{ github.run_number }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Repository:* ${{ github.repository }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Branch:* ${{ github.ref }}"
+                  }
+                ]
+              },
+              {
+                "type": "actions",
+                "elements": [
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Action"
+                    },
+                    "url": "${{ env.GITHUB_RUN_URL }}"
+                  }
+                ]
+              }
+            ]
+          }' $SLACK_WEBHOOK_URL
