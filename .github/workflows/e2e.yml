@@ -3,10 +3,10 @@ on:
   push:
     branches:
       - main
-      - guillaume/e2e-tests
   schedule:
     # Every night at midnight
     - cron: "0 0 * * *"
+  workflow_dispatch:
 
 env:
   WORKFLOWAI_TEST_API_URL: https://api.workflowai.dev
@@ -42,7 +42,7 @@ jobs:
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "*Python E2E Tests Completed* :white_check_mark:\\nThe GitHub Action has completed in the repository *${{ github.repository }}*."
+                        "text": "*:white_check_mark: Python E2E Tests Completed*"
                     }
                 }
             ]
@@ -60,7 +60,7 @@ jobs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": ":warning: *Python E2E Tests Failed!* :warning:\<!channel>, your GitHub Action has failed in the repository *${{ github.repository }}*."
+                  "text": ":warning: *Python E2E Tests Failed!* \n <!channel>"
                 }
               },
               {
