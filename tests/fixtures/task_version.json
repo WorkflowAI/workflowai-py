@@ -1,0 +1,26 @@
+{
+    "id": "0a35fd2e55def802918880d094f634f9",
+    "iteration": 1,
+    "properties": {
+        "model": "gpt-4o-2024-05-13",
+        "provider": "openai",
+        "temperature": 0,
+        "instructions": "To complete the task 'AddSixToNumber', follow these steps: 1. Take an input object that contains a 'number' field. 2. Add 6 to the value of the 'number' field. 3. Return an output object that contains a 'result' field with the computed value. Ensure the input and output objects conform to their respective schemas.",
+        "max_tokens": null,
+        "runner_name": "WorkflowAI",
+        "runner_version": "v0.1.0",
+        "few_shot": null,
+        "template_name": "v1",
+        "task_variant_id": "216123bda0159257f03ed2723f59731f"
+    },
+    "tags": [
+        "model=gpt-4o-2024-05-13",
+        "provider=openai",
+        "temperature=0",
+        "template_name=v1"
+    ],
+    "aliases": [
+        "environment=dev"
+    ],
+    "is_external": null
+}

@@ -5,6 +5,7 @@ from workflowai.core.domain import (
     task,
     task_example,
     task_run,
+    task_version,
     task_version_reference,
 )
 
@@ -26,6 +27,7 @@ class Client(Protocol):
         task: "task.Task[task.TaskInput, task.TaskOutput]",
         task_input: "task.TaskInput",
         version: Optional["task_version_reference.TaskVersionReference"] = None,
+        environment: Optional[str] = None,
         iteration: Optional[int] = None,
         stream: Literal[False] = False,
         use_cache: "cache_usage.CacheUsage" = "when_available",
@@ -39,6 +41,7 @@ class Client(Protocol):
         task: "task.Task[task.TaskInput, task.TaskOutput]",
         task_input: "task.TaskInput",
         version: Optional["task_version_reference.TaskVersionReference"] = None,
+        environment: Optional[str] = None,
         iteration: Optional[int] = None,
         stream: Literal[True] = True,
         use_cache: "cache_usage.CacheUsage" = "when_available",
@@ -51,6 +54,7 @@ class Client(Protocol):
         task: "task.Task[task.TaskInput, task.TaskOutput]",
         task_input: "task.TaskInput",
         version: Optional["task_version_reference.TaskVersionReference"] = None,
+        environment: Optional[str] = None,
         iteration: Optional[int] = None,
         stream: bool = False,
         use_cache: "cache_usage.CacheUsage" = "when_available",
@@ -99,5 +103,23 @@ class Client(Protocol):
 
         Returns:
             task_example.TaskExample[task.TaskInput, task.TaskOutput]: the task example as stored in our database
+        """
+        ...
+
+    async def deploy_version(
+        self,
+        task: "task.Task[task.TaskInput, task.TaskOutput]",
+        iteration: int,
+        environment: str,
+    ) -> "task_version.TaskVersion":
+        """Deploy a version to an environemnt. Version becomes usable using TaskVersionReference(environment=...)
+
+        Args:
+            task (task.Task[task.TaskInput, task.TaskOutput]): the task to deploy
+            reference (task_version_reference.TaskVersionReference): the version to deploy
+            environment (str): the environment to deploy to
+
+        Returns:
+            task_version.TaskVersion: the deployed version
         """
         ...

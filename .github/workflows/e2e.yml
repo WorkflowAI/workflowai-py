@@ -1,0 +1,48 @@
+name: E2E tests
+on:
+  push:
+    branches:
+      - main
+      - guillaume/e2e-tests
+  schedule:
+    # Every night at midnight
+    - cron: "0 0 * * *"
+
+env:
+  WORKFLOWAI_TEST_API_URL: https://api.workflowai.dev
+
+jobs:
+  e2e-tests:
+    # TODO: we should run on multiple environments
+    environment: staging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Poetry
+        run: pipx install poetry==1.8.0
+
+      - name: Install dependencies
+        run: |
+          poetry config virtualenvs.in-project true
+          poetry install --all-extras
+
+      - name: Run tests
+        run: poetry run pytest tests/e2e
+        env:
+          WORKFLOWAI_TEST_API_KEY: ${{ secrets.WORKFLOWAI_TEST_API_KEY }}
+
+      - name: Set Slack message
+        id: slack_message
+        run: |
+          if [ "${{ job.status }}" == "failure" ]; then
+            echo "::set-output name=message:::{\"blocks\":[{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\":warning: *GitHub Action Failed!* :warning:\\nHey <!channel>, the GitHub Action has failed in the repository *${{ github.repository }}*.\"}},{\"type\":\"section\",\"fields\":[{\"type\":\"mrkdwn\",\"text\":\"*Job:* ${{ github.job }}\"},{\"type\":\"mrkdwn\",\"text\":\"*Run Number:* ${{ github.run_number }}\"},{\"type\":\"mrkdwn\",\"text\":\"*Repository:* ${{ github.repository }}\"},{\"type\":\"mrkdwn\",\"text\":\"*Branch:* ${{ github.ref }}\"}]},{\"type\":\"actions\",\"elements\":[{\"type\":\"button\",\"text\":{\"type\":\"plain_text\",\"text\":\"View Action\"},\"url\":\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}]}";
+          else
+            echo "::set-output name=message:::{\"blocks\":[{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*GitHub Action Completed* :white_check_mark:\\nThe GitHub Action has completed in the repository *${{ github.repository }}*.\"}},{\"type\":\"section\",\"fields\":[{\"type\":\"mrkdwn\",\"text\":\"*Job:* ${{ github.job }}\"},{\"type\":\"mrkdwn\",\"text\":\"*Run Number:* ${{ github.run_number }}\"},{\"type\":\"mrkdwn\",\"text\":\"*Repository:* ${{ github.repository }}\"},{\"type\":\"mrkdwn\",\"text\":\"*Branch:* ${{ github.ref }}\"}]},{\"type\":\"actions\",\"elements\":[{\"type\":\"button\",\"text\":{\"type\":\"plain_text\",\"text\":\"View Action\"},\"url\":\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}]}]}";
+          fi
+
+      - name: Notify Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data "${{ steps.slack_message.outputs.message }}" $SLACK_WEBHOOK_URL
