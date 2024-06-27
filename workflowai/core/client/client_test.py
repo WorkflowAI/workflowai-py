@@ -172,6 +172,7 @@ class TestImportExample:
             "task_output": {"message": "hello"},
         }
 
+
 class TestDeployVersion:
     async def test_success(self, httpx_mock: HTTPXMock, client: Client):
         httpx_mock.add_response(json=fixtures_json("task_version.json"))
@@ -188,3 +189,32 @@ class TestDeployVersion:
         assert body == {
             "add_alias": "environment=dev",
         }
+
+
+class TestListExamples:
+    async def test_success(self, httpx_mock: HTTPXMock, client: Client):
+        httpx_mock.add_response(json=fixtures_json("task_examples.json"))
+        task = HelloTask(id="123", schema_id=1)
+
+        examples = await client.list_examples(task)
+        assert examples.count == 1
+        assert len(examples.items) == 1
+
+        reqs = httpx_mock.get_requests()
+        assert len(reqs) == 1
+        assert reqs[0].url == "http://localhost:8000/tasks/123/schemas/1/examples"
+
+    async def test_success_with_limit(self, httpx_mock: HTTPXMock, client: Client):
+        httpx_mock.add_response(json=fixtures_json("task_examples.json"))
+        task = HelloTask(id="123", schema_id=1)
+
+        examples = await client.list_examples(task, limit=1, offset=2)
+        assert examples.count == 1
+        assert len(examples.items) == 1
+
+        reqs = httpx_mock.get_requests()
+        assert len(reqs) == 1
+        assert (
+            reqs[0].url
+            == "http://localhost:8000/tasks/123/schemas/1/examples?limit=1&offset=2"
+        )

@@ -2,6 +2,7 @@ from typing import Any, AsyncIterator, Literal, Optional, Protocol, Union, overl
 
 from workflowai.core.domain import (
     cache_usage,
+    page,
     task,
     task_example,
     task_run,
@@ -103,6 +104,24 @@ class Client(Protocol):
 
         Returns:
             task_example.TaskExample[task.TaskInput, task.TaskOutput]: the task example as stored in our database
+        """
+        ...
+
+    async def list_examples(
+        self,
+        task: "task.Task[task.TaskInput, task.TaskOutput]",
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> "page.Page[task_example.TaskExample[task.TaskInput, task.TaskOutput]]":
+        """List examples for a task
+
+        Args:
+            task (task.Task[task.TaskInput, task.TaskOutput]): the task
+            limit (Optional[int], optional): the maximum number of examples to return. Defaults to None.
+            offset (Optional[int], optional): the number of examples to skip. Defaults to None.
+
+        Returns:
+            page.Page[task_example.TaskExample[task.TaskInput, task.TaskOutput]]: a page of examples
         """
         ...
 

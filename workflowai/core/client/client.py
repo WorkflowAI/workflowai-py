@@ -1,5 +1,6 @@
 import os
 from typing import Any, AsyncIterator, Literal, Optional, Union, overload
+from urllib.parse import urlencode
 
 from httpx import HTTPStatusError
 
@@ -17,6 +18,7 @@ from workflowai.core.client.models import (
 )
 from workflowai.core.domain.cache_usage import CacheUsage
 from workflowai.core.domain.errors import NotFoundError
+from workflowai.core.domain.page import Page
 from workflowai.core.domain.task import Task, TaskInput, TaskOutput
 from workflowai.core.domain.task_example import TaskExample
 from workflowai.core.domain.task_run import TaskRun
@@ -161,3 +163,26 @@ class WorkflowAIClient:
         req = PatchGroupRequest(add_alias=f"environment={environment}")
         res = await self.api.patch(route, req, returns=TaskVersion)
         return res
+
+    async def list_examples(
+        self,
+        task: Task[TaskInput, TaskOutput],
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> Page[TaskExample[TaskInput, TaskOutput]]:
+        await self._auto_register(task)
+
+        route = f"/tasks/{task.id}/schemas/{task.schema_id}/examples"
+        query_dict: dict[str, Any] = {}
+        if limit:
+            query_dict["limit"] = limit
+        if offset:
+            query_dict["offset"] = offset
+        if query_dict:
+            route += "?" + urlencode(query_dict)
+
+        res = await self.api.get(route, returns=Page[ExampleResponse])
+        return Page(
+            count=res.count,
+            items=[item.to_domain(task) for item in res.items],
+        )
