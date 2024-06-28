@@ -139,14 +139,18 @@ class ImportExampleRequest(BaseModel):
 class ExampleResponse(BaseModel):
     id: str
     task_input: dict[str, Any]
+    task_input_hash: str
     task_output: dict[str, Any]
+    task_output_hash: str
 
     def to_domain(self, task: Task[TaskInput, TaskOutput]):
         return TaskExample[TaskInput, TaskOutput](
             id=self.id,
             task=task,
             task_input=task.input_class.model_validate(self.task_input),
+            task_input_hash=self.task_input_hash,
             task_output=task.output_class.model_validate(self.task_output),
+            task_output_hash=self.task_output_hash,
         )
 
 

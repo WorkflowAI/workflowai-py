@@ -11,4 +11,6 @@ class TaskExample(BaseModel, Generic[TaskInput, TaskOutput]):
     task: Task[TaskInput, TaskOutput]
 
     task_input: TaskInput
+    task_input_hash: str = ""
     task_output: TaskOutput
+    task_output_hash: str = ""
