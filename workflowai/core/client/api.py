@@ -9,10 +9,10 @@ _M = TypeVar("_M", bound=BaseModel)
 
 
 class APIClient:
-    def __init__(self, endpoint: str, api_key: str, source_headers: dict[str, str] | {}):
+    def __init__(self, endpoint: str, api_key: str, source_headers: Optional[dict[str, str]] = None):
         self.endpoint = endpoint
         self.api_key = api_key
-        self.source_headers = source_headers
+        self.source_headers = source_headers or {}
 
         if not self.endpoint or not self.api_key:
             raise ValueError("Missing API URL or key")
