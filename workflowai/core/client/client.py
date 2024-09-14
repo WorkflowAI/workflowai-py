@@ -26,9 +26,16 @@ from workflowai.core.domain.task_version_reference import TaskVersionReference
 
 class WorkflowAIClient:
     def __init__(self, endpoint: Optional[str] = None, api_key: Optional[str] = None):
+        self.additional_headers = {
+            "x-workflowai-source": "sdk",
+            "x-workflowai-language": "python",
+            "x-workflowai-version": "0.1.3" #__version__,
+        }
+
         self.api = APIClient(
             endpoint or os.getenv("WORKFLOWAI_API_URL", "https://api.workflowai.ai"),
             api_key or os.getenv("WORKFLOWAI_API_KEY", ""),
+            self.additional_headers
         )
 
     async def register(self, task: Task[TaskInput, TaskOutput]):

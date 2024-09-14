@@ -9,18 +9,24 @@ _M = TypeVar("_M", bound=BaseModel)
 
 
 class APIClient:
-    def __init__(self, endpoint: str, api_key: str):
+    def __init__(self, endpoint: str, api_key: str, source_headers: dict[str, str] | {}):
         self.endpoint = endpoint
         self.api_key = api_key
+        self.source_headers = source_headers
 
         if not self.endpoint or not self.api_key:
             raise ValueError("Missing API URL or key")
 
     def _client(self) -> httpx.AsyncClient:
-        return httpx.AsyncClient(
+        client = httpx.AsyncClient(
             base_url=self.endpoint,
-            headers={"Authorization": f"Bearer {self.api_key}"},
+            headers={
+                "Authorization": f"Bearer {self.api_key}", 
+                **(self.source_headers or {})
+        },
         )
+        return client
+
 
     async def get(self, path: str, returns: type[_R], query: dict[str, Any] = {}) -> _R:
         async with self._client() as client:
