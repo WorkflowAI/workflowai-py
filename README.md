@@ -20,7 +20,7 @@ Usage examples are available in the [examples](./examples/) directory.
 import workflowai
 
 wai = workflowai.start(
-    url=..., # defaults to WORKFLOWAI_API_URL env var or https://api.workflowai.ai
+    url=..., # defaults to WORKFLOWAI_API_URL env var or https://api.workflowai.com
     api_key=..., # defaults to WORKFLOWAI_API_KEY env var
 )
 ```
