@@ -27,7 +27,7 @@ from workflowai.core.domain.task_version_reference import TaskVersionReference
 class WorkflowAIClient:
     def __init__(self, endpoint: Optional[str] = None, api_key: Optional[str] = None):
         self.api = APIClient(
-            endpoint or os.getenv("WORKFLOWAI_API_URL", "https://api.workflowai.ai"),
+            endpoint or os.getenv("WORKFLOWAI_API_URL", "https://api.workflowai.com"),
             api_key or os.getenv("WORKFLOWAI_API_KEY", ""),
         )
 
