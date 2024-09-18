@@ -1,3 +1,4 @@
+import importlib.metadata
 import os
 from typing import Any, AsyncIterator, Literal, Optional, Union, overload
 
@@ -29,7 +30,7 @@ class WorkflowAIClient:
         self.additional_headers = {
             "x-workflowai-source": "sdk",
             "x-workflowai-language": "python",
-            "x-workflowai-version": "0.1.3" #__version__,
+            "x-workflowai-version": importlib.metadata.version("workflowai"),
         }
 
         self.api = APIClient(

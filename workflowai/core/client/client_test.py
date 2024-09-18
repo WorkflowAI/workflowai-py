@@ -1,3 +1,4 @@
+import importlib.metadata
 import json
 
 import pytest
@@ -105,6 +106,34 @@ class TestRun:
             "stream": False,
             "use_cache": "when_available",
         }
+        
+    async def test_success_with_headers(self, httpx_mock: HTTPXMock, client: Client):
+        httpx_mock.add_response(json=fixtures_json("task_run.json"))
+        task = HelloTask(id="123", schema_id=1)
+
+        task_run = await client.run(task, task_input=HelloTaskInput(name="Alice"))
+
+        assert task_run.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
+
+        reqs = httpx_mock.get_requests()
+        assert len(reqs) == 1
+        assert reqs[0].url == "http://localhost:8000/tasks/123/schemas/1/run"
+        headers = {
+            "x-workflowai-source": "sdk",
+            "x-workflowai-language": "python",
+            "x-workflowai-version": importlib.metadata.version("workflowai"),
+        }
+        
+        body = json.loads(reqs[0].content)
+        assert body == {
+            "task_input": {"name": "Alice"},
+            "group": {"properties": {}},
+            "stream": False,
+            "use_cache": "when_available",
+        }
+        # Check for additional headers
+        for key, value in headers.items():
+            assert reqs[0].headers[key] == value
 
 
 class TestImportRun:
