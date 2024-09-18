@@ -34,7 +34,7 @@ class WorkflowAIClient:
         }
 
         self.api = APIClient(
-            endpoint or os.getenv("WORKFLOWAI_API_URL", "https://api.workflowai.ai"),
+            endpoint or os.getenv("WORKFLOWAI_API_URL", "https://api.workflowai.com"),
             api_key or os.getenv("WORKFLOWAI_API_KEY", ""),
             self.additional_headers
         )
