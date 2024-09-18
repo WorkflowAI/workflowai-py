@@ -10,3 +10,7 @@ class WorkflowAIError(Exception):
 class NotFoundError(WorkflowAIError):
     def __init__(self, message: str):
         super().__init__(message)
+
+class TooManyRequestsError(WorkflowAIError):
+    def __init__(self, message: str):
+        super().__init__(message)

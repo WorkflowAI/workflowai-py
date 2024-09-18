@@ -60,6 +60,9 @@ class Client(Protocol):
         use_cache: "cache_usage.CacheUsage" = "when_available",
         labels: Optional[set[str]] = None,
         metadata: Optional[dict[str, Any]] = None,
+        retry_delay: int = 5000,
+        max_retry_delay: int = 60000,
+        max_retry_count: int = 1
     ) -> Union[
         "task_run.TaskRun[task.TaskInput, task.TaskOutput]",
         AsyncIterator["task.TaskOutput"],
@@ -74,6 +77,9 @@ class Client(Protocol):
             use_cache (CacheUsage, optional): how to use the cache. Defaults to "when_available".
             labels (Optional[set[str]], optional): a set of labels to attach to the run. Labels are indexed and searchable. Defaults to None.
             metadata (Optional[dict[str, Any]], optional): a dictionary of metadata to attach to the run. Defaults to None.
+            retry_delay (int, optional): The initial delay between retries in milliseconds. Defaults to 5000.
+            max_retry_delay (int, optional): The maximum delay between retries in milliseconds. Defaults to 60000.
+            max_retry_count (int, optional): The maximum number of retry attempts. Defaults to 1.
 
         Returns:
             Union[TaskRun[TaskInput, TaskOutput], AsyncIterator[TaskOutput]]: the task run object or an async iterator of output objects

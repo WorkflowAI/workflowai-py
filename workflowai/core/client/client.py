@@ -1,7 +1,21 @@
 import os
-from typing import Any, AsyncIterator, Literal, Optional, Union, overload
+from typing import (
+    Any,
+    AsyncIterator,
+    Callable,
+    Literal,
+    Optional,
+    Union,
+    overload,
+)
 
 from httpx import HTTPStatusError
+from tenacity import (
+    retry,
+    retry_if_exception_cause_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from workflowai.core.client.api import APIClient
 from workflowai.core.client.models import (
@@ -16,7 +30,7 @@ from workflowai.core.client.models import (
     TaskRunResponse,
 )
 from workflowai.core.domain.cache_usage import CacheUsage
-from workflowai.core.domain.errors import NotFoundError
+from workflowai.core.domain.errors import NotFoundError, TooManyRequestsError
 from workflowai.core.domain.task import Task, TaskInput, TaskOutput
 from workflowai.core.domain.task_example import TaskExample
 from workflowai.core.domain.task_run import TaskRun
@@ -25,19 +39,32 @@ from workflowai.core.domain.task_version_reference import TaskVersionReference
 
 
 class WorkflowAIClient:
-    def __init__(self, endpoint: Optional[str] = None, api_key: Optional[str] = None):
+    def __init__(self, endpoint: Optional[str] = None, api_key: Optional[str] = None,
+                 retry_delay: int = 5000, max_retry_delay: int = 60000, max_retry_count: int = 1):
         self.additional_headers = {
             "x-workflowai-source": "sdk",
             "x-workflowai-language": "python",
             "x-workflowai-version": "0.1.3" #__version__,
         }
-
+        self.retry_delay = retry_delay
+        self.max_retry_delay = max_retry_delay
+        self.max_retry_count = max_retry_count
         self.api = APIClient(
             endpoint or os.getenv("WORKFLOWAI_API_URL", "https://api.workflowai.ai"),
             api_key or os.getenv("WORKFLOWAI_API_KEY", ""),
             self.additional_headers
         )
 
+
+    async def _retry_request(self, request_func: Callable[[], Any]) -> Any:
+        @retry(stop=stop_after_attempt(self.max_retry_count), 
+               wait=wait_exponential(multiplier=1, min=self.retry_delay, max=self.max_retry_delay),
+               retry=retry_if_exception_cause_type(TooManyRequestsError))
+        async def _execute_request():
+            return await request_func()
+
+        return await _execute_request()
+    
     async def register(self, task: Task[TaskInput, TaskOutput]):
         request = CreateTaskRequest(
             task_id=task.id or None,
@@ -46,7 +73,7 @@ class WorkflowAIClient:
             output_schema=task.output_class.model_json_schema(),
         )
 
-        res = await self.api.post("/tasks", request, returns=CreateTaskResponse)
+        res = await self._retry_request(lambda: self.api.post("/tasks", request, returns=CreateTaskResponse))
 
         task.id = res.task_id
         task.schema_id = res.task_schema_id
@@ -68,6 +95,9 @@ class WorkflowAIClient:
         use_cache: CacheUsage = "when_available",
         labels: Optional[set[str]] = None,
         metadata: Optional[dict[str, Any]] = None,
+        retry_delay: int = 5000,
+        max_retry_delay: int = 60000,
+        max_retry_count: int = 1
     ) -> TaskRun[TaskInput, TaskOutput]: ...
 
     @overload
@@ -82,6 +112,9 @@ class WorkflowAIClient:
         use_cache: CacheUsage = "when_available",
         labels: Optional[set[str]] = None,
         metadata: Optional[dict[str, Any]] = None,
+        retry_delay: int = 5000,
+        max_retry_delay: int = 60000,
+        max_retry_count: int = 1
     ) -> AsyncIterator[TaskOutput]: ...
 
     async def run(
@@ -95,6 +128,9 @@ class WorkflowAIClient:
         use_cache: CacheUsage = "when_available",
         labels: Optional[set[str]] = None,
         metadata: Optional[dict[str, Any]] = None,
+        retry_delay: int = 5000,
+        max_retry_delay: int = 60000,
+        max_retry_count: int = 1
     ) -> Union[TaskRun[TaskInput, TaskOutput], AsyncIterator[TaskOutput]]:
         await self._auto_register(task)
 
@@ -120,10 +156,12 @@ class WorkflowAIClient:
 
         if not stream:
             try:
-                res = await self.api.post(route, request, returns=TaskRunResponse)
+                res = await self._retry_request(lambda: self.api.post(route, request, returns=TaskRunResponse))
             except HTTPStatusError as e:
                 if e.response.status_code == 404:
                     raise NotFoundError("Task not found")
+                if e.response.status_code == 429:
+                    raise TooManyRequestsError("Too many requests, please try again later.")
                 raise e
 
             return res.to_domain(task)
@@ -143,7 +181,7 @@ class WorkflowAIClient:
 
         request = ImportRunRequest.from_domain(run)
         route = f"/tasks/{run.task.id}/schemas/{run.task.schema_id}/runs"
-        res = await self.api.post(route, request, returns=TaskRunResponse)
+        res = await self._retry_request(lambda: self.api.post(route, request, returns=TaskRunResponse))
         return res.to_domain(run.task)
 
     async def import_example(
@@ -153,7 +191,7 @@ class WorkflowAIClient:
 
         request = ImportExampleRequest.from_domain(example)
         route = f"/tasks/{example.task.id}/schemas/{example.task.schema_id}/examples"
-        res = await self.api.post(route, request, returns=ExampleResponse)
+        res = await self._retry_request(lambda: self.api.post(route, request, returns=ExampleResponse))
         return res.to_domain(example.task)
 
     async def deploy_version(
@@ -166,5 +204,5 @@ class WorkflowAIClient:
 
         route = f"/tasks/{task.id}/schemas/{task.schema_id}/groups/{iteration}"
         req = PatchGroupRequest(add_alias=f"environment={environment}")
-        res = await self.api.patch(route, req, returns=TaskVersion)
+        res = await self._retry_request(lambda: self.api.patch(route, req, returns=TaskVersion))
         return res
