@@ -1,3 +1,4 @@
+import importlib.metadata
 import os
 from typing import Any, AsyncIterator, Literal, Optional, Union, overload
 
@@ -26,9 +27,16 @@ from workflowai.core.domain.task_version_reference import TaskVersionReference
 
 class WorkflowAIClient:
     def __init__(self, endpoint: Optional[str] = None, api_key: Optional[str] = None):
+        self.additional_headers = {
+            "x-workflowai-source": "sdk",
+            "x-workflowai-language": "python",
+            "x-workflowai-version": importlib.metadata.version("workflowai"),
+        }
+
         self.api = APIClient(
             endpoint or os.getenv("WORKFLOWAI_API_URL", "https://api.workflowai.com"),
             api_key or os.getenv("WORKFLOWAI_API_KEY", ""),
+            self.additional_headers
         )
 
     async def register(self, task: Task[TaskInput, TaskOutput]):
