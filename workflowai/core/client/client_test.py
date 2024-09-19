@@ -106,6 +106,20 @@ class TestRun:
             "use_cache": "when_available",
         }
 
+    async def test_run_retries_on_too_many_requests(self, httpx_mock: HTTPXMock, client: Client):
+        task = HelloTask(id="123", schema_id=1)
+
+        httpx_mock.add_response(status_code=429)
+        httpx_mock.add_response(json=fixtures_json("task_run.json"))
+
+        task_run = await client.run(task, task_input=HelloTaskInput(name="Alice"), max_retry_count=5)
+
+        assert task_run.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
+
+        reqs = httpx_mock.get_requests()
+        assert len(reqs) == 2  
+        assert reqs[0].url == "http://localhost:8000/tasks/123/schemas/1/run"
+        assert reqs[1].url == "http://localhost:8000/tasks/123/schemas/1/run"
 
 class TestImportRun:
     async def test_success(self, httpx_mock: HTTPXMock, client: Client):
