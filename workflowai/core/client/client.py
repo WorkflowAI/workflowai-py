@@ -1,4 +1,5 @@
 import asyncio
+import importlib.metadata
 import os
 from typing import (
     Any,
@@ -37,10 +38,10 @@ class WorkflowAIClient:
         self.additional_headers = {
             "x-workflowai-source": "sdk",
             "x-workflowai-language": "python",
-            "x-workflowai-version": "0.1.3" #__version__,
+            "x-workflowai-version": importlib.metadata.version("workflowai"),
         }
         self.api = APIClient(
-            endpoint or os.getenv("WORKFLOWAI_API_URL", "https://api.workflowai.ai"),
+            endpoint or os.getenv("WORKFLOWAI_API_URL", "https://api.workflowai.com"),
             api_key or os.getenv("WORKFLOWAI_API_KEY", ""),
             self.additional_headers
         )

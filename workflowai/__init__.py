@@ -19,7 +19,7 @@ def start(url: Optional[str] = None, api_key: Optional[str] = None) -> Client:
 
     Args:
         url (Optional[str], optional): The API endpoint to use.
-            If not provided, the env variable WORKFLOWAI_API_URL is used. Otherwise defaults to https://api.workflowai.ai
+            If not provided, the env variable WORKFLOWAI_API_URL is used. Otherwise defaults to https://api.workflowai.com
         api_key (Optional[str], optional): _description_. If not provided, the env variable WORKFLOWAI_API_KEY is used.
 
     Returns:
