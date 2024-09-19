@@ -140,7 +140,7 @@ class WorkflowAIClient:
             res = None
             delay = retry_delay / 1000
             retry_count = 0
-            while retry_count <= max_retry_count:
+            while retry_count < max_retry_count:
                 try:
                     res = await self.api.post(route, request, returns=TaskRunResponse)
                     return res.to_domain(task)
@@ -169,7 +169,7 @@ class WorkflowAIClient:
         async def _stream():
             delay = retry_delay / 1000
             retry_count = 0
-            while retry_count <= max_retry_count:
+            while retry_count < max_retry_count:
                 try:
                     async for chunk in self.api.stream(
                         method="POST", path=route, data=request, returns=RunTaskStreamChunk
