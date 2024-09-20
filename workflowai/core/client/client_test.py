@@ -148,9 +148,10 @@ class TestRun:
         assert task_run.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
 
         reqs = httpx_mock.get_requests()
-        assert len(reqs) == 2  
+        assert len(reqs) == 2
         assert reqs[0].url == "http://localhost:8000/tasks/123/schemas/1/run"
         assert reqs[1].url == "http://localhost:8000/tasks/123/schemas/1/run"
+
 
 class TestImportRun:
     async def test_success(self, httpx_mock: HTTPXMock, client: Client):
