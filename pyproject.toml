@@ -13,7 +13,6 @@ httpx = "^0.27.0"
 typer = { version = "^0.12.3", optional = true }
 rich = { version = "^13.7.1", optional = true }
 
-
 [tool.poetry.group.dev.dependencies]
 pyright = "^1.1.367"
 pytest = "^8.2.2"
