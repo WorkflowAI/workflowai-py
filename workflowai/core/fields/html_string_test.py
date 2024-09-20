@@ -17,7 +17,7 @@ def test_html_string_json_schema() -> None:
                 "format": "html",
                 "title": "Html String",
                 "type": "string",
-            }
+            },
         },
         "title": "_ModelWithHMTLString",
         "type": "object",

@@ -30,7 +30,8 @@ class Currency(Enum):
     IDR = "IDR"  # Indonesian Rupiah
     MYR = "MYR"  # Malaysian Ringgit
     # Those are 25 of the most common currencies in the world.
-    # You can duplicate this object add more if you need to or contact support@workflowai.com to add more currencies to the list.
+    # You can duplicate this object add more if you need to or contact support@workflowai.com
+    # to add more currencies to the list.
 
 
 class Price(BaseModel):

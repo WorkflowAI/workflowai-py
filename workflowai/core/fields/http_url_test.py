@@ -17,7 +17,7 @@ def test_http_url_json_schema() -> None:
                 "title": "Url",
                 "type": "string",
                 "examples": ["http://www.example.com"],
-            }
+            },
         },
         "required": ["url"],
         "title": "ModelWithHttpUrl",
@@ -30,12 +30,12 @@ def test_http_url_serialize() -> None:
     assert model.model_dump() == {"url": "http://example.com"}
 
 
-def test_URL_value() -> None:
+def test_url_value():
     """Test that the HttpUrl validates the URL value."""
 
     # Should raise
     for invalid_url in ["http://", "https://", "http://example", "https://example"]:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             ModelWithHttpUrl(url=invalid_url)
 
     # Should not raise
@@ -48,7 +48,7 @@ def test_URL_value() -> None:
         ModelWithHttpUrl(url=valid_url)
 
 
-def test_validates_URL_scheme() -> None:
+def test_validates_url_scheme():
     """Tests that the HttpUrl field only accepts URLs with the http or https scheme."""
 
     # Should raise
@@ -57,7 +57,7 @@ def test_validates_URL_scheme() -> None:
         "file://example.com",
         "sftp://example.com",
     ]:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             ModelWithHttpUrl(url=non_http_url)
 
     # Should not raise

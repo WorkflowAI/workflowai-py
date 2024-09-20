@@ -16,14 +16,14 @@ class _ZoneInfoPydanticAnnotation:
         def validate_from_str(value: str) -> ZoneInfo:
             try:
                 return ZoneInfo(value)
-            except ZoneInfoNotFoundError:
-                raise ValueError("Invalid timezone")
+            except ZoneInfoNotFoundError as e:
+                raise ValueError("Invalid timezone") from e
 
         from_str_schema = core_schema.chain_schema(
             [
                 core_schema.str_schema(),
                 core_schema.no_info_plain_validator_function(validate_from_str),
-            ]
+            ],
         )
         return core_schema.json_or_python_schema(
             json_schema=from_str_schema,
@@ -32,14 +32,16 @@ class _ZoneInfoPydanticAnnotation:
                     # check if it's an instance first before doing any further work
                     core_schema.is_instance_schema(ZoneInfo),
                     from_str_schema,
-                ]
+                ],
             ),
             serialization=core_schema.plain_serializer_function_ser_schema(_serialize),
         )
 
     @classmethod
     def __get_pydantic_json_schema__(
-        cls, core_schema: core_schema.JsonSchema, handler: GetJsonSchemaHandler
+        cls,
+        core_schema: core_schema.JsonSchema,
+        handler: GetJsonSchemaHandler,
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema.update(format="timezone")

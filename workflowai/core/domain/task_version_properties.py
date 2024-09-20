@@ -11,13 +11,13 @@ class TaskVersionProperties(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     model: Optional[str] = Field(
-        default=None, description="The LLM model used for the run"
+        default=None, description="The LLM model used for the run",
     )
     provider: Optional[str] = Field(
-        default=None, description="The LLM provider used for the run"
+        default=None, description="The LLM provider used for the run",
     )
     temperature: Optional[float] = Field(
-        default=None, description="The temperature for generation"
+        default=None, description="The temperature for generation",
     )
     instructions: Optional[str] = Field(
         default=None,
@@ -29,15 +29,15 @@ class TaskVersionProperties(BaseModel):
     )
 
     runner_name: Optional[str] = Field(
-        default=None, description="The name of the runner used"
+        default=None, description="The name of the runner used",
     )
 
     runner_version: Optional[str] = Field(
-        default=None, description="The version of the runner used"
+        default=None, description="The version of the runner used",
     )
 
     few_shot: "Optional[FewShotConfiguration]" = Field(
-        default=None, description="Few shot configuration"
+        default=None, description="Few shot configuration",
     )
 
 

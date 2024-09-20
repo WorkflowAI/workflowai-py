@@ -44,9 +44,9 @@ class WorkflowAIClient:
         self.api = APIClient(
             endpoint or os.getenv("WORKFLOWAI_API_URL", "https://api.workflowai.com"),
             api_key or os.getenv("WORKFLOWAI_API_KEY", ""),
-            self.additional_headers
+            self.additional_headers,
         )
-    
+
     async def register(self, task: Task[TaskInput, TaskOutput]):
         request = CreateTaskRequest(
             task_id=task.id or None,
@@ -79,7 +79,7 @@ class WorkflowAIClient:
         metadata: Optional[dict[str, Any]] = None,
         retry_delay: int = 5000,
         max_retry_delay: int = 60000,
-        max_retry_count: int = 1
+        max_retry_count: int = 1,
     ) -> TaskRun[TaskInput, TaskOutput]: ...
 
     @overload
@@ -96,10 +96,10 @@ class WorkflowAIClient:
         metadata: Optional[dict[str, Any]] = None,
         retry_delay: int = 5000,
         max_retry_delay: int = 60000,
-        max_retry_count: int = 1
+        max_retry_count: int = 1,
     ) -> AsyncIterator[TaskOutput]: ...
 
-    async def run(
+    async def run(  # noqa: C901
         self,
         task: Task[TaskInput, TaskOutput],
         task_input: TaskInput,
@@ -112,7 +112,7 @@ class WorkflowAIClient:
         metadata: Optional[dict[str, Any]] = None,
         retry_delay: int = 5000,
         max_retry_delay: int = 60000,
-        max_retry_count: int = 1
+        max_retry_count: int = 1,
     ) -> Union[TaskRun[TaskInput, TaskOutput], AsyncIterator[TaskOutput]]:
         await self._auto_register(task)
 
@@ -146,17 +146,17 @@ class WorkflowAIClient:
                     return res.to_domain(task)
                 except HTTPStatusError as e:
                     if e.response.status_code == 404:
-                        raise NotFoundError("Task not found")
+                        raise NotFoundError("Task not found") from e
                     retry_after = e.response.headers.get("Retry-After")
                     if retry_after:
-                        try: 
-                            #for 429 errors this is non-negative decimal
-                            delay = float(retry_after) 
+                        try:
+                            # for 429 errors this is non-negative decimal
+                            delay = float(retry_after)
                         except ValueError:
                             try:
                                 retry_after_date = parsedate_to_datetime(retry_after)
                                 current_time = asyncio.get_event_loop().time()
-                                delay = (retry_after_date.timestamp()- current_time)
+                                delay = retry_after_date.timestamp() - current_time
                             except (TypeError, ValueError, OverflowError):
                                 delay = min(delay * 2, max_retry_delay / 1000)
                         await asyncio.sleep(delay)
@@ -165,19 +165,22 @@ class WorkflowAIClient:
                             delay = min(delay * 2, max_retry_delay / 1000)
                         await asyncio.sleep(delay)
                 retry_count += 1
-        
+
         async def _stream():
             delay = retry_delay / 1000
             retry_count = 0
             while retry_count < max_retry_count:
                 try:
                     async for chunk in self.api.stream(
-                        method="POST", path=route, data=request, returns=RunTaskStreamChunk
+                        method="POST",
+                        path=route,
+                        data=request,
+                        returns=RunTaskStreamChunk,
                     ):
                         yield task.output_class.model_construct(None, **chunk.task_output)
                 except HTTPStatusError as e:
                     if e.response.status_code == 404:
-                        raise NotFoundError("Task not found")
+                        raise NotFoundError("Task not found") from e
                     retry_after = e.response.headers.get("Retry-After")
 
                     if retry_after:
@@ -187,18 +190,19 @@ class WorkflowAIClient:
                             try:
                                 retry_after_date = parsedate_to_datetime(retry_after)
                                 current_time = asyncio.get_event_loop().time()
-                                delay = (retry_after_date.timestamp() - current_time)
+                                delay = retry_after_date.timestamp() - current_time
                             except (TypeError, ValueError, OverflowError):
                                 delay = min(delay * 2, max_retry_delay / 1000)
-                    elif e.response.status_code == 429:
-                        if delay < max_retry_delay / 1000:
+                    elif e.response.status_code == 429 and delay < max_retry_delay / 1000:
                             delay = min(delay * 2, max_retry_delay / 1000)
                     await asyncio.sleep(delay)
                 retry_count += 1
+
         return _stream()
 
     async def import_run(
-        self, run: TaskRun[TaskInput, TaskOutput]
+        self,
+        run: TaskRun[TaskInput, TaskOutput],
     ) -> TaskRun[TaskInput, TaskOutput]:
         await self._auto_register(run.task)
 
@@ -208,7 +212,8 @@ class WorkflowAIClient:
         return res.to_domain(run.task)
 
     async def import_example(
-        self, example: TaskExample[TaskInput, TaskOutput]
+        self,
+        example: TaskExample[TaskInput, TaskOutput],
     ) -> TaskExample[TaskInput, TaskOutput]:
         await self._auto_register(example.task)
 

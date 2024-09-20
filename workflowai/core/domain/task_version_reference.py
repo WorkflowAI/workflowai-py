@@ -13,7 +13,7 @@ class TaskVersionReference(BaseModel):
 
     id: Optional[str] = Field(description="The id of an existing group", default=None)
     iteration: Optional[int] = Field(
-        description="An iteration for an existing group.", default=None
+        description="An iteration for an existing group.", default=None,
     )
     properties: Optional[TaskVersionProperties] = Field(
         description="The properties to evaluate the task schema with. A group will be created if needed",
@@ -40,7 +40,7 @@ class TaskVersionReference(BaseModel):
         )
         if count != 1:
             raise ValueError(
-                "Exactly one of id, iteration or properties must be provided"
+                "Exactly one of id, iteration or properties must be provided",
             )
         return self
 
@@ -63,7 +63,7 @@ class TaskVersionReference(BaseModel):
                 instructions=instructions,
                 max_tokens=max_tokens,
                 **kwargs,
-            )
+            ),
         )
 
     @classmethod

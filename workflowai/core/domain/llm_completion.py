@@ -9,12 +9,12 @@ class LLMCompletion(BaseModel):
     """A raw response from the LLM api"""
 
     messages: list[dict[str, Any]] = Field(
-        description="The raw messages sent to the LLM"
+        description="The raw messages sent to the LLM",
     )
     response: Optional[str] = Field(
-        default=None, description="The raw response from the LLM"
+        default=None, description="The raw response from the LLM",
     )
 
     usage: Optional[LLMUsage] = Field(
-        default=None, description="The usage of the LLM model"
+        default=None, description="The usage of the LLM model",
     )

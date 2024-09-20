@@ -8,6 +8,6 @@ HTMLString = Annotated[
         {
             "type": "string",
             "format": "html",
-        }
+        },
     ),
 ]
