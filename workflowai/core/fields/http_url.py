@@ -50,7 +50,7 @@ def is_valid_http_url(value: str) -> bool:
 
         # Regular expression for validating domain with TLD
         domain_regex = re.compile(
-            r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$"
+            r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$",
         )
         if not domain_regex.match(domain):
             return False  # Invalid domain (no TLD or invalid characters in domain name)

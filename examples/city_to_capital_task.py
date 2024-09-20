@@ -12,7 +12,7 @@ class CityToCapitalTaskInput(BaseModel):
 
 class CityToCapitalTaskOutput(BaseModel):
     capital: str = Field(
-        description="The capital of the specified city", examples=["Tokyo"]
+        description="The capital of the specified city", examples=["Tokyo"],
     )
 
 

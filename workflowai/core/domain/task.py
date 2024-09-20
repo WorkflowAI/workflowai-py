@@ -20,11 +20,11 @@ class Task(BaseModel, Generic[TaskInput, TaskOutput]):
     id: str = ""
     schema_id: int = 0
 
-    input_class: type[TaskInput] = BaseModel  # type: ignore
-    output_class: type[TaskOutput] = BaseModel  # type: ignore
+    input_class: type[TaskInput] = BaseModel  # pyright: ignore [reportAssignmentType]
+    output_class: type[TaskOutput] = BaseModel  # pyright: ignore [reportAssignmentType]
 
     version: TaskVersionReference = Field(
-        default_factory=lambda: TaskVersionReference.with_properties()
+        default_factory=lambda: TaskVersionReference.with_properties(),
     )
 
     created_at: Optional[datetime] = None

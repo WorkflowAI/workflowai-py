@@ -16,12 +16,12 @@ def fixture_path(*components: str, relative: bool = False) -> str:
 
 
 def fixture_text(*components: str) -> str:
-    with open(fixture_path(*components), "r") as f:
+    with open(fixture_path(*components)) as f:
         return f.read()
 
 
-def fixtures_json(*components: str, bson: bool = False) -> Any:
-    with open(fixture_path(*components), "r") as f:
+def fixtures_json(*components: str) -> Any:
+    with open(fixture_path(*components)) as f:
         return json.load(f)
 
 

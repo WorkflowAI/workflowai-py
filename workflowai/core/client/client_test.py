@@ -14,7 +14,7 @@ from workflowai.core.domain.task_run import TaskRun
 from workflowai.core.domain.task_version import TaskVersion
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def client():
     return WorkflowAIClient(endpoint="http://localhost:8000", api_key="test")
 
@@ -29,7 +29,7 @@ class TestRegister:
                 "name": "Hello",
                 "input_schema": {"version": "1", "json_schema": {}},
                 "output_schema": {"version": "1", "json_schema": {}},
-            }
+            },
         )
         task = HelloTask()
         assert task.id == "", "sanity"
@@ -69,13 +69,15 @@ class TestRun:
                     b'data: {"run_id":"1","task_output":{"message":""}}',
                     b'data: {"run_id":"1","task_output":{"message":"hel"}}',
                     b'data: {"run_id":"1","task_output":{"message":"hello"}}',
-                ]
-            )
+                ],
+            ),
         )
         task = HelloTask(id="123", schema_id=1)
 
         streamed = await client.run(
-            task, task_input=HelloTaskInput(name="Alice"), stream=True
+            task,
+            task_input=HelloTaskInput(name="Alice"),
+            stream=True,
         )
         chunks = [chunk async for chunk in streamed]
 
@@ -106,7 +108,7 @@ class TestRun:
             "stream": False,
             "use_cache": "when_available",
         }
-        
+
     async def test_success_with_headers(self, httpx_mock: HTTPXMock, client: Client):
         httpx_mock.add_response(json=fixtures_json("task_run.json"))
         task = HelloTask(id="123", schema_id=1)
@@ -123,7 +125,7 @@ class TestRun:
             "x-workflowai-language": "python",
             "x-workflowai-version": importlib.metadata.version("workflowai"),
         }
-        
+
         body = json.loads(reqs[0].content)
         assert body == {
             "task_input": {"name": "Alice"},
@@ -146,9 +148,10 @@ class TestRun:
         assert task_run.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
 
         reqs = httpx_mock.get_requests()
-        assert len(reqs) == 2  
+        assert len(reqs) == 2
         assert reqs[0].url == "http://localhost:8000/tasks/123/schemas/1/run"
         assert reqs[1].url == "http://localhost:8000/tasks/123/schemas/1/run"
+
 
 class TestImportRun:
     async def test_success(self, httpx_mock: HTTPXMock, client: Client):
@@ -214,6 +217,7 @@ class TestImportExample:
             "task_input": {"name": "Alice"},
             "task_output": {"message": "hello"},
         }
+
 
 class TestDeployVersion:
     async def test_success(self, httpx_mock: HTTPXMock, client: Client):

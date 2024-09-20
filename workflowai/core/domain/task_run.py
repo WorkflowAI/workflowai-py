@@ -36,7 +36,7 @@ class TaskRun(BaseModel, Generic[TaskInput, TaskOutput]):
     version: TaskVersion
 
     from_cache: bool = Field(
-        default=False, description="Whether the task run was loaded from the cache"
+        default=False, description="Whether the task run was loaded from the cache",
     )
 
     # if available, the id of an example that match the task run input

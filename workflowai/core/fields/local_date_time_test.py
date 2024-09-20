@@ -1,14 +1,14 @@
 from datetime import date, datetime, time
-from zoneinfo import ZoneInfo
 
 import pytest
 from pydantic import BaseModel
+from zoneinfo import ZoneInfo
 
 from .local_date_time import DatetimeLocal
 
 
 @pytest.mark.parametrize(
-    "date, local_time, timezone, expected_datetime",
+    ("date", "local_time", "timezone", "expected_datetime"),
     [
         (
             date(2022, 5, 15),
@@ -31,7 +31,10 @@ from .local_date_time import DatetimeLocal
     ],
 )
 def test_datetime_local_to_datetime_parametrized(
-    date: date, local_time: time, timezone: str, expected_datetime: datetime
+    date: date,
+    local_time: time,
+    timezone: str,
+    expected_datetime: datetime,
 ) -> None:
     """Test 'datetime_local_to_datetime' function. It should return a 'datetime' object from DatetimeLocal object."""
 
@@ -75,7 +78,7 @@ def test_local_date_time_json_schema() -> None:
                 "required": ["date", "local_time", "timezone"],
                 "title": "DatetimeLocal",
                 "type": "object",
-            }
+            },
         },
         "properties": {"local_datetime": {"$ref": "#/$defs/DatetimeLocal"}},
         "required": ["local_datetime"],
@@ -90,7 +93,7 @@ def test_local_date_time_dump_sanity() -> None:
             date=date(2022, 5, 15),
             local_time=time(15, 30),
             timezone=ZoneInfo("Europe/London"),
-        )
+        ),
     )
     dumped = model.model_dump()
     assert dumped == {
@@ -98,7 +101,7 @@ def test_local_date_time_dump_sanity() -> None:
             "date": date(2022, 5, 15),
             "local_time": time(15, 30),
             "timezone": "Europe/London",
-        }
+        },
     }
 
     sanity = ModelWithDatetimeLocal.model_validate(dumped)

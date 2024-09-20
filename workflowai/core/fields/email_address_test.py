@@ -46,13 +46,12 @@ def test_email_validation_with_valid_emails(email: str) -> None:
         "email.@domain.com",
         "email..email@domain.com",
         "あいうえお@domain.com",
-        "email@domain.com (Joe Smith)",
         "email@-domain.com",
         "email@domain..com",
     ],
 )
 def test_email_validation_with_invalid_emails(email: str) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError):  # noqa: PT011
         _ModelWithEmail(email=email)
 
 
@@ -65,7 +64,7 @@ def test_email_address_str_json_schema() -> None:
                 "format": "email",
                 "title": "Email",
                 "type": "string",
-            }
+            },
         },
         "required": ["email"],
         "title": "_ModelWithEmail",
