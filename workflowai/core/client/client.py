@@ -26,7 +26,7 @@ from workflowai.core.client.models import (
     TaskRunResponse,
 )
 from workflowai.core.domain.cache_usage import CacheUsage
-from workflowai.core.domain.errors import NotFoundError
+from workflowai.core.domain.errors import BaseError, WorkflowAIError
 from workflowai.core.domain.task import Task, TaskInput, TaskOutput
 from workflowai.core.domain.task_example import TaskExample
 from workflowai.core.domain.task_run import TaskRun
@@ -146,7 +146,13 @@ class WorkflowAIClient:
                     return res.to_domain(task)
                 except HTTPStatusError as e:
                     if e.response.status_code == 404:
-                        raise NotFoundError("Task not found") from e
+                        raise WorkflowAIError(
+                            error=BaseError(
+                                status_code=404,
+                                code="not_found",
+                                message="Task not found",
+                            ),
+                        ) from e
                     retry_after = e.response.headers.get("Retry-After")
                     if retry_after:
                         try:
@@ -180,7 +186,7 @@ class WorkflowAIClient:
                         yield task.output_class.model_construct(None, **chunk.task_output)
                 except HTTPStatusError as e:
                     if e.response.status_code == 404:
-                        raise NotFoundError("Task not found") from e
+                        raise WorkflowAIError(error=BaseError(message="Task not found")) from e
                     retry_after = e.response.headers.get("Retry-After")
 
                     if retry_after:
@@ -194,7 +200,7 @@ class WorkflowAIClient:
                             except (TypeError, ValueError, OverflowError):
                                 delay = min(delay * 2, max_retry_delay / 1000)
                     elif e.response.status_code == 429 and delay < max_retry_delay / 1000:
-                            delay = min(delay * 2, max_retry_delay / 1000)
+                        delay = min(delay * 2, max_retry_delay / 1000)
                     await asyncio.sleep(delay)
                 retry_count += 1
 

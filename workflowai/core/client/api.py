@@ -1,7 +1,10 @@
 from typing import Any, AsyncIterator, Literal, Optional, TypeVar, Union, overload
 
 import httpx
-from pydantic import BaseModel, TypeAdapter
+from pydantic import BaseModel, TypeAdapter, ValidationError
+
+from workflowai.core.client.utils import split_chunks
+from workflowai.core.domain.errors import BaseError, ErrorResponse, WorkflowAIError
 
 # A type for return values
 _R = TypeVar("_R")
@@ -24,6 +27,7 @@ class APIClient:
                 "Authorization": f"Bearer {self.api_key}",
                 **(self.source_headers or {}),
             },
+            timeout=120.0,
         )
         return client
 
@@ -84,6 +88,20 @@ class APIClient:
             response = await client.delete(path)
             response.raise_for_status()
 
+    def _extract_error(self, data: Union[bytes, str], exception: Optional[Exception] = None) -> WorkflowAIError:
+        try:
+            res = ErrorResponse.model_validate_json(data)
+            return WorkflowAIError(res.error, task_run_id=res.task_run_id)
+        except ValidationError:
+            raise WorkflowAIError(
+                error=BaseError(
+                    message="Unknown error" if exception is None else str(exception),
+                    details={
+                        "raw": str(data),
+                    },
+                ),
+            ) from exception
+
     async def stream(
         self,
         method: Literal["GET", "POST"],
@@ -91,14 +109,16 @@ class APIClient:
         data: BaseModel,
         returns: type[_M],
     ) -> AsyncIterator[_M]:
-        # TODO: error handling
-        async with self._client() as client:  # noqa: SIM117
-            async with client.stream(
-                method,
-                path,
-                content=data.model_dump_json(exclude_none=True),
-                headers={"Content-Type": "application/json"},
-            ) as response:
-                async for chunk in response.aiter_bytes():
-                    stripped = chunk.removeprefix(b"data: ").removesuffix(b"\n\n")
-                    yield returns.model_validate_json(stripped)
+        async with self._client() as client, client.stream(
+            method,
+            path,
+            content=data.model_dump_json(exclude_none=True),
+            headers={"Content-Type": "application/json"},
+        ) as response:
+            async for chunk in response.aiter_bytes():
+                payload = ""
+                try:
+                    for payload in split_chunks(chunk):
+                        yield returns.model_validate_json(payload)
+                except ValidationError as e:
+                    raise self._extract_error(payload, e) from None
