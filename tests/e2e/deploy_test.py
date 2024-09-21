@@ -28,14 +28,18 @@ async def test_deploy_task(wai: workflowai.Client):
 
     # Run using the environment and the same input
     task_run2 = await wai.run(
-        task, task_input=CityToCapitalTaskInput(city="Osaka"), environment="dev",
+        task,
+        task_input=CityToCapitalTaskInput(city="Osaka"),
+        environment="dev",
     )
     # IDs will match since we are using cache
     assert task_run.id == task_run2.id
 
     # Run using the environment and a different input
     task_run3 = await wai.run(
-        task, task_input=CityToCapitalTaskInput(city="Toulouse"), environment="dev",
+        task,
+        task_input=CityToCapitalTaskInput(city="Toulouse"),
+        environment="dev",
     )
     assert task_run3.task_output.capital == "Paris"
     assert task_run3.id != task_run2.id

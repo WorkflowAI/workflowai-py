@@ -2,7 +2,7 @@ from typing import Optional
 
 from workflowai.core.client import Client as Client
 from workflowai.core.domain.cache_usage import CacheUsage as CacheUsage
-from workflowai.core.domain.errors import NotFoundError as NotFoundError
+from workflowai.core.domain.errors import WorkflowAIError as WorkflowAIError
 from workflowai.core.domain.llm_completion import LLMCompletion as LLMCompletion
 from workflowai.core.domain.task import Task as Task
 from workflowai.core.domain.task_evaluation import TaskEvaluation as TaskEvaluation
