@@ -1,7 +1,6 @@
-import asyncio
 import importlib.metadata
 import os
-from email.utils import parsedate_to_datetime
+from collections.abc import Awaitable, Callable
 from typing import (
     Any,
     AsyncIterator,
@@ -25,6 +24,7 @@ from workflowai.core.client.models import (
     RunTaskStreamChunk,
     TaskRunResponse,
 )
+from workflowai.core.client.utils import build_retryable_wait
 from workflowai.core.domain.cache_usage import CacheUsage
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
 from workflowai.core.domain.task import Task, TaskInput, TaskOutput
@@ -77,7 +77,6 @@ class WorkflowAIClient:
         use_cache: CacheUsage = "when_available",
         labels: Optional[set[str]] = None,
         metadata: Optional[dict[str, Any]] = None,
-        retry_delay: int = 5000,
         max_retry_delay: int = 60000,
         max_retry_count: int = 1,
     ) -> TaskRun[TaskInput, TaskOutput]: ...
@@ -94,12 +93,11 @@ class WorkflowAIClient:
         use_cache: CacheUsage = "when_available",
         labels: Optional[set[str]] = None,
         metadata: Optional[dict[str, Any]] = None,
-        retry_delay: int = 5000,
         max_retry_delay: int = 60000,
         max_retry_count: int = 1,
     ) -> AsyncIterator[TaskOutput]: ...
 
-    async def run(  # noqa: C901
+    async def run(
         self,
         task: Task[TaskInput, TaskOutput],
         task_input: TaskInput,
@@ -110,7 +108,6 @@ class WorkflowAIClient:
         use_cache: CacheUsage = "when_available",
         labels: Optional[set[str]] = None,
         metadata: Optional[dict[str, Any]] = None,
-        retry_delay: int = 5000,
         max_retry_delay: int = 60000,
         max_retry_count: int = 1,
     ) -> Union[TaskRun[TaskInput, TaskOutput], AsyncIterator[TaskOutput]]:
@@ -135,76 +132,62 @@ class WorkflowAIClient:
         )
 
         route = f"/tasks/{task.id}/schemas/{task.schema_id}/run"
+        should_retry, wait_for_exception = build_retryable_wait(max_retry_delay, max_retry_count)
 
         if not stream:
-            res = None
-            delay = retry_delay / 1000
-            retry_count = 0
-            while retry_count < max_retry_count:
-                try:
-                    res = await self.api.post(route, request, returns=TaskRunResponse)
-                    return res.to_domain(task)
-                except HTTPStatusError as e:
-                    if e.response.status_code == 404:
-                        raise WorkflowAIError(
-                            error=BaseError(
-                                status_code=404,
-                                code="not_found",
-                                message="Task not found",
-                            ),
-                        ) from e
-                    retry_after = e.response.headers.get("Retry-After")
-                    if retry_after:
-                        try:
-                            # for 429 errors this is non-negative decimal
-                            delay = float(retry_after)
-                        except ValueError:
-                            try:
-                                retry_after_date = parsedate_to_datetime(retry_after)
-                                current_time = asyncio.get_event_loop().time()
-                                delay = retry_after_date.timestamp() - current_time
-                            except (TypeError, ValueError, OverflowError):
-                                delay = min(delay * 2, max_retry_delay / 1000)
-                        await asyncio.sleep(delay)
-                    elif e.response.status_code == 429:
-                        if delay < max_retry_delay / 1000:
-                            delay = min(delay * 2, max_retry_delay / 1000)
-                        await asyncio.sleep(delay)
-                retry_count += 1
+            return await self._retriable_run(
+                route,
+                request,
+                task,
+                should_retry=should_retry,
+                wait_for_exception=wait_for_exception,
+            )
 
-        async def _stream():
-            delay = retry_delay / 1000
-            retry_count = 0
-            while retry_count < max_retry_count:
-                try:
-                    async for chunk in self.api.stream(
-                        method="POST",
-                        path=route,
-                        data=request,
-                        returns=RunTaskStreamChunk,
-                    ):
-                        yield task.output_class.model_construct(None, **chunk.task_output)
-                except HTTPStatusError as e:
-                    if e.response.status_code == 404:
-                        raise WorkflowAIError(error=BaseError(message="Task not found")) from e
-                    retry_after = e.response.headers.get("Retry-After")
+        return self._retriable_stream(
+            route,
+            request,
+            task,
+            should_retry=should_retry,
+            wait_for_exception=wait_for_exception,
+        )
 
-                    if retry_after:
-                        try:
-                            delay = float(retry_after)
-                        except ValueError:
-                            try:
-                                retry_after_date = parsedate_to_datetime(retry_after)
-                                current_time = asyncio.get_event_loop().time()
-                                delay = retry_after_date.timestamp() - current_time
-                            except (TypeError, ValueError, OverflowError):
-                                delay = min(delay * 2, max_retry_delay / 1000)
-                    elif e.response.status_code == 429 and delay < max_retry_delay / 1000:
-                        delay = min(delay * 2, max_retry_delay / 1000)
-                    await asyncio.sleep(delay)
-                retry_count += 1
+    async def _retriable_run(
+        self,
+        route: str,
+        request: RunRequest,
+        task: Task[TaskInput, TaskOutput],
+        should_retry: Callable[[], bool],
+        wait_for_exception: Callable[[HTTPStatusError], Awaitable[None]],
+    ):
+        while should_retry():
+            try:
+                res = await self.api.post(route, request, returns=TaskRunResponse)
+                return res.to_domain(task)
+            except HTTPStatusError as e:  # noqa: PERF203
+                await wait_for_exception(e)
 
-        return _stream()
+        raise WorkflowAIError(error=BaseError(message="max retries reached"))
+
+    async def _retriable_stream(
+        self,
+        route: str,
+        request: RunRequest,
+        task: Task[TaskInput, TaskOutput],
+        should_retry: Callable[[], bool],
+        wait_for_exception: Callable[[HTTPStatusError], Awaitable[None]],
+    ):
+        while should_retry():
+            try:
+                async for chunk in self.api.stream(
+                    method="POST",
+                    path=route,
+                    data=request,
+                    returns=RunTaskStreamChunk,
+                ):
+                    yield task.output_class.model_construct(None, **chunk.task_output)
+                return
+            except HTTPStatusError as e:  # noqa: PERF203
+                await wait_for_exception(e)
 
     async def import_run(
         self,

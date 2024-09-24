@@ -140,7 +140,7 @@ class TestRun:
     async def test_run_retries_on_too_many_requests(self, httpx_mock: HTTPXMock, client: Client):
         task = HelloTask(id="123", schema_id=1)
 
-        httpx_mock.add_response(status_code=429)
+        httpx_mock.add_response(headers={"Retry-After": "0.01"}, status_code=429)
         httpx_mock.add_response(json=fixtures_json("task_run.json"))
 
         task_run = await client.run(task, task_input=HelloTaskInput(name="Alice"), max_retry_count=5)
