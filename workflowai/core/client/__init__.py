@@ -33,9 +33,8 @@ class Client(Protocol):
         use_cache: "cache_usage.CacheUsage" = "when_available",
         labels: Optional[set[str]] = None,
         metadata: Optional[dict[str, Any]] = None,
-        retry_delay: int = 5000,
-        max_retry_delay: int = 60000,
-        max_retry_count: int = 1,
+        max_retry_delay: float = 60,
+        max_retry_count: float = 1,
     ) -> "task_run.TaskRun[task.TaskInput, task.TaskOutput]": ...
 
     @overload
@@ -50,9 +49,8 @@ class Client(Protocol):
         use_cache: "cache_usage.CacheUsage" = "when_available",
         labels: Optional[set[str]] = None,
         metadata: Optional[dict[str, Any]] = None,
-        retry_delay: int = 5000,
-        max_retry_delay: int = 60000,
-        max_retry_count: int = 1,
+        max_retry_delay: float = 60,
+        max_retry_count: float = 1,
     ) -> AsyncIterator["task.TaskOutput"]: ...
 
     async def run(
@@ -66,9 +64,8 @@ class Client(Protocol):
         use_cache: "cache_usage.CacheUsage" = "when_available",
         labels: Optional[set[str]] = None,
         metadata: Optional[dict[str, Any]] = None,
-        retry_delay: int = 5000,
-        max_retry_delay: int = 60000,
-        max_retry_count: int = 1,
+        max_retry_delay: float = 60,
+        max_retry_count: float = 1,
     ) -> Union[
         "task_run.TaskRun[task.TaskInput, task.TaskOutput]",
         AsyncIterator["task.TaskOutput"],
