@@ -77,8 +77,8 @@ class WorkflowAIClient:
         use_cache: CacheUsage = "when_available",
         labels: Optional[set[str]] = None,
         metadata: Optional[dict[str, Any]] = None,
-        max_retry_delay: int = 60000,
-        max_retry_count: int = 1,
+        max_retry_delay: float = 60,
+        max_retry_count: float = 1,
     ) -> TaskRun[TaskInput, TaskOutput]: ...
 
     @overload
@@ -93,8 +93,8 @@ class WorkflowAIClient:
         use_cache: CacheUsage = "when_available",
         labels: Optional[set[str]] = None,
         metadata: Optional[dict[str, Any]] = None,
-        max_retry_delay: int = 60000,
-        max_retry_count: int = 1,
+        max_retry_delay: float = 60,
+        max_retry_count: float = 1,
     ) -> AsyncIterator[TaskOutput]: ...
 
     async def run(
@@ -108,8 +108,8 @@ class WorkflowAIClient:
         use_cache: CacheUsage = "when_available",
         labels: Optional[set[str]] = None,
         metadata: Optional[dict[str, Any]] = None,
-        max_retry_delay: int = 60000,
-        max_retry_count: int = 1,
+        max_retry_delay: float = 60,
+        max_retry_count: float = 1,
     ) -> Union[TaskRun[TaskInput, TaskOutput], AsyncIterator[TaskOutput]]:
         await self._auto_register(task)
 
