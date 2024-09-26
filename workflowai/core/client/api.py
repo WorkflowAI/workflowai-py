@@ -1,3 +1,4 @@
+import json
 from typing import Any, AsyncIterator, Literal, Optional, TypeVar, Union, overload
 
 import httpx
@@ -34,7 +35,7 @@ class APIClient:
     async def get(self, path: str, returns: type[_R], query: Union[dict[str, Any], None] = None) -> _R:
         async with self._client() as client:
             response = await client.get(path, params=query)
-            response.raise_for_status()
+            await self.raise_for_status(response)
             return TypeAdapter(returns).validate_python(response.json())
 
     @overload
@@ -55,7 +56,7 @@ class APIClient:
                 content=data.model_dump_json(exclude_none=True),
                 headers={"Content-Type": "application/json"},
             )
-            response.raise_for_status()
+            await self.raise_for_status(response)
             if not returns:
                 return None
             return TypeAdapter(returns).validate_python(response.json())
@@ -78,7 +79,7 @@ class APIClient:
                 content=data.model_dump_json(exclude_none=True),
                 headers={"Content-Type": "application/json"},
             )
-            response.raise_for_status()
+            await self.raise_for_status(response)
             if not returns:
                 return None
             return TypeAdapter(returns).validate_python(response.json())
@@ -86,10 +87,14 @@ class APIClient:
     async def delete(self, path: str) -> None:
         async with self._client() as client:
             response = await client.delete(path)
-            response.raise_for_status()
+            await self.raise_for_status(response)
 
     def _extract_error(self, data: Union[bytes, str], exception: Optional[Exception] = None) -> WorkflowAIError:
         try:
+            data_dict = json.loads(data)
+            if next(iter(data_dict.keys())) == "detail":
+                data_dict = {"error": {"detail": data_dict["detail"]}}
+                data = json.dumps(data_dict)
             res = ErrorResponse.model_validate_json(data)
             return WorkflowAIError(res.error, task_run_id=res.task_run_id)
         except ValidationError:
@@ -122,3 +127,7 @@ class APIClient:
                         yield returns.model_validate_json(payload)
                 except ValidationError as e:
                     raise self._extract_error(payload, e) from None
+
+    async def raise_for_status(self, response: httpx.Response):
+        if response.status_code != 200:
+            raise self._extract_error(response.content) from None

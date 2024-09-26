@@ -1,3 +1,4 @@
+import json
 from typing import Any, Literal, Optional, Union
 
 from pydantic import BaseModel
@@ -71,3 +72,13 @@ class WorkflowAIError(Exception):
     def __init__(self, error: BaseError, task_run_id: Optional[str] = None):
         self.error = error
         self.task_run_id = task_run_id
+
+    def __str__(self):
+        error_dict = {
+            "message": self.error.message,
+            "code": self.error.code,
+            "status_code": self.error.status_code,
+            "details": self.error.details,
+            "task_run_id": self.task_run_id,
+        }
+        return json.dumps(error_dict, indent=4)
