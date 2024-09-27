@@ -81,4 +81,4 @@ class WorkflowAIError(Exception):
             "details": self.error.details,
             "task_run_id": self.task_run_id,
         }
-        return json.dumps(error_dict, indent=4)
+        return f"WorkflowAIError :  {json.dumps(error_dict, indent=4)}, Task Run ID : {self.task_run_id}"
