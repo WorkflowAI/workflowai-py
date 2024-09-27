@@ -1,4 +1,4 @@
-import json
+from json import JSONDecodeError
 from typing import Any, AsyncIterator, Literal, Optional, TypeVar, Union, overload
 
 import httpx
@@ -91,13 +91,9 @@ class APIClient:
 
     def _extract_error(self, data: Union[bytes, str], exception: Optional[Exception] = None) -> WorkflowAIError:
         try:
-            data_dict = json.loads(data)
-            if next(iter(data_dict.keys())) == "detail":
-                data_dict = {"error": {"detail": data_dict["detail"]}}
-                data = json.dumps(data_dict)
             res = ErrorResponse.model_validate_json(data)
             return WorkflowAIError(res.error, task_run_id=res.task_run_id)
-        except ValidationError:
+        except JSONDecodeError:
             raise WorkflowAIError(
                 error=BaseError(
                     message="Unknown error" if exception is None else str(exception),
@@ -129,5 +125,25 @@ class APIClient:
                     raise self._extract_error(payload, e) from None
 
     async def raise_for_status(self, response: httpx.Response):
-        if response.status_code != 200:
-            raise self._extract_error(response.content) from None
+        if response.status_code < 200 and response.status_code >= 300:
+            try:
+                response_json = response.json()
+                r_error = response_json.get("error",{})
+                error_message = response_json.get("detail", {}) or r_error.get("message", "Unknown Error")
+                details =  r_error.get("details", {})
+                error_code = r_error.get("code", "unknown_error")
+                status_code = r_error.get("status_code", response.status_code)
+            except JSONDecodeError:
+                error_message = "Unknown error"
+                details = {"raw": response.content.decode()}
+                error_code ="unknown_error"
+                status_code = response.status_code
+
+            raise WorkflowAIError(
+                error=BaseError(
+                    message=error_message,
+                    details=details,
+                    status_code=status_code,
+                    code=error_code,
+                ),
+            ) from None
