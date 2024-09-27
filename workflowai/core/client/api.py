@@ -89,10 +89,15 @@ class APIClient:
             response = await client.delete(path)
             await self.raise_for_status(response)
 
-    def _extract_error(self, data: Union[bytes, str], exception: Optional[Exception] = None) -> WorkflowAIError:
+    def _extract_error(
+        self,
+        response: httpx.Response,
+        data: Union[bytes, str],
+        exception: Optional[Exception] = None,
+    ) -> WorkflowAIError:
         try:
             res = ErrorResponse.model_validate_json(data)
-            return WorkflowAIError(res.error, task_run_id=res.task_run_id)
+            return WorkflowAIError(error=res.error, task_run_id=res.task_run_id, response=response)
         except JSONDecodeError:
             raise WorkflowAIError(
                 error=BaseError(
@@ -101,6 +106,7 @@ class APIClient:
                         "raw": str(data),
                     },
                 ),
+                response=response,
             ) from exception
 
     async def stream(
@@ -122,28 +128,8 @@ class APIClient:
                     for payload in split_chunks(chunk):
                         yield returns.model_validate_json(payload)
                 except ValidationError as e:
-                    raise self._extract_error(payload, e) from None
+                    raise self._extract_error(response, payload, e) from None
 
     async def raise_for_status(self, response: httpx.Response):
-        if response.status_code < 200 and response.status_code >= 300:
-            try:
-                response_json = response.json()
-                r_error = response_json.get("error",{})
-                error_message = response_json.get("detail", {}) or r_error.get("message", "Unknown Error")
-                details =  r_error.get("details", {})
-                error_code = r_error.get("code", "unknown_error")
-                status_code = r_error.get("status_code", response.status_code)
-            except JSONDecodeError:
-                error_message = "Unknown error"
-                details = {"raw": response.content.decode()}
-                error_code ="unknown_error"
-                status_code = response.status_code
-
-            raise WorkflowAIError(
-                error=BaseError(
-                    message=error_message,
-                    details=details,
-                    status_code=status_code,
-                    code=error_code,
-                ),
-            ) from None
+        if response.status_code < 200 or response.status_code >= 300:
+            raise WorkflowAIError.from_response(response) from None
