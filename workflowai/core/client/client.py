@@ -10,8 +10,6 @@ from typing import (
     overload,
 )
 
-from httpx import HTTPStatusError
-
 from workflowai.core.client.api import APIClient
 from workflowai.core.client.models import (
     CreateTaskRequest,
@@ -157,16 +155,18 @@ class WorkflowAIClient:
         request: RunRequest,
         task: Task[TaskInput, TaskOutput],
         should_retry: Callable[[], bool],
-        wait_for_exception: Callable[[HTTPStatusError], Awaitable[None]],
+        wait_for_exception: Callable[[WorkflowAIError], Awaitable[None]],
     ):
+        last_error = None
         while should_retry():
             try:
                 res = await self.api.post(route, request, returns=TaskRunResponse)
                 return res.to_domain(task)
-            except HTTPStatusError as e:  # noqa: PERF203
+            except WorkflowAIError as e:  # noqa: PERF203
+                last_error = e
                 await wait_for_exception(e)
 
-        raise WorkflowAIError(error=BaseError(message="max retries reached"))
+        raise last_error or WorkflowAIError(error=BaseError(message="max retries reached"), response=None)
 
     async def _retriable_stream(
         self,
@@ -174,7 +174,7 @@ class WorkflowAIClient:
         request: RunRequest,
         task: Task[TaskInput, TaskOutput],
         should_retry: Callable[[], bool],
-        wait_for_exception: Callable[[HTTPStatusError], Awaitable[None]],
+        wait_for_exception: Callable[[WorkflowAIError], Awaitable[None]],
     ):
         while should_retry():
             try:
@@ -186,7 +186,7 @@ class WorkflowAIClient:
                 ):
                     yield task.output_class.model_construct(None, **chunk.task_output)
                 return
-            except HTTPStatusError as e:  # noqa: PERF203
+            except WorkflowAIError as e:  # noqa: PERF203
                 await wait_for_exception(e)
 
     async def import_run(

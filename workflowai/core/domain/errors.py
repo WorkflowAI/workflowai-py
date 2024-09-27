@@ -70,7 +70,7 @@ class ErrorResponse(BaseModel):
 
 
 class WorkflowAIError(Exception):
-    def __init__(self, response:Response, error: BaseError, task_run_id: Optional[str] = None):
+    def __init__(self, response: Optional[Response], error: BaseError, task_run_id: Optional[str] = None):
         self.error = error
         self.task_run_id = task_run_id
         self.response = response

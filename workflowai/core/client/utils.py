@@ -8,8 +8,6 @@ from json import JSONDecodeError
 from time import time
 from typing import Any, Optional
 
-from httpx import HTTPStatusError
-
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
 
 delimiter = re.compile(r'\}\n\ndata: \{"')
@@ -59,7 +57,10 @@ def build_retryable_wait(
     def _should_retry():
         return retry_count < max_retry_count and _leftover_delay() >= 0
 
-    async def _wait_for_exception(e: HTTPStatusError):
+    async def _wait_for_exception(e: WorkflowAIError):
+        if not e.response:
+            raise e
+
         nonlocal retry_count
         retry_after = retry_after_to_delay_seconds(e.response.headers.get("Retry-After"))
         leftover_delay = _leftover_delay()
@@ -85,6 +86,7 @@ def build_retryable_wait(
                     status_code=status_code,
                     code=error_code,
                 ),
+                response=e.response,
             ) from None
 
         await asyncio.sleep(retry_after)
