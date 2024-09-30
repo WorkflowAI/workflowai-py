@@ -1,3 +1,4 @@
+from json import JSONDecodeError
 from typing import Any, AsyncIterator, Literal, Optional, TypeVar, Union, overload
 
 import httpx
@@ -34,7 +35,7 @@ class APIClient:
     async def get(self, path: str, returns: type[_R], query: Union[dict[str, Any], None] = None) -> _R:
         async with self._client() as client:
             response = await client.get(path, params=query)
-            response.raise_for_status()
+            await self.raise_for_status(response)
             return TypeAdapter(returns).validate_python(response.json())
 
     @overload
@@ -55,7 +56,7 @@ class APIClient:
                 content=data.model_dump_json(exclude_none=True),
                 headers={"Content-Type": "application/json"},
             )
-            response.raise_for_status()
+            await self.raise_for_status(response)
             if not returns:
                 return None
             return TypeAdapter(returns).validate_python(response.json())
@@ -78,7 +79,7 @@ class APIClient:
                 content=data.model_dump_json(exclude_none=True),
                 headers={"Content-Type": "application/json"},
             )
-            response.raise_for_status()
+            await self.raise_for_status(response)
             if not returns:
                 return None
             return TypeAdapter(returns).validate_python(response.json())
@@ -86,13 +87,18 @@ class APIClient:
     async def delete(self, path: str) -> None:
         async with self._client() as client:
             response = await client.delete(path)
-            response.raise_for_status()
+            await self.raise_for_status(response)
 
-    def _extract_error(self, data: Union[bytes, str], exception: Optional[Exception] = None) -> WorkflowAIError:
+    def _extract_error(
+        self,
+        response: httpx.Response,
+        data: Union[bytes, str],
+        exception: Optional[Exception] = None,
+    ) -> WorkflowAIError:
         try:
             res = ErrorResponse.model_validate_json(data)
-            return WorkflowAIError(res.error, task_run_id=res.task_run_id)
-        except ValidationError:
+            return WorkflowAIError(error=res.error, task_run_id=res.task_run_id, response=response)
+        except JSONDecodeError:
             raise WorkflowAIError(
                 error=BaseError(
                     message="Unknown error" if exception is None else str(exception),
@@ -100,6 +106,7 @@ class APIClient:
                         "raw": str(data),
                     },
                 ),
+                response=response,
             ) from exception
 
     async def stream(
@@ -121,4 +128,8 @@ class APIClient:
                     for payload in split_chunks(chunk):
                         yield returns.model_validate_json(payload)
                 except ValidationError as e:
-                    raise self._extract_error(payload, e) from None
+                    raise self._extract_error(response, payload, e) from None
+
+    async def raise_for_status(self, response: httpx.Response):
+        if response.status_code < 200 or response.status_code >= 300:
+            raise WorkflowAIError.from_response(response) from None

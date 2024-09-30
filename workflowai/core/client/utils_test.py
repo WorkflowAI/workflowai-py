@@ -6,6 +6,7 @@ from freezegun import freeze_time
 from httpx import HTTPStatusError
 
 from workflowai.core.client.utils import build_retryable_wait, retry_after_to_delay_seconds, split_chunks
+from workflowai.core.domain.errors import WorkflowAIError
 
 
 @pytest.mark.parametrize(
@@ -42,7 +43,7 @@ class TestBuildRetryableWait:
         response.headers = {"Retry-After": "0.01"}
         return HTTPStatusError(message="", request=Mock(), response=response)
 
-    async def test_should_retry_count(self, request_error: HTTPStatusError):
+    async def test_should_retry_count(self, request_error: WorkflowAIError):
         should_retry, wait_for_exception = build_retryable_wait(60, 1)
         assert should_retry()
         await wait_for_exception(request_error)

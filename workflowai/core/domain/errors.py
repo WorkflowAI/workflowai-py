@@ -1,5 +1,7 @@
+from json import JSONDecodeError
 from typing import Any, Literal, Optional, Union
 
+from httpx import Response
 from pydantic import BaseModel
 
 ProviderErrorCode = Literal[
@@ -68,6 +70,39 @@ class ErrorResponse(BaseModel):
 
 
 class WorkflowAIError(Exception):
-    def __init__(self, error: BaseError, task_run_id: Optional[str] = None):
+    def __init__(self, response: Optional[Response], error: BaseError, task_run_id: Optional[str] = None):
         self.error = error
         self.task_run_id = task_run_id
+        self.response = response
+
+    def __str__(self):
+        return f"WorkflowAIError : [{self.error.code}] ({self.error.status_code}): [{self.error.message}]"
+
+    @classmethod
+    def from_response(cls, response: Response):
+        try:
+            response_json = response.json()
+            r_error = response_json.get("error",{})
+            error_message = response_json.get("detail", {}) or r_error.get("message", "Unknown Error")
+            details =  r_error.get("details", {})
+            error_code = r_error.get("code", "unknown_error")
+            status_code = response.status_code
+            task_run_id = r_error.get("task_run_id", None)
+        except JSONDecodeError:
+            error_message = "Unknown error"
+            details = {"raw": response.content.decode()}
+            error_code ="unknown_error"
+            status_code = response.status_code
+            task_run_id=None
+
+        return cls(
+            response=response,
+            error=BaseError(
+                message=error_message,
+                details=details,
+                status_code=status_code,
+                code=error_code,
+            ),
+            task_run_id=task_run_id,
+        )
+

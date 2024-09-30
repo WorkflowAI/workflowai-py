@@ -4,10 +4,11 @@
 import asyncio
 import re
 from email.utils import parsedate_to_datetime
+from json import JSONDecodeError
 from time import time
 from typing import Any, Optional
 
-from httpx import HTTPStatusError
+from workflowai.core.domain.errors import BaseError, WorkflowAIError
 
 delimiter = re.compile(r'\}\n\ndata: \{"')
 
@@ -56,13 +57,38 @@ def build_retryable_wait(
     def _should_retry():
         return retry_count < max_retry_count and _leftover_delay() >= 0
 
-    async def _wait_for_exception(e: HTTPStatusError):
+    async def _wait_for_exception(e: WorkflowAIError):
+        if not e.response:
+            raise e
+
         nonlocal retry_count
         retry_after = retry_after_to_delay_seconds(e.response.headers.get("Retry-After"))
         leftover_delay = _leftover_delay()
         if not retry_after or leftover_delay < 0 or retry_count >= max_retry_count:
-            # TODO: convert error to WorkflowAIError
-            raise e
+            # Convert error to WorkflowAIError
+            try:
+                response_json = e.response.json()
+                r_err = response_json.get("error", {})
+                error_message = response_json.get("detail", {}) or r_err.get("message", "Unknown Error")
+                details = r_err.get("details", {})
+                error_code = r_err.get("code", "unknown_error")
+                status_code = r_err.get("status_code", e.response.status_code)
+            except JSONDecodeError:
+                error_message = "Unknown error"
+                details = {"raw": e.response.content.decode()}
+                error_code = "unknown_error"
+                status_code = e.response.status_code
+
+            raise WorkflowAIError(
+                error=BaseError(
+                    message=error_message,
+                    details=details,
+                    status_code=status_code,
+                    code=error_code,
+                ),
+                response=e.response,
+            ) from None
+
         await asyncio.sleep(retry_after)
         retry_count += 1
 
