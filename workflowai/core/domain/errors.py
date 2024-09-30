@@ -31,6 +31,9 @@ ProviderErrorCode = Literal[
     "provider_unavailable",
     # The request timed out
     "read_timeout",
+    # The requested model does not support the requested generation mode
+    # (e-g a model that does not support images generation was sent an image)
+    "model_does_not_support_mode",
 ]
 
 ErrorCode = Union[
@@ -43,9 +46,6 @@ ErrorCode = Union[
         "no_provider_supporting_model",
         # The requested provider does not support the model
         "provider_does_not_support_model",
-        # The requested model does not support the requested generation mode
-        # (e-g a model that does not support images generation was sent an image)
-        "model_does_not_support_mode",
         # Run properties are invalid, for example the model does not exist
         "invalid_run_properties",
         # An internal error occurred
