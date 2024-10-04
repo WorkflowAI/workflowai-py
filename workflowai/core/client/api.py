@@ -22,11 +22,12 @@ class APIClient:
             raise ValueError("Missing API URL or key")
 
     def _client(self) -> httpx.AsyncClient:
+        source_headers = self.source_headers or {}
         client = httpx.AsyncClient(
             base_url=self.endpoint,
             headers={
                 "Authorization": f"Bearer {self.api_key}",
-                **(self.source_headers or {}),
+                **source_headers,
             },
             timeout=120.0,
         )
