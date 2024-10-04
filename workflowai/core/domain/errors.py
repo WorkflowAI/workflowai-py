@@ -52,6 +52,7 @@ ErrorCode = Union[
         "internal_error",
         # The request was invalid
         "bad_request",
+        "invalid_file",
     ],
     str,  # Using as a fallback to avoid validation error if an error code is added to the API
 ]
@@ -82,18 +83,18 @@ class WorkflowAIError(Exception):
     def from_response(cls, response: Response):
         try:
             response_json = response.json()
-            r_error = response_json.get("error",{})
+            r_error = response_json.get("error", {})
             error_message = response_json.get("detail", {}) or r_error.get("message", "Unknown Error")
-            details =  r_error.get("details", {})
+            details = r_error.get("details", {})
             error_code = r_error.get("code", "unknown_error")
             status_code = response.status_code
             task_run_id = r_error.get("task_run_id", None)
         except JSONDecodeError:
             error_message = "Unknown error"
             details = {"raw": response.content.decode()}
-            error_code ="unknown_error"
+            error_code = "unknown_error"
             status_code = response.status_code
-            task_run_id=None
+            task_run_id = None
 
         return cls(
             response=response,
@@ -105,4 +106,3 @@ class WorkflowAIError(Exception):
             ),
             task_run_id=task_run_id,
         )
-
