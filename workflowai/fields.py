@@ -1,5 +1,6 @@
 from workflowai.core.fields.chat_message import ChatMessage as ChatMessage
 from workflowai.core.fields.email_address import EmailAddressStr as EmailAddressStr
+from workflowai.core.fields.file import File as File
 from workflowai.core.fields.html_string import HTMLString as HTMLString
 from workflowai.core.fields.http_url import HttpUrl as HttpUrl
 from workflowai.core.fields.image import Image as Image
