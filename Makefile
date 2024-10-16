@@ -27,3 +27,7 @@ lint:
 .PHONY: test
 test:
 	pytest
+
+.PHONY: lock
+lock:
+	poetry lock --no-update
