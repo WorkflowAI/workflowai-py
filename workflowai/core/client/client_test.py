@@ -8,37 +8,12 @@ from tests.models.hello_task import HelloTask, HelloTaskInput, HelloTaskOutput
 from tests.utils import fixtures_json
 from workflowai.core.client import Client
 from workflowai.core.client.client import WorkflowAIClient
-from workflowai.core.domain.llm_completion import LLMCompletion
-from workflowai.core.domain.task_example import TaskExample
-from workflowai.core.domain.task_run import TaskRun
-from workflowai.core.domain.task_version import TaskVersion
+from workflowai.core.domain.task_run import Run
 
 
-@pytest.fixture()
+@pytest.fixture
 def client():
     return WorkflowAIClient(endpoint="http://localhost:8000", api_key="test")
-
-
-class TestRegister:
-    async def test_success(self, httpx_mock: HTTPXMock, client: WorkflowAIClient):
-        httpx_mock.add_response(
-            json={
-                "task_id": "123",
-                "task_schema_id": 1,
-                "created_at": "2022-01-01T00:00:00Z",
-                "name": "Hello",
-                "input_schema": {"version": "1", "json_schema": {}},
-                "output_schema": {"version": "1", "json_schema": {}},
-            },
-        )
-        task = HelloTask()
-        assert task.id == "", "sanity"
-        assert task.schema_id == 0, "sanity"
-
-        await client.register(task)
-
-        assert task.id == "123"
-        assert task.schema_id == 1
 
 
 class TestRun:
@@ -52,12 +27,12 @@ class TestRun:
 
         reqs = httpx_mock.get_requests()
         assert len(reqs) == 1
-        assert reqs[0].url == "http://localhost:8000/tasks/123/schemas/1/run"
+        assert reqs[0].url == "http://localhost:8000/v1/_/tasks/123/schemas/1/run"
 
         body = json.loads(reqs[0].content)
         assert body == {
             "task_input": {"name": "Alice"},
-            "group": {"properties": {}},
+            "version": "production",
             "stream": False,
             "use_cache": "when_available",
         }
@@ -66,9 +41,9 @@ class TestRun:
         httpx_mock.add_response(
             stream=IteratorStream(
                 [
-                    b'data: {"run_id":"1","task_output":{"message":""}}',
-                    b'data: {"run_id":"1","task_output":{"message":"hel"}}',
-                    b'data: {"run_id":"1","task_output":{"message":"hello"}}',
+                    b'data: {"id":"1","task_output":{"message":""}}\n\n',
+                    b'data: {"id":"1","task_output":{"message":"hel"}}\n\ndata: {"id":"1","task_output":{"message":"hello"}}\n\n',  # noqa: E501
+                    b'data: {"id":"1","task_output":{"message":"hello"},"version":{"properties":{"model":"gpt-4o","temperature":0.5}},"cost_usd":0.01,"duration_seconds":10.1}\n\n',  # noqa: E501
                 ],
             ),
         )
@@ -81,11 +56,19 @@ class TestRun:
         )
         chunks = [chunk async for chunk in streamed]
 
-        assert chunks == [
+        outputs = [chunk.task_output for chunk in chunks]
+        assert outputs == [
             HelloTaskOutput(message=""),
             HelloTaskOutput(message="hel"),
             HelloTaskOutput(message="hello"),
+            HelloTaskOutput(message="hello"),
         ]
+        last_message = chunks[-1]
+        assert isinstance(last_message, Run)
+        assert last_message.version.properties.model == "gpt-4o"
+        assert last_message.version.properties.temperature == 0.5
+        assert last_message.cost_usd == 0.01
+        assert last_message.duration_seconds == 10.1
 
     async def test_run_with_env(self, httpx_mock: HTTPXMock, client: Client):
         httpx_mock.add_response(json=fixtures_json("task_run.json"))
@@ -94,17 +77,17 @@ class TestRun:
         await client.run(
             task,
             task_input=HelloTaskInput(name="Alice"),
-            environment="dev",
+            version="dev",
         )
 
         reqs = httpx_mock.get_requests()
         assert len(reqs) == 1
-        assert reqs[0].url == "http://localhost:8000/tasks/123/schemas/1/run"
+        assert reqs[0].url == "http://localhost:8000/v1/_/tasks/123/schemas/1/run"
 
         body = json.loads(reqs[0].content)
         assert body == {
             "task_input": {"name": "Alice"},
-            "group": {"alias": "environment=dev"},
+            "version": "dev",
             "stream": False,
             "use_cache": "when_available",
         }
@@ -119,7 +102,7 @@ class TestRun:
 
         reqs = httpx_mock.get_requests()
         assert len(reqs) == 1
-        assert reqs[0].url == "http://localhost:8000/tasks/123/schemas/1/run"
+        assert reqs[0].url == "http://localhost:8000/v1/_/tasks/123/schemas/1/run"
         headers = {
             "x-workflowai-source": "sdk",
             "x-workflowai-language": "python",
@@ -129,7 +112,7 @@ class TestRun:
         body = json.loads(reqs[0].content)
         assert body == {
             "task_input": {"name": "Alice"},
-            "group": {"properties": {}},
+            "version": "production",
             "stream": False,
             "use_cache": "when_available",
         }
@@ -149,89 +132,5 @@ class TestRun:
 
         reqs = httpx_mock.get_requests()
         assert len(reqs) == 2
-        assert reqs[0].url == "http://localhost:8000/tasks/123/schemas/1/run"
-        assert reqs[1].url == "http://localhost:8000/tasks/123/schemas/1/run"
-
-
-class TestImportRun:
-    async def test_success(self, httpx_mock: HTTPXMock, client: Client):
-        httpx_mock.add_response(json=fixtures_json("task_run.json"))
-        task = HelloTask(id="123", schema_id=1)
-
-        run = TaskRun(
-            task=task,
-            task_input=HelloTaskInput(name="Alice"),
-            task_output=HelloTaskOutput(message="hello"),
-            version=TaskVersion(iteration=1),
-            llm_completions=[
-                LLMCompletion(messages=[{"content": "hello"}], response="world"),
-            ],
-        )
-
-        imported = await client.import_run(run)
-        assert imported.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
-
-        reqs = httpx_mock.get_requests()
-        assert len(reqs) == 1
-        assert reqs[0].url == "http://localhost:8000/tasks/123/schemas/1/runs"
-
-        body = json.loads(reqs[0].content)
-        assert body == {
-            "id": run.id,
-            "task_input": {"name": "Alice"},
-            "task_output": {"message": "hello"},
-            "group": {"iteration": 1},
-            "llm_completions": [
-                {
-                    "messages": [
-                        {
-                            "content": "hello",
-                        },
-                    ],
-                    "response": "world",
-                },
-            ],
-        }
-
-
-class TestImportExample:
-    async def test_success(self, httpx_mock: HTTPXMock, client: Client):
-        httpx_mock.add_response(json=fixtures_json("task_example.json"))
-        task = HelloTask(id="123", schema_id=1)
-
-        example = TaskExample(
-            task=task,
-            task_input=HelloTaskInput(name="Alice"),
-            task_output=HelloTaskOutput(message="hello"),
-        )
-
-        imported = await client.import_example(example)
-        assert imported.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
-
-        reqs = httpx_mock.get_requests()
-        assert len(reqs) == 1
-        assert reqs[0].url == "http://localhost:8000/tasks/123/schemas/1/examples"
-
-        body = json.loads(reqs[0].content)
-        assert body == {
-            "task_input": {"name": "Alice"},
-            "task_output": {"message": "hello"},
-        }
-
-
-class TestDeployVersion:
-    async def test_success(self, httpx_mock: HTTPXMock, client: Client):
-        httpx_mock.add_response(json=fixtures_json("task_version.json"))
-        task = HelloTask(id="123", schema_id=1)
-
-        version = await client.deploy_version(task, iteration=1, environment="dev")
-        assert version.iteration == 1
-
-        reqs = httpx_mock.get_requests()
-        assert len(reqs) == 1
-        assert reqs[0].url == "http://localhost:8000/tasks/123/schemas/1/groups/1"
-
-        body = json.loads(reqs[0].content)
-        assert body == {
-            "add_alias": "environment=dev",
-        }
+        assert reqs[0].url == "http://localhost:8000/v1/_/tasks/123/schemas/1/run"
+        assert reqs[1].url == "http://localhost:8000/v1/_/tasks/123/schemas/1/run"

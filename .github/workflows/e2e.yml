@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  WORKFLOWAI_TEST_API_URL: https://api.workflowai.dev
+  WORKFLOWAI_TEST_API_URL: https://run.workflowai.dev
 
 jobs:
   e2e-tests:

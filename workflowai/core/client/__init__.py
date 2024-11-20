@@ -1,75 +1,51 @@
 from typing import Any, AsyncIterator, Literal, Optional, Protocol, Union, overload
 
-from workflowai.core.domain import (
-    cache_usage,
-    task,
-    task_example,
-    task_run,
-    task_version,
-    task_version_reference,
-)
+from workflowai.core.domain.cache_usage import CacheUsage
+from workflowai.core.domain.task import Task, TaskInput, TaskOutput
+from workflowai.core.domain.task_run import Run, RunChunk
+from workflowai.core.domain.task_version_reference import VersionReference
 
 
 class Client(Protocol):
     """A client to interact with the WorkflowAI API"""
 
-    async def register(self, task: "task.Task[task.TaskInput, task.TaskOutput]"):
-        """Register a task, creating a new task if needed and setting the task schema id
-
-        Args:
-            task (task.Task[task.TaskInput, task.TaskOutput]): a task
-        """
-        ...
-
     @overload
     async def run(
         self,
-        task: "task.Task[task.TaskInput, task.TaskOutput]",
-        task_input: "task.TaskInput",
-        version: Optional["task_version_reference.TaskVersionReference"] = None,
-        environment: Optional[str] = None,
-        iteration: Optional[int] = None,
+        task: Task[TaskInput, TaskOutput],
+        task_input: TaskInput,
         stream: Literal[False] = False,
-        use_cache: "cache_usage.CacheUsage" = "when_available",
-        labels: Optional[set[str]] = None,
+        version: Optional[VersionReference] = None,
+        use_cache: CacheUsage = "when_available",
         metadata: Optional[dict[str, Any]] = None,
         max_retry_delay: float = 60,
         max_retry_count: float = 1,
-    ) -> "task_run.TaskRun[task.TaskInput, task.TaskOutput]": ...
+    ) -> Run[TaskOutput]: ...
 
     @overload
     async def run(
         self,
-        task: "task.Task[task.TaskInput, task.TaskOutput]",
-        task_input: "task.TaskInput",
-        version: Optional["task_version_reference.TaskVersionReference"] = None,
-        environment: Optional[str] = None,
-        iteration: Optional[int] = None,
+        task: Task[TaskInput, TaskOutput],
+        task_input: TaskInput,
         stream: Literal[True] = True,
-        use_cache: "cache_usage.CacheUsage" = "when_available",
-        labels: Optional[set[str]] = None,
+        version: Optional[VersionReference] = None,
+        use_cache: CacheUsage = "when_available",
         metadata: Optional[dict[str, Any]] = None,
         max_retry_delay: float = 60,
         max_retry_count: float = 1,
-    ) -> AsyncIterator["task.TaskOutput"]: ...
+    ) -> AsyncIterator[Union[RunChunk[TaskOutput], Run[TaskOutput]]]: ...
 
     async def run(
         self,
-        task: "task.Task[task.TaskInput, task.TaskOutput]",
-        task_input: "task.TaskInput",
-        version: Optional["task_version_reference.TaskVersionReference"] = None,
-        environment: Optional[str] = None,
-        iteration: Optional[int] = None,
+        task: Task[TaskInput, TaskOutput],
+        task_input: TaskInput,
         stream: bool = False,
-        use_cache: "cache_usage.CacheUsage" = "when_available",
-        labels: Optional[set[str]] = None,
+        version: Optional[VersionReference] = None,
+        use_cache: CacheUsage = "when_available",
         metadata: Optional[dict[str, Any]] = None,
         max_retry_delay: float = 60,
         max_retry_count: float = 1,
-    ) -> Union[
-        "task_run.TaskRun[task.TaskInput, task.TaskOutput]",
-        AsyncIterator["task.TaskOutput"],
-    ]:
+    ) -> Union[Run[TaskOutput], AsyncIterator[Union[RunChunk[TaskOutput], Run[TaskOutput]]]]:
         """Run a task
 
         Args:
@@ -95,51 +71,5 @@ class Client(Protocol):
         Returns:
             Union[TaskRun[TaskInput, TaskOutput], AsyncIterator[TaskOutput]]: the task run object
                 or an async iterator of output objects
-        """
-        ...
-
-    async def import_run(
-        self,
-        run: "task_run.TaskRun[task.TaskInput, task.TaskOutput]",
-    ) -> "task_run.TaskRun[task.TaskInput, task.TaskOutput]":
-        """Import a task run
-
-        Args:
-            run (task_run.TaskRun[task.TaskInput, task.TaskOutput]): a task run
-
-        Returns:
-            task_run.TaskRun[task.TaskInput, task.TaskOutput]: the task run as stored in our database
-        """
-        ...
-
-    async def import_example(
-        self,
-        example: "task_example.TaskExample[task.TaskInput, task.TaskOutput]",
-    ) -> "task_example.TaskExample[task.TaskInput, task.TaskOutput]":
-        """Import a task example
-
-        Args:
-            example (task_example.TaskExample[task.TaskInput, task.TaskOutput]): a task example
-
-        Returns:
-            task_example.TaskExample[task.TaskInput, task.TaskOutput]: the task example as stored in our database
-        """
-        ...
-
-    async def deploy_version(
-        self,
-        task: "task.Task[task.TaskInput, task.TaskOutput]",
-        iteration: int,
-        environment: str,
-    ) -> "task_version.TaskVersion":
-        """Deploy a version to an environemnt. Version becomes usable using TaskVersionReference(environment=...)
-
-        Args:
-            task (task.Task[task.TaskInput, task.TaskOutput]): the task to deploy
-            reference (task_version_reference.TaskVersionReference): the version to deploy
-            environment (str): the environment to deploy to
-
-        Returns:
-            task_version.TaskVersion: the deployed version
         """
         ...

@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 
-from workflowai import Task, TaskVersionReference
+from workflowai import Task, VersionReference
 
 
 class CityToCapitalTaskInput(BaseModel):
@@ -12,7 +12,8 @@ class CityToCapitalTaskInput(BaseModel):
 
 class CityToCapitalTaskOutput(BaseModel):
     capital: str = Field(
-        description="The capital of the specified city", examples=["Tokyo"],
+        description="The capital of the specified city",
+        examples=["Tokyo"],
     )
 
 
@@ -22,6 +23,4 @@ class CityToCapitalTask(Task[CityToCapitalTaskInput, CityToCapitalTaskOutput]):
     input_class: type[CityToCapitalTaskInput] = CityToCapitalTaskInput
     output_class: type[CityToCapitalTaskOutput] = CityToCapitalTaskOutput
 
-    version: TaskVersionReference = TaskVersionReference(
-        iteration=4,
-    )
+    version: VersionReference = 4

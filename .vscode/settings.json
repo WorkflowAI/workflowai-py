@@ -1,49 +1,43 @@
 {
-    "[python]": {
-        "editor.codeActionsOnSave": {
-            "source.fixAll": "explicit",
-            "source.organizeImports": "explicit"
-        },
-        "editor.defaultFormatter": "charliermarsh.ruff",
+  "[python]": {
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.organizeImports": "explicit"
     },
-    "python.analysis.typeCheckingMode": "strict",
-    "python.analysis.ignore": [
-        "**/*_pb2.py",
-        "**/*_pb2.pyi",
-        "**/*_pb2_grpc.py",
-        "*.proto"
-    ],
-    "ruff.lint.args": [
-        "--extend-ignore=E501",
-        "--extend-exclude=/**/3rdparty_repositories/**/*.py",
-        "--extend-exclude=/**/site-packages/**/*.py",
-    ],
-    "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true,
-    "python.testing.pytestArgs": [
-        "-vv",
-    ],
-    "python.languageServer": "Pylance",
-    "python.analysis.autoImportCompletions": true,
-    "editor.suggestSelection": "first",
-    "editor.quickSuggestions": {
-        "other": true,
-        "comments": false,
-        "strings": false
-    },
-    "editor.acceptSuggestionOnEnter": "on",
-    "editor.tabCompletion": "on",
-    "python.analysis.completeFunctionParens": true,
-    "files.exclude": {
-        "**/.git": true,
-        "**/.svn": true,
-        "**/.hg": true,
-        "**/CVS": true,
-        "**/.DS_Store": true,
-        "**/Thumbs.db": true,
-        "ai_model_cache": true,
-        ".mypy_cache": true,
-        ".venv": true,
-        ".ruff_cache": true,
-    },
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "python.analysis.typeCheckingMode": "strict",
+  "python.analysis.ignore": [
+    "**/*_pb2.py",
+    "**/*_pb2.pyi",
+    "**/*_pb2_grpc.py",
+    "*.proto"
+  ],
+
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["-vv"],
+  "python.languageServer": "Pylance",
+  "python.analysis.autoImportCompletions": true,
+  "editor.suggestSelection": "first",
+  "editor.quickSuggestions": {
+    "other": true,
+    "comments": false,
+    "strings": false
+  },
+  "editor.acceptSuggestionOnEnter": "on",
+  "editor.tabCompletion": "on",
+  "python.analysis.completeFunctionParens": true,
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "ai_model_cache": true,
+    ".mypy_cache": true,
+    ".venv": true,
+    ".ruff_cache": true
+  }
 }
