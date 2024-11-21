@@ -37,7 +37,7 @@ def test_retry_after_to_delay_seconds(retry_after: Optional[str], expected: Opti
 
 
 class TestBuildRetryableWait:
-    @pytest.fixture()
+    @pytest.fixture
     def request_error(self):
         response = Mock()
         response.headers = {"Retry-After": "0.01"}

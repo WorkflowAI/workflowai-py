@@ -1,4 +1,4 @@
-from typing import Any, Literal, Optional, Union
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -11,13 +11,16 @@ class TaskVersionProperties(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     model: Optional[str] = Field(
-        default=None, description="The LLM model used for the run",
+        default=None,
+        description="The LLM model used for the run",
     )
     provider: Optional[str] = Field(
-        default=None, description="The LLM provider used for the run",
+        default=None,
+        description="The LLM provider used for the run",
     )
     temperature: Optional[float] = Field(
-        default=None, description="The temperature for generation",
+        default=None,
+        description="The temperature for generation",
     )
     instructions: Optional[str] = Field(
         default=None,
@@ -29,37 +32,11 @@ class TaskVersionProperties(BaseModel):
     )
 
     runner_name: Optional[str] = Field(
-        default=None, description="The name of the runner used",
+        default=None,
+        description="The name of the runner used",
     )
 
     runner_version: Optional[str] = Field(
-        default=None, description="The version of the runner used",
-    )
-
-    few_shot: "Optional[FewShotConfiguration]" = Field(
-        default=None, description="Few shot configuration",
-    )
-
-
-class FewShotConfiguration(BaseModel):
-    count: Optional[int] = Field(
         default=None,
-        description="The number of few-shot examples to use for the task",
+        description="The version of the runner used",
     )
-
-    selection: Union[Literal["latest", "manual"], str, None] = Field(
-        default=None,
-        description="The selection method to use for few-shot examples",
-    )
-
-    examples: Optional[list["FewShotExample"]] = Field(
-        default=None,
-        description="The few-shot examples used for the task. If provided, count and selection are ignored. "
-        "If not provided, count and selection are used to select examples and the examples list will be set "
-        "in the final group.",
-    )
-
-
-class FewShotExample(BaseModel):
-    task_input: dict[str, Any]
-    task_output: dict[str, Any]

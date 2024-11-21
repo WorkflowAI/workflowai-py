@@ -1,9 +1,9 @@
 from datetime import datetime
 from typing import Generic, Optional, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
-from workflowai.core.domain.task_version_reference import TaskVersionReference
+from workflowai.core.domain.task_version_reference import VersionReference
 
 TaskInput = TypeVar("TaskInput", bound=BaseModel)
 TaskOutput = TypeVar("TaskOutput", bound=BaseModel)
@@ -20,11 +20,9 @@ class Task(BaseModel, Generic[TaskInput, TaskOutput]):
     id: str = ""
     schema_id: int = 0
 
+    version: VersionReference = "production"
+
     input_class: type[TaskInput] = BaseModel  # pyright: ignore [reportAssignmentType]
     output_class: type[TaskOutput] = BaseModel  # pyright: ignore [reportAssignmentType]
-
-    version: TaskVersionReference = Field(
-        default_factory=lambda: TaskVersionReference.with_properties(),
-    )
 
     created_at: Optional[datetime] = None
