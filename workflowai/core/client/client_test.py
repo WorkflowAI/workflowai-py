@@ -4,7 +4,7 @@ import json
 import pytest
 from pytest_httpx import HTTPXMock, IteratorStream
 
-from tests.models.hello_task import HelloTask, HelloTaskInput, HelloTaskOutput
+from tests.models.hello_task import HelloTask, HelloTaskInput, HelloTaskNotOptional, HelloTaskOutput
 from tests.utils import fixtures_json
 from workflowai.core.client import Client
 from workflowai.core.client.client import WorkflowAIClient
@@ -63,6 +63,43 @@ class TestRun:
             HelloTaskOutput(message="hello"),
             HelloTaskOutput(message="hello"),
         ]
+        last_message = chunks[-1]
+        assert isinstance(last_message, Run)
+        assert last_message.version.properties.model == "gpt-4o"
+        assert last_message.version.properties.temperature == 0.5
+        assert last_message.cost_usd == 0.01
+        assert last_message.duration_seconds == 10.1
+
+    async def test_stream_not_optional(self, httpx_mock: HTTPXMock, client: Client):
+        # Checking that streaming works even with non optional fields
+        # The first two chunks are missing a required key but the last one has it
+        httpx_mock.add_response(
+            stream=IteratorStream(
+                [
+                    b'data: {"id":"1","task_output":{"message":""}}\n\n',
+                    b'data: {"id":"1","task_output":{"message":"hel"}}\n\ndata: {"id":"1","task_output":{"message":"hello"}}\n\n',  # noqa: E501
+                    b'data: {"id":"1","task_output":{"message":"hello", "another_field": "test"},"version":{"properties":{"model":"gpt-4o","temperature":0.5}},"cost_usd":0.01,"duration_seconds":10.1}\n\n',  # noqa: E501
+                ],
+            ),
+        )
+        task = HelloTaskNotOptional(id="123", schema_id=1)
+
+        streamed = await client.run(
+            task,
+            task_input=HelloTaskInput(name="Alice"),
+            stream=True,
+        )
+        chunks = [chunk async for chunk in streamed]
+
+        messages = [chunk.task_output.message for chunk in chunks]
+        assert messages == ["", "hel", "hello", "hello"]
+
+        for chunk in chunks[:-1]:
+            with pytest.raises(AttributeError):
+                # Since the field is not optional, it will raise an attribute error
+                assert chunk.task_output.another_field
+        assert chunks[-1].task_output.another_field == "test"
+
         last_message = chunks[-1]
         assert isinstance(last_message, Run)
         assert last_message.version.properties.model == "gpt-4o"

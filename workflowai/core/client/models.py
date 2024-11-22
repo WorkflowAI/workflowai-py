@@ -71,7 +71,7 @@ class RunStreamChunk(BaseModel):
         if self.version is None:
             return RunChunk(
                 id=self.id,
-                task_output=task.output_class.model_validate(self.task_output),
+                task_output=task.output_class.model_construct(None, **self.task_output),
             )
 
         return Run(
