@@ -51,6 +51,8 @@ ignore = [
     "TD",
     "PYI051",
     "FIX002",
+    "SLF001", #reportPrivateUsage
+    "PT017", # Do not force using pytest.raises 
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
