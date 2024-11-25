@@ -79,7 +79,7 @@ async def test_stream_404(httpx_mock: HTTPXMock):
             returns=TestOutputModel,
         ):
             pass
-    except Exception as e:
+    except httpx.HTTPStatusError as e:
         assert isinstance(e, httpx.HTTPStatusError)
         assert e.response.status_code == 404
         assert e.response.reason_phrase == "Not Found"
