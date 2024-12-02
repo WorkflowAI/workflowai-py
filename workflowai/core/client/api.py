@@ -1,4 +1,3 @@
-from json import JSONDecodeError
 from typing import Any, AsyncIterator, Literal, Optional, TypeVar, Union, overload
 
 import httpx
@@ -99,7 +98,7 @@ class APIClient:
         try:
             res = ErrorResponse.model_validate_json(data)
             return WorkflowAIError(error=res.error, task_run_id=res.task_run_id, response=response)
-        except JSONDecodeError:
+        except ValidationError:
             raise WorkflowAIError(
                 error=BaseError(
                     message="Unknown error" if exception is None else str(exception),
@@ -123,6 +122,11 @@ class APIClient:
             content=data.model_dump_json(exclude_none=True),
             headers={"Content-Type": "application/json"},
         ) as response:
+            if not response.is_success:
+                # We need to read the response to get the error message
+                await response.aread()
+                response.raise_for_status()
+
             async for chunk in response.aiter_bytes():
                 payload = ""
                 try:
