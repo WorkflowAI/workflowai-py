@@ -1,6 +1,6 @@
 import importlib.metadata
 import json
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -9,7 +9,10 @@ from pytest_httpx import HTTPXMock, IteratorStream
 from tests.models.hello_task import HelloTask, HelloTaskInput, HelloTaskNotOptional, HelloTaskOutput
 from tests.utils import fixtures_json
 from workflowai.core.client import Client
-from workflowai.core.client._client import WorkflowAIClient
+from workflowai.core.client._client import (
+    WorkflowAIClient,
+    _compute_default_version_reference,  # pyright: ignore [reportPrivateUsage]
+)
 from workflowai.core.domain.task_run import Run
 
 
@@ -261,3 +264,12 @@ class TestTask:
             HelloTaskOutput(message="hello"),
             HelloTaskOutput(message="hello"),
         ]
+
+
+@pytest.mark.parametrize(
+    ("env_var", "expected"),
+    [("p", "production"), ("production", "production"), ("dev", "dev"), ("staging", "staging"), ("1", 1)],
+)
+def test_compute_default_version_reference(env_var: str, expected: Any):
+    with patch.dict("os.environ", {"WORKFLOWAI_DEFAULT_VERSION": env_var}):
+        assert _compute_default_version_reference() == expected

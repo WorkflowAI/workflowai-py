@@ -44,8 +44,10 @@ def _compute_default_version_reference() -> VersionReference:
     if version in {"dev", "staging", "production"}:
         return version  # pyright: ignore [reportReturnType]
 
-    if isinstance(version, int):
-        return version
+    try:
+        return int(version)
+    except ValueError:
+        pass
 
     _logger.warning("Invalid default version: %s", version)
 
