@@ -1,5 +1,6 @@
 import functools
 import importlib.metadata
+import logging
 import os
 from collections.abc import Awaitable, Callable
 from typing import (
@@ -14,11 +15,10 @@ from typing_extensions import Unpack
 
 from workflowai.core.client import Client
 from workflowai.core.client._api import APIClient
-from workflowai.core.client._fn_utils import wrap_run_template
+from workflowai.core.client._fn_utils import task_id_from_fn_name, wrap_run_template
 from workflowai.core.client._models import (
     RunRequest,
     RunResponse,
-    RunStreamChunk,
 )
 from workflowai.core.client._types import (
     FinalRunTemplate,
@@ -33,19 +33,36 @@ from workflowai.core.domain.task import Task, TaskInput, TaskOutput
 from workflowai.core.domain.task_run import Run
 from workflowai.core.domain.task_version_reference import VersionReference
 
+_logger = logging.getLogger("WorkflowAI")
+
+
+def _compute_default_version_reference() -> VersionReference:
+    version = os.getenv("WORKFLOWAI_DEFAULT_VERSION")
+    if not version:
+        return "production"
+
+    if version in {"dev", "staging", "production"}:
+        return version  # pyright: ignore [reportReturnType]
+
+    if isinstance(version, int):
+        return version
+
+    _logger.warning("Invalid default version: %s", version)
+
+    return "production"
+
+
+DEFAULT_VERSION_REFERENCE = _compute_default_version_reference()
+
 
 class WorkflowAIClient(Client):
-    def __init__(self, endpoint: Optional[str] = None, api_key: Optional[str] = None):
+    def __init__(self, api_key: str, endpoint: Optional[str] = None):
         self.additional_headers = {
             "x-workflowai-source": "sdk",
             "x-workflowai-language": "python",
             "x-workflowai-version": importlib.metadata.version("workflowai"),
         }
-        self.api = APIClient(
-            endpoint or os.getenv("WORKFLOWAI_API_URL", "https://run.workflowai.com"),
-            api_key or os.getenv("WORKFLOWAI_API_KEY", ""),
-            self.additional_headers,
-        )
+        self.api = APIClient(endpoint or "https://run.workflowai.com", api_key, self.additional_headers)
 
     @overload
     async def run(
@@ -136,15 +153,21 @@ class WorkflowAIClient(Client):
                     method="POST",
                     path=route,
                     data=request,
-                    returns=RunStreamChunk,
+                    returns=RunResponse,
                 ):
                     yield chunk.to_domain(validator)
                 return
             except WorkflowAIError as e:  # noqa: PERF203
                 await wait_for_exception(e)
 
-    def task(self, id: str, schema_id: int, version: VersionReference = "production") -> TaskDecorator:  # noqa: A002
+    def task(
+        self,
+        schema_id: int,
+        task_id: Optional[str] = None,
+        version: VersionReference = DEFAULT_VERSION_REFERENCE,
+    ) -> TaskDecorator:
         def wrap(fn: RunTemplate[TaskInput, TaskOutput]) -> FinalRunTemplate[TaskInput, TaskOutput]:
-            return functools.wraps(fn)(wrap_run_template(self, id, schema_id, version, fn))  # pyright: ignore [reportReturnType]
+            tid = task_id or task_id_from_fn_name(fn)
+            return functools.wraps(fn)(wrap_run_template(self, tid, schema_id, version, fn))  # pyright: ignore [reportReturnType]
 
         return wrap  # pyright: ignore [reportReturnType]

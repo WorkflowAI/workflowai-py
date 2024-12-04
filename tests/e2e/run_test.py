@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Optional
+from typing import AsyncIterator, Optional
 
 from pydantic import BaseModel
 
@@ -21,6 +21,12 @@ class Sentiment(Enum):
 
 class ExtractProductReviewSentimentTaskOutput(BaseModel):
     sentiment: Optional[Sentiment] = None
+
+
+@workflowai.task(schema_id=1)
+def extract_product_review_sentiment(
+    task_input: ExtractProductReviewSentimentTaskInput,
+) -> AsyncIterator[ExtractProductReviewSentimentTaskOutput]: ...
 
 
 class ExtractProductReviewSentimentTask(

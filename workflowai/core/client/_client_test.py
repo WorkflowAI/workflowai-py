@@ -181,7 +181,7 @@ class TestTask:
             yield run_mock
 
     def test_fn_name(self, client: Client):
-        @client.task(id="123", schema_id=1)
+        @client.task(schema_id=1, task_id="123")
         async def fn(task_input: HelloTaskInput) -> HelloTaskOutput: ...
 
         assert fn.__name__ == "fn"
@@ -189,7 +189,7 @@ class TestTask:
         assert callable(fn)
 
     async def test_run_output_only(self, client: Client, patched_run_fn: AsyncMock):
-        @client.task(id="123", schema_id=1)
+        @client.task(schema_id=1, task_id="123")
         async def fn(task_input: HelloTaskInput) -> HelloTaskOutput: ...
 
         patched_run_fn.return_value = Run(task_output=HelloTaskOutput(message="hello"))
@@ -199,7 +199,7 @@ class TestTask:
         assert output == HelloTaskOutput(message="hello")
 
     async def test_run_with_version(self, client: Client, patched_run_fn: AsyncMock):
-        @client.task(id="123", schema_id=1)
+        @client.task(schema_id=1, task_id="123")
         async def fn(task_input: HelloTaskInput) -> Run[HelloTaskOutput]: ...
 
         patched_run_fn.return_value = Run(id="1", task_output=HelloTaskOutput(message="hello"))
@@ -215,7 +215,7 @@ class TestTask:
         # having to await async iterators depending on how they are defined so instead we mock
         # the underlying api call to check that we don't need the extra await
 
-        @client.task(id="123", schema_id=1)
+        @client.task(schema_id=1, task_id="123")
         def fn(task_input: HelloTaskInput) -> AsyncIterator[Run[HelloTaskOutput]]: ...
 
         httpx_mock.add_response(
@@ -238,7 +238,7 @@ class TestTask:
         ]
 
     async def test_stream_output_only(self, client: Client, httpx_mock: HTTPXMock):
-        @client.task(id="123", schema_id=1)
+        @client.task(schema_id=1)
         def fn(task_input: HelloTaskInput) -> AsyncIterator[HelloTaskOutput]: ...
 
         httpx_mock.add_response(

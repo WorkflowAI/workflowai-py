@@ -41,29 +41,6 @@ class RunResponse(BaseModel):
     id: str
     task_output: dict[str, Any]
 
-    version: Version
-    duration_seconds: Optional[float] = None
-    cost_usd: Optional[float] = None
-
-    def to_domain(self, validator: OutputValidator[TaskOutput]) -> Run[TaskOutput]:
-        return Run(
-            id=self.id,
-            task_output=validator(self.task_output),
-            version=TaskVersion(
-                properties=TaskVersionProperties.model_construct(
-                    None,
-                    **self.version.properties,
-                ),
-            ),
-            duration_seconds=self.duration_seconds,
-            cost_usd=self.cost_usd,
-        )
-
-
-class RunStreamChunk(BaseModel):
-    id: str
-    task_output: dict[str, Any]
-
     version: Optional[Version] = None
     duration_seconds: Optional[float] = None
     cost_usd: Optional[float] = None

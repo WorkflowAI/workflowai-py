@@ -1,6 +1,10 @@
-from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
+from asyncio import run as aiorun
 
-from workflowai import Task, VersionReference
+import typer
+from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
+from rich import print as rprint
+
+import workflowai
 
 
 class CityToCapitalTaskInput(BaseModel):
@@ -17,10 +21,19 @@ class CityToCapitalTaskOutput(BaseModel):
     )
 
 
-class CityToCapitalTask(Task[CityToCapitalTaskInput, CityToCapitalTaskOutput]):
-    id: str = "citytocapital"
-    schema_id: int = 1
-    input_class: type[CityToCapitalTaskInput] = CityToCapitalTaskInput
-    output_class: type[CityToCapitalTaskOutput] = CityToCapitalTaskOutput
+@workflowai.task(schema_id=1)
+async def city_to_capital(task_input: CityToCapitalTaskInput) -> CityToCapitalTaskOutput: ...
 
-    version: VersionReference = 4
+
+def main(city: str) -> None:
+    async def _inner() -> None:
+        task_input = CityToCapitalTaskInput(city=city)
+        task_output = await city_to_capital(task_input)
+
+        rprint(task_output)
+
+    aiorun(_inner())
+
+
+if __name__ == "__main__":
+    typer.run(main)

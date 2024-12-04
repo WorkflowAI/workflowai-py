@@ -17,9 +17,6 @@ class APIClient:
         self.api_key = api_key
         self.source_headers = source_headers or {}
 
-        if not self.endpoint or not self.api_key:
-            raise ValueError("Missing API URL or key")
-
     def _client(self) -> httpx.AsyncClient:
         source_headers = self.source_headers or {}
         client = httpx.AsyncClient(

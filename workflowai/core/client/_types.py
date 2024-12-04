@@ -191,4 +191,9 @@ class Client(Protocol):
         """
         ...
 
-    def task(self, id: str, schema_id: int, version: VersionReference = "production") -> TaskDecorator: ...  # noqa: A002
+    def task(
+        self,
+        schema_id: int,
+        task_id: Optional[str] = None,
+        version: VersionReference = "production",
+    ) -> TaskDecorator: ...

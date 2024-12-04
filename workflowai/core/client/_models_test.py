@@ -4,7 +4,7 @@ import pytest
 from pydantic import BaseModel, ValidationError
 
 from tests.utils import fixture_text
-from workflowai.core.client._models import RunResponse, RunStreamChunk
+from workflowai.core.client._models import RunResponse
 from workflowai.core.client._utils import tolerant_validator
 from workflowai.core.domain.task_run import Run
 
@@ -31,10 +31,10 @@ class _TaskOutputOpt(BaseModel):
     b: Optional[str] = None
 
 
-class TestRunStreamChunkToDomain:
+class TestRunResponseToDomain:
     def test_no_version_not_optional(self):
         # Check that partial model is ok
-        chunk = RunStreamChunk.model_validate_json('{"id": "1", "task_output": {"a": 1}}')
+        chunk = RunResponse.model_validate_json('{"id": "1", "task_output": {"a": 1}}')
         assert chunk.task_output == {"a": 1}
 
         with pytest.raises(ValidationError):  # sanity
@@ -48,7 +48,7 @@ class TestRunStreamChunkToDomain:
             assert parsed.task_output.b
 
     def test_no_version_optional(self):
-        chunk = RunStreamChunk.model_validate_json('{"id": "1", "task_output": {"a": 1}}')
+        chunk = RunResponse.model_validate_json('{"id": "1", "task_output": {"a": 1}}')
         assert chunk
 
         parsed = chunk.to_domain(tolerant_validator(_TaskOutputOpt))
@@ -57,7 +57,7 @@ class TestRunStreamChunkToDomain:
         assert parsed.task_output.b is None
 
     def test_with_version(self):
-        chunk = RunStreamChunk.model_validate_json(
+        chunk = RunResponse.model_validate_json(
             '{"id": "1", "task_output": {"a": 1, "b": "test"}, "cost_usd": 0.1, "duration_seconds": 1, "version": {"properties": {"a": 1, "b": "test"}}}',  # noqa: E501
         )
         assert chunk
@@ -71,7 +71,7 @@ class TestRunStreamChunkToDomain:
         assert parsed.duration_seconds == 1
 
     def test_with_version_validation_fails(self):
-        chunk = RunStreamChunk.model_validate_json(
+        chunk = RunResponse.model_validate_json(
             '{"id": "1", "task_output": {"a": 1}, "version": {"properties": {"a": 1, "b": "test"}}}',
         )
         with pytest.raises(ValidationError):

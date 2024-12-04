@@ -86,7 +86,7 @@ def extract_fn_data(fn: RunTemplate[TaskInput, TaskOutput]) -> ExtractFnData:
 
 
 def _wrap_run(client: Client, task: Task[TaskInput, TaskOutput]) -> FinalRunFn[TaskInput, TaskOutput]:
-    async def wrap(task_input: TaskInput, **kwargs: Unpack[RunParams]) -> Run[TaskOutput]:
+    async def wrap(task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]) -> Run[TaskOutput]:
         return await client.run(task, task_input, stream=False, **kwargs)
 
     return wrap
@@ -96,7 +96,7 @@ def _wrap_run_output_only(
     client: Client,
     task: Task[TaskInput, TaskOutput],
 ) -> FinalRunFnOutputOnly[TaskInput, TaskOutput]:
-    async def wrap(task_input: TaskInput, **kwargs: Unpack[RunParams]) -> TaskOutput:
+    async def wrap(task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]) -> TaskOutput:
         run = await client.run(task, task_input, stream=False, **kwargs)
         return run.task_output
 
@@ -104,7 +104,7 @@ def _wrap_run_output_only(
 
 
 def _wrap_stream_run(client: Client, task: Task[TaskInput, TaskOutput]) -> FinalStreamRunFn[TaskInput, TaskOutput]:
-    async def wrap(task_input: TaskInput, **kwargs: Unpack[RunParams]):
+    async def wrap(task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]) -> AsyncIterator[Run[TaskOutput]]:
         s = await client.run(task, task_input, stream=True, **kwargs)
         async for chunk in s:
             yield chunk
@@ -116,7 +116,7 @@ def _wrap_stream_run_output_only(
     client: Client,
     task: Task[TaskInput, TaskOutput],
 ) -> FinalStreamRunFnOutputOnly[TaskInput, TaskOutput]:
-    async def wrap(task_input: TaskInput, **kwargs: Unpack[RunParams]) -> AsyncIterator[TaskOutput]:
+    async def wrap(task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]) -> AsyncIterator[TaskOutput]:
         s = await client.run(task, task_input, stream=True, **kwargs)
         async for chunk in s:
             yield chunk.task_output
@@ -148,3 +148,7 @@ def wrap_run_template(
     if output_only:
         return _wrap_run_output_only(client, task)
     return _wrap_run(client, task)
+
+
+def task_id_from_fn_name(fn: Any) -> str:
+    return fn.__name__.replace("_", "-").lower()
