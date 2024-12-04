@@ -3,7 +3,7 @@ import pytest
 from pydantic import BaseModel
 from pytest_httpx import HTTPXMock
 
-from workflowai.core.client.api import APIClient
+from workflowai.core.client._api import APIClient
 from workflowai.core.domain.errors import WorkflowAIError
 
 

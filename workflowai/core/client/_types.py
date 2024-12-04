@@ -6,14 +6,13 @@ from typing import (
     Literal,
     Optional,
     Protocol,
-    TypedDict,
     TypeVar,
     Union,
     overload,
 )
 
 from pydantic import BaseModel
-from typing_extensions import NotRequired, Unpack
+from typing_extensions import NotRequired, TypedDict, Unpack
 
 from workflowai.core.domain.cache_usage import CacheUsage
 from workflowai.core.domain.task import Task, TaskInput, TaskOutput

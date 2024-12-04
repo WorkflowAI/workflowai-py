@@ -121,7 +121,8 @@ def _wrap_stream_run_output_only(
         async for chunk in s:
             yield chunk.task_output
 
-    return wrap
+    # TODO: not sure what's going on here...
+    return wrap  # pyright: ignore [reportReturnType]
 
 
 def wrap_run_template(
