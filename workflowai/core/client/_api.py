@@ -3,7 +3,7 @@ from typing import Any, AsyncIterator, Literal, Optional, TypeVar, Union, overlo
 import httpx
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
-from workflowai.core.client.utils import split_chunks
+from workflowai.core.client._utils import split_chunks
 from workflowai.core.domain.errors import BaseError, ErrorResponse, WorkflowAIError
 
 # A type for return values

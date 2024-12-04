@@ -4,9 +4,9 @@ import pytest
 from pydantic import BaseModel, ValidationError
 
 from tests.utils import fixture_text
-from workflowai.core.client.models import RunResponse, RunStreamChunk
-from workflowai.core.domain.task import Task
-from workflowai.core.domain.task_run import Run, RunChunk
+from workflowai.core.client._models import RunResponse, RunStreamChunk
+from workflowai.core.client._utils import tolerant_validator
+from workflowai.core.domain.task_run import Run
 
 
 @pytest.mark.parametrize(
@@ -31,20 +31,6 @@ class _TaskOutputOpt(BaseModel):
     b: Optional[str] = None
 
 
-class _Task(Task[_TaskOutput, _TaskOutput]):
-    id: str = "test-task"
-    schema_id: int = 1
-    input_class: type[_TaskOutput] = _TaskOutput
-    output_class: type[_TaskOutput] = _TaskOutput
-
-
-class _TaskOpt(Task[_TaskOutputOpt, _TaskOutputOpt]):
-    id: str = "test-task"
-    schema_id: int = 1
-    input_class: type[_TaskOutputOpt] = _TaskOutputOpt
-    output_class: type[_TaskOutputOpt] = _TaskOutputOpt
-
-
 class TestRunStreamChunkToDomain:
     def test_no_version_not_optional(self):
         # Check that partial model is ok
@@ -54,8 +40,8 @@ class TestRunStreamChunkToDomain:
         with pytest.raises(ValidationError):  # sanity
             _TaskOutput.model_validate({"a": 1})
 
-        parsed = chunk.to_domain(_Task())
-        assert isinstance(parsed, RunChunk)
+        parsed = chunk.to_domain(tolerant_validator(_TaskOutput))
+        assert isinstance(parsed, Run)
         assert parsed.task_output.a == 1
         # b is not defined
         with pytest.raises(AttributeError):
@@ -65,8 +51,8 @@ class TestRunStreamChunkToDomain:
         chunk = RunStreamChunk.model_validate_json('{"id": "1", "task_output": {"a": 1}}')
         assert chunk
 
-        parsed = chunk.to_domain(_TaskOpt())
-        assert isinstance(parsed, RunChunk)
+        parsed = chunk.to_domain(tolerant_validator(_TaskOutputOpt))
+        assert isinstance(parsed, Run)
         assert parsed.task_output.a == 1
         assert parsed.task_output.b is None
 
@@ -76,7 +62,7 @@ class TestRunStreamChunkToDomain:
         )
         assert chunk
 
-        parsed = chunk.to_domain(_Task())
+        parsed = chunk.to_domain(tolerant_validator(_TaskOutput))
         assert isinstance(parsed, Run)
         assert parsed.task_output.a == 1
         assert parsed.task_output.b == "test"
@@ -89,4 +75,4 @@ class TestRunStreamChunkToDomain:
             '{"id": "1", "task_output": {"a": 1}, "version": {"properties": {"a": 1, "b": "test"}}}',
         )
         with pytest.raises(ValidationError):
-            chunk.to_domain(_Task())
+            chunk.to_domain(_TaskOutput.model_validate)

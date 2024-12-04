@@ -4,6 +4,7 @@ from workflowai.core.client import Client as Client
 from workflowai.core.domain.cache_usage import CacheUsage as CacheUsage
 from workflowai.core.domain.errors import WorkflowAIError as WorkflowAIError
 from workflowai.core.domain.task import Task as Task
+from workflowai.core.domain.task_run import Run as Run
 from workflowai.core.domain.task_version import TaskVersion as TaskVersion
 from workflowai.core.domain.task_version_reference import (
     VersionReference as VersionReference,
@@ -21,6 +22,6 @@ def start(url: Optional[str] = None, api_key: Optional[str] = None) -> Client:
     Returns:
         client.Client: a client instance
     """
-    from workflowai.core.client.client import WorkflowAIClient
+    from workflowai.core.client._client import WorkflowAIClient
 
     return WorkflowAIClient(url, api_key)

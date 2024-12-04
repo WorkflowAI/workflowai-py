@@ -3,9 +3,10 @@ from typing import Any, Optional, Union
 from pydantic import BaseModel
 from typing_extensions import NotRequired, TypedDict
 
+from workflowai.core.client._types import OutputValidator
 from workflowai.core.domain.cache_usage import CacheUsage
-from workflowai.core.domain.task import Task, TaskInput, TaskOutput
-from workflowai.core.domain.task_run import Run, RunChunk
+from workflowai.core.domain.task import TaskOutput
+from workflowai.core.domain.task_run import Run
 from workflowai.core.domain.task_version import TaskVersion
 from workflowai.core.domain.task_version_properties import TaskVersionProperties
 
@@ -44,10 +45,10 @@ class RunResponse(BaseModel):
     duration_seconds: Optional[float] = None
     cost_usd: Optional[float] = None
 
-    def to_domain(self, task: Task[TaskInput, TaskOutput]) -> Run[TaskOutput]:
+    def to_domain(self, validator: OutputValidator[TaskOutput]) -> Run[TaskOutput]:
         return Run(
             id=self.id,
-            task_output=task.output_class.model_validate(self.task_output),
+            task_output=validator(self.task_output),
             version=TaskVersion(
                 properties=TaskVersionProperties.model_construct(
                     None,
@@ -67,17 +68,12 @@ class RunStreamChunk(BaseModel):
     duration_seconds: Optional[float] = None
     cost_usd: Optional[float] = None
 
-    def to_domain(self, task: Task[TaskInput, TaskOutput]) -> Union[Run[TaskOutput], RunChunk[TaskOutput]]:
-        if self.version is None:
-            return RunChunk(
-                id=self.id,
-                task_output=task.output_class.model_construct(None, **self.task_output),
-            )
-
+    def to_domain(self, validator: OutputValidator[TaskOutput]) -> Run[TaskOutput]:
         return Run(
             id=self.id,
-            task_output=task.output_class.model_validate(self.task_output),
-            version=TaskVersion(
+            task_output=validator(self.task_output),
+            version=self.version
+            and TaskVersion(
                 properties=TaskVersionProperties.model_construct(
                     None,
                     **self.version.properties,
