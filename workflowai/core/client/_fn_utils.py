@@ -44,7 +44,7 @@ def check_return_type(return_type_hint: Type[Any]) -> tuple[bool, Type[BaseModel
         return False, output_cls
     if issubclass(return_type_hint, BaseModel):
         return True, return_type_hint
-    raise ValueError("Function must have a return type hint that is a subclass of BaseModel or Run")
+    raise ValueError("Function must have a return type hint that is a subclass of Pydantic's 'BaseModel' or 'Run'")
 
 
 class ExtractFnData(NamedTuple):
