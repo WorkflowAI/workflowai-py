@@ -4,12 +4,13 @@ on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+(-?[a-zA-Z0-9]+)?"
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: Branch that contains the release
-        required: true
-        type: string
+  # Dispatch does not work because of trusted publishers in pypi
+  # workflow_dispatch:
+  #   inputs:
+  #     branch:
+  #       description: Branch that contains the release
+  #       required: true
+  #       type: string
 
 jobs:
   publish:
