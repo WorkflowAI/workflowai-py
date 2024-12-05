@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch that contains the release
+        required: true
+        type: string
 
 jobs:
   publish:
@@ -13,6 +19,12 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v3
+        if: github.event_name == 'push'
+
+      - uses: actions/checkout@v3
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          ref: ${{ inputs.branch }}
 
       - name: Install Poetry
         run: pipx install poetry==1.8.3
@@ -23,11 +35,20 @@ jobs:
           poetry install --all-extras
 
       - name: Check package version matches tag
+        if: github.event_name == 'push'
         run: |
           TAG_VERSION=${GITHUB_REF#refs/tags/v}
           PACKAGE_VERSION=$(poetry version -s)
           if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
             echo "Error: Tag version ($TAG_VERSION) does not match package version ($PACKAGE_VERSION)"
+            exit 1
+          fi
+      - name: Check that version is alpha version
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          PACKAGE_VERSION=$(poetry version -s)
+          if [[ ! "$PACKAGE_VERSION" =~ .*a[0-9]+$ ]]; then
+            echo "Error: Package version ($PACKAGE_VERSION) is not an alpha version (should end with 'aN' where N is a number)"
             exit 1
           fi
 
