@@ -6,7 +6,7 @@ from pydantic import BaseModel, ValidationError
 from tests.utils import fixture_text
 from workflowai.core.client._models import RunResponse
 from workflowai.core.client._utils import tolerant_validator
-from workflowai.core.domain.task_run import Run
+from workflowai.core.domain.run import Run
 
 
 @pytest.mark.parametrize(
@@ -40,7 +40,7 @@ class TestRunResponseToDomain:
         with pytest.raises(ValidationError):  # sanity
             _TaskOutput.model_validate({"a": 1})
 
-        parsed = chunk.to_domain(tolerant_validator(_TaskOutput))
+        parsed = chunk.to_domain(task_id="1", task_schema_id=1, validator=tolerant_validator(_TaskOutput))
         assert isinstance(parsed, Run)
         assert parsed.task_output.a == 1
         # b is not defined
@@ -51,7 +51,7 @@ class TestRunResponseToDomain:
         chunk = RunResponse.model_validate_json('{"id": "1", "task_output": {"a": 1}}')
         assert chunk
 
-        parsed = chunk.to_domain(tolerant_validator(_TaskOutputOpt))
+        parsed = chunk.to_domain(task_id="1", task_schema_id=1, validator=tolerant_validator(_TaskOutputOpt))
         assert isinstance(parsed, Run)
         assert parsed.task_output.a == 1
         assert parsed.task_output.b is None
@@ -62,7 +62,7 @@ class TestRunResponseToDomain:
         )
         assert chunk
 
-        parsed = chunk.to_domain(tolerant_validator(_TaskOutput))
+        parsed = chunk.to_domain(task_id="1", task_schema_id=1, validator=tolerant_validator(_TaskOutput))
         assert isinstance(parsed, Run)
         assert parsed.task_output.a == 1
         assert parsed.task_output.b == "test"
@@ -75,4 +75,4 @@ class TestRunResponseToDomain:
             '{"id": "1", "task_output": {"a": 1}, "version": {"properties": {"a": 1, "b": "test"}}}',
         )
         with pytest.raises(ValidationError):
-            chunk.to_domain(_TaskOutput.model_validate)
+            chunk.to_domain(task_id="1", task_schema_id=1, validator=_TaskOutput.model_validate)

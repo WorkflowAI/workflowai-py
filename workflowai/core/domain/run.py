@@ -19,6 +19,8 @@ class Run(BaseModel, Generic[TaskOutput]):
         default_factory=lambda: str(uuid.uuid4()),
         description="The unique identifier of the task run. This is a UUIDv7.",
     )
+    task_id: str
+    task_schema_id: int
     task_output: TaskOutput
 
     duration_seconds: Optional[float] = None

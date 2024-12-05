@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from pytest_httpx import HTTPXMock, IteratorStream
 
 import workflowai
-from workflowai.core.domain.task_run import Run
+from workflowai.core.domain.run import Run
 
 
 class CityToCapitalTaskInput(BaseModel):

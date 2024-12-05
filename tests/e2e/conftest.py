@@ -4,7 +4,7 @@ import pytest
 from dotenv import load_dotenv
 
 from workflowai import Client
-from workflowai.core.client._client import WorkflowAIClient
+from workflowai.core.client.client import WorkflowAIClient
 
 load_dotenv()
 

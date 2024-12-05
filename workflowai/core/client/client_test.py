@@ -9,11 +9,11 @@ from pytest_httpx import HTTPXMock, IteratorStream
 from tests.models.hello_task import HelloTask, HelloTaskInput, HelloTaskNotOptional, HelloTaskOutput
 from tests.utils import fixtures_json
 from workflowai.core.client import Client
-from workflowai.core.client._client import (
+from workflowai.core.client.client import (
     WorkflowAIClient,
     _compute_default_version_reference,  # pyright: ignore [reportPrivateUsage]
 )
-from workflowai.core.domain.task_run import Run
+from workflowai.core.domain.run import Run
 
 
 @pytest.fixture
@@ -29,6 +29,8 @@ class TestRun:
         task_run = await client.run(task, task_input=HelloTaskInput(name="Alice"))
 
         assert task_run.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
+        assert task_run.task_id == "123"
+        assert task_run.task_schema_id == 1
 
         reqs = httpx_mock.get_requests()
         assert len(reqs) == 1
@@ -195,7 +197,11 @@ class TestTask:
         @client.task(schema_id=1, task_id="123")
         async def fn(task_input: HelloTaskInput) -> HelloTaskOutput: ...
 
-        patched_run_fn.return_value = Run(task_output=HelloTaskOutput(message="hello"))
+        patched_run_fn.return_value = Run(
+            task_output=HelloTaskOutput(message="hello"),
+            task_id="123",
+            task_schema_id=1,
+        )
 
         output = await fn(HelloTaskInput(name="Alice"))
 
@@ -205,7 +211,12 @@ class TestTask:
         @client.task(schema_id=1, task_id="123")
         async def fn(task_input: HelloTaskInput) -> Run[HelloTaskOutput]: ...
 
-        patched_run_fn.return_value = Run(id="1", task_output=HelloTaskOutput(message="hello"))
+        patched_run_fn.return_value = Run(
+            id="1",
+            task_output=HelloTaskOutput(message="hello"),
+            task_id="123",
+            task_schema_id=1,
+        )
 
         output = await fn(HelloTaskInput(name="Alice"))
 
@@ -233,11 +244,14 @@ class TestTask:
 
         chunks = [chunk async for chunk in fn(HelloTaskInput(name="Alice"))]
 
+        def _run(output: HelloTaskOutput, **kwargs: Any) -> Run[HelloTaskOutput]:
+            return Run(id="1", task_id="123", task_schema_id=1, task_output=output, **kwargs)
+
         assert chunks == [
-            Run(id="1", task_output=HelloTaskOutput(message="")),
-            Run(id="1", task_output=HelloTaskOutput(message="hel")),
-            Run(id="1", task_output=HelloTaskOutput(message="hello")),
-            Run(id="1", task_output=HelloTaskOutput(message="hello"), duration_seconds=10.1, cost_usd=0.01),
+            _run(HelloTaskOutput(message="")),
+            _run(HelloTaskOutput(message="hel")),
+            _run(HelloTaskOutput(message="hello")),
+            _run(HelloTaskOutput(message="hello"), duration_seconds=10.1, cost_usd=0.01),
         ]
 
     async def test_stream_output_only(self, client: Client, httpx_mock: HTTPXMock):

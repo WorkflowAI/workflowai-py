@@ -15,9 +15,9 @@ from pydantic import BaseModel
 from typing_extensions import NotRequired, TypedDict, Unpack
 
 from workflowai.core.domain.cache_usage import CacheUsage
+from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import Task, TaskInput, TaskOutput
-from workflowai.core.domain.task_run import Run
-from workflowai.core.domain.task_version_reference import VersionReference
+from workflowai.core.domain.version_reference import VersionReference
 
 TaskInputContra = TypeVar("TaskInputContra", bound=BaseModel, contravariant=True)
 TaskOutputCov = TypeVar("TaskOutputCov", bound=BaseModel, covariant=True)
@@ -194,5 +194,5 @@ class Client(Protocol):
         self,
         schema_id: int,
         task_id: Optional[str] = None,
-        version: VersionReference = "production",
+        version: Optional[VersionReference] = None,
     ) -> TaskDecorator: ...

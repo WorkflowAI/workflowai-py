@@ -1,7 +1,10 @@
+import functools
+from collections.abc import Callable
 from typing import (
     Any,
     AsyncIterator,
     NamedTuple,
+    Optional,
     Sequence,
     Type,
     Union,
@@ -17,14 +20,16 @@ from workflowai.core.client._types import (
     Client,
     FinalRunFn,
     FinalRunFnOutputOnly,
+    FinalRunTemplate,
     FinalStreamRunFn,
     FinalStreamRunFnOutputOnly,
     RunParams,
     RunTemplate,
+    TaskDecorator,
 )
+from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import Task, TaskInput, TaskOutput
-from workflowai.core.domain.task_run import Run
-from workflowai.core.domain.task_version_reference import VersionReference
+from workflowai.core.domain.version_reference import VersionReference
 
 # TODO: add sync support
 
@@ -85,27 +90,30 @@ def extract_fn_data(fn: RunTemplate[TaskInput, TaskOutput]) -> ExtractFnData:
     return ExtractFnData(stream, output_only, input_cls, output_cls)
 
 
-def _wrap_run(client: Client, task: Task[TaskInput, TaskOutput]) -> FinalRunFn[TaskInput, TaskOutput]:
+def _wrap_run(client: Callable[[], Client], task: Task[TaskInput, TaskOutput]) -> FinalRunFn[TaskInput, TaskOutput]:
     async def wrap(task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]) -> Run[TaskOutput]:
-        return await client.run(task, task_input, stream=False, **kwargs)
+        return await client().run(task, task_input, stream=False, **kwargs)
 
     return wrap
 
 
 def _wrap_run_output_only(
-    client: Client,
+    client: Callable[[], Client],
     task: Task[TaskInput, TaskOutput],
 ) -> FinalRunFnOutputOnly[TaskInput, TaskOutput]:
     async def wrap(task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]) -> TaskOutput:
-        run = await client.run(task, task_input, stream=False, **kwargs)
+        run = await client().run(task, task_input, stream=False, **kwargs)
         return run.task_output
 
     return wrap
 
 
-def _wrap_stream_run(client: Client, task: Task[TaskInput, TaskOutput]) -> FinalStreamRunFn[TaskInput, TaskOutput]:
+def _wrap_stream_run(
+    client: Callable[[], Client],
+    task: Task[TaskInput, TaskOutput],
+) -> FinalStreamRunFn[TaskInput, TaskOutput]:
     async def wrap(task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]) -> AsyncIterator[Run[TaskOutput]]:
-        s = await client.run(task, task_input, stream=True, **kwargs)
+        s = await client().run(task, task_input, stream=True, **kwargs)
         async for chunk in s:
             yield chunk
 
@@ -113,11 +121,11 @@ def _wrap_stream_run(client: Client, task: Task[TaskInput, TaskOutput]) -> Final
 
 
 def _wrap_stream_run_output_only(
-    client: Client,
+    client: Callable[[], Client],
     task: Task[TaskInput, TaskOutput],
 ) -> FinalStreamRunFnOutputOnly[TaskInput, TaskOutput]:
     async def wrap(task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]) -> AsyncIterator[TaskOutput]:
-        s = await client.run(task, task_input, stream=True, **kwargs)
+        s = await client().run(task, task_input, stream=True, **kwargs)
         async for chunk in s:
             yield chunk.task_output
 
@@ -126,10 +134,10 @@ def _wrap_stream_run_output_only(
 
 
 def wrap_run_template(
-    client: Client,
+    client: Callable[[], Client],
     task_id: str,
     task_schema_id: int,
-    version: VersionReference,
+    version: Optional[VersionReference],
     fn: RunTemplate[TaskInput, TaskOutput],
 ):
     stream, output_only, input_cls, output_cls = extract_fn_data(fn)
@@ -153,3 +161,17 @@ def wrap_run_template(
 
 def task_id_from_fn_name(fn: Any) -> str:
     return fn.__name__.replace("_", "-").lower()
+
+
+def task_wrapper(
+    client: Callable[[], Client],
+    schema_id: int,
+    task_id: Optional[str] = None,
+    version: Optional[VersionReference] = None,
+) -> TaskDecorator:
+    def wrap(fn: RunTemplate[TaskInput, TaskOutput]) -> FinalRunTemplate[TaskInput, TaskOutput]:
+        tid = task_id or task_id_from_fn_name(fn)
+        return functools.wraps(fn)(wrap_run_template(client, tid, schema_id, version, fn))  # pyright: ignore [reportReturnType]
+
+    # TODO: pyright is unhappy with generics
+    return wrap  # pyright: ignore [reportReturnType]

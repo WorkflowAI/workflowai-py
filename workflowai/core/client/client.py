@@ -1,4 +1,3 @@
-import functools
 import importlib.metadata
 import logging
 import os
@@ -13,25 +12,21 @@ from typing import (
 
 from typing_extensions import Unpack
 
-from workflowai.core.client import Client
 from workflowai.core.client._api import APIClient
-from workflowai.core.client._fn_utils import task_id_from_fn_name, wrap_run_template
+from workflowai.core.client._fn_utils import task_wrapper
 from workflowai.core.client._models import (
     RunRequest,
     RunResponse,
 )
 from workflowai.core.client._types import (
-    FinalRunTemplate,
     OutputValidator,
     RunParams,
-    RunTemplate,
-    TaskDecorator,
 )
 from workflowai.core.client._utils import build_retryable_wait, tolerant_validator
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
+from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import Task, TaskInput, TaskOutput
-from workflowai.core.domain.task_run import Run
-from workflowai.core.domain.task_version_reference import VersionReference
+from workflowai.core.domain.version_reference import VersionReference
 
 _logger = logging.getLogger("WorkflowAI")
 
@@ -54,17 +49,20 @@ def _compute_default_version_reference() -> VersionReference:
     return "production"
 
 
-DEFAULT_VERSION_REFERENCE = _compute_default_version_reference()
-
-
-class WorkflowAIClient(Client):
-    def __init__(self, api_key: str, endpoint: Optional[str] = None):
+class WorkflowAIClient:
+    def __init__(
+        self,
+        api_key: str,
+        endpoint: Optional[str] = None,
+        default_version: Optional[VersionReference] = None,
+    ):
         self.additional_headers = {
             "x-workflowai-source": "sdk",
             "x-workflowai-language": "python",
             "x-workflowai-version": importlib.metadata.version("workflowai"),
         }
         self.api = APIClient(endpoint or "https://run.workflowai.com", api_key, self.additional_headers)
+        self.default_version: VersionReference = default_version or _compute_default_version_reference()
 
     @overload
     async def run(
@@ -93,7 +91,7 @@ class WorkflowAIClient(Client):
     ) -> Union[Run[TaskOutput], AsyncIterator[Run[TaskOutput]]]:
         request = RunRequest(
             task_input=task_input.model_dump(by_alias=True),
-            version=kwargs.get("version") or task.version,
+            version=kwargs.get("version") or task.version or self.default_version,
             stream=stream,
             use_cache=kwargs.get("use_cache"),
             metadata=kwargs.get("metadata"),
@@ -111,6 +109,8 @@ class WorkflowAIClient(Client):
                 request,
                 should_retry=should_retry,
                 wait_for_exception=wait_for_exception,
+                task_id=task.id,
+                task_schema_id=task.schema_id,
                 validator=kwargs.get("validator") or task.output_class.model_validate,
             )
 
@@ -119,6 +119,8 @@ class WorkflowAIClient(Client):
             request,
             should_retry=should_retry,
             wait_for_exception=wait_for_exception,
+            task_id=task.id,
+            task_schema_id=task.schema_id,
             validator=kwargs.get("validator") or tolerant_validator(task.output_class),
         )
 
@@ -128,13 +130,15 @@ class WorkflowAIClient(Client):
         request: RunRequest,
         should_retry: Callable[[], bool],
         wait_for_exception: Callable[[WorkflowAIError], Awaitable[None]],
+        task_id: str,
+        task_schema_id: int,
         validator: OutputValidator[TaskOutput],
     ):
         last_error = None
         while should_retry():
             try:
                 res = await self.api.post(route, request, returns=RunResponse)
-                return res.to_domain(validator)
+                return res.to_domain(task_id, task_schema_id, validator)
             except WorkflowAIError as e:  # noqa: PERF203
                 last_error = e
                 await wait_for_exception(e)
@@ -147,6 +151,8 @@ class WorkflowAIClient(Client):
         request: RunRequest,
         should_retry: Callable[[], bool],
         wait_for_exception: Callable[[WorkflowAIError], Awaitable[None]],
+        task_id: str,
+        task_schema_id: int,
         validator: OutputValidator[TaskOutput],
     ):
         while should_retry():
@@ -157,7 +163,7 @@ class WorkflowAIClient(Client):
                     data=request,
                     returns=RunResponse,
                 ):
-                    yield chunk.to_domain(validator)
+                    yield chunk.to_domain(task_id, task_schema_id, validator)
                 return
             except WorkflowAIError as e:  # noqa: PERF203
                 await wait_for_exception(e)
@@ -166,10 +172,6 @@ class WorkflowAIClient(Client):
         self,
         schema_id: int,
         task_id: Optional[str] = None,
-        version: VersionReference = DEFAULT_VERSION_REFERENCE,
-    ) -> TaskDecorator:
-        def wrap(fn: RunTemplate[TaskInput, TaskOutput]) -> FinalRunTemplate[TaskInput, TaskOutput]:
-            tid = task_id or task_id_from_fn_name(fn)
-            return functools.wraps(fn)(wrap_run_template(self, tid, schema_id, version, fn))  # pyright: ignore [reportReturnType]
-
-        return wrap  # pyright: ignore [reportReturnType]
+        version: Optional[VersionReference] = None,
+    ):
+        return task_wrapper(lambda: self, schema_id, task_id=task_id, version=version)

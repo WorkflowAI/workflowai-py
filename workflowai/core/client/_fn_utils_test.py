@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from tests.models.hello_task import HelloTaskInput, HelloTaskOutput
 from workflowai.core.client._fn_utils import extract_fn_data, get_generic_args, is_async_iterator
-from workflowai.core.domain.task_run import Run
+from workflowai.core.domain.run import Run
 
 
 async def say_hello(task_input: HelloTaskInput) -> HelloTaskOutput: ...
