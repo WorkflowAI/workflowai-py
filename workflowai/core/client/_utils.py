@@ -8,7 +8,9 @@ from json import JSONDecodeError
 from time import time
 from typing import Any, Optional
 
+from workflowai.core.client._types import OutputValidator
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
+from workflowai.core.domain.task import TaskOutput
 
 delimiter = re.compile(r'\}\n\ndata: \{"')
 
@@ -93,3 +95,7 @@ def build_retryable_wait(
         retry_count += 1
 
     return _should_retry, _wait_for_exception
+
+
+def tolerant_validator(m: type[TaskOutput]) -> OutputValidator[TaskOutput]:
+    return lambda payload: m.model_construct(None, **payload)

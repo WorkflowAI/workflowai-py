@@ -1,5 +1,4 @@
-from datetime import datetime
-from typing import Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
@@ -24,5 +23,3 @@ class Task(BaseModel, Generic[TaskInput, TaskOutput]):
 
     input_class: type[TaskInput] = BaseModel  # pyright: ignore [reportAssignmentType]
     output_class: type[TaskOutput] = BaseModel  # pyright: ignore [reportAssignmentType]
-
-    created_at: Optional[datetime] = None

@@ -5,7 +5,7 @@ import pytest
 from freezegun import freeze_time
 from httpx import HTTPStatusError
 
-from workflowai.core.client.utils import build_retryable_wait, retry_after_to_delay_seconds, split_chunks
+from workflowai.core.client._utils import build_retryable_wait, retry_after_to_delay_seconds, split_chunks
 from workflowai.core.domain.errors import WorkflowAIError
 
 

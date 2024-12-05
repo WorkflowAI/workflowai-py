@@ -3,7 +3,7 @@ from typing import Any, AsyncIterator, Literal, Optional, TypeVar, Union, overlo
 import httpx
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
-from workflowai.core.client.utils import split_chunks
+from workflowai.core.client._utils import split_chunks
 from workflowai.core.domain.errors import BaseError, ErrorResponse, WorkflowAIError
 
 # A type for return values
@@ -16,9 +16,6 @@ class APIClient:
         self.endpoint = endpoint
         self.api_key = api_key
         self.source_headers = source_headers or {}
-
-        if not self.endpoint or not self.api_key:
-            raise ValueError("Missing API URL or key")
 
     def _client(self) -> httpx.AsyncClient:
         source_headers = self.source_headers or {}

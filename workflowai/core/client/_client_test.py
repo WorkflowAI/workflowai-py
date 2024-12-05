@@ -1,5 +1,7 @@
 import importlib.metadata
 import json
+from typing import Any, AsyncIterator
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from pytest_httpx import HTTPXMock, IteratorStream
@@ -7,7 +9,10 @@ from pytest_httpx import HTTPXMock, IteratorStream
 from tests.models.hello_task import HelloTask, HelloTaskInput, HelloTaskNotOptional, HelloTaskOutput
 from tests.utils import fixtures_json
 from workflowai.core.client import Client
-from workflowai.core.client.client import WorkflowAIClient
+from workflowai.core.client._client import (
+    WorkflowAIClient,
+    _compute_default_version_reference,  # pyright: ignore [reportPrivateUsage]
+)
 from workflowai.core.domain.task_run import Run
 
 
@@ -34,7 +39,6 @@ class TestRun:
             "task_input": {"name": "Alice"},
             "version": "production",
             "stream": False,
-            "use_cache": "when_available",
         }
 
     async def test_stream(self, httpx_mock: HTTPXMock, client: Client):
@@ -65,6 +69,7 @@ class TestRun:
         ]
         last_message = chunks[-1]
         assert isinstance(last_message, Run)
+        assert last_message.version
         assert last_message.version.properties.model == "gpt-4o"
         assert last_message.version.properties.temperature == 0.5
         assert last_message.cost_usd == 0.01
@@ -102,6 +107,7 @@ class TestRun:
 
         last_message = chunks[-1]
         assert isinstance(last_message, Run)
+        assert last_message.version
         assert last_message.version.properties.model == "gpt-4o"
         assert last_message.version.properties.temperature == 0.5
         assert last_message.cost_usd == 0.01
@@ -126,7 +132,6 @@ class TestRun:
             "task_input": {"name": "Alice"},
             "version": "dev",
             "stream": False,
-            "use_cache": "when_available",
         }
 
     async def test_success_with_headers(self, httpx_mock: HTTPXMock, client: Client):
@@ -151,7 +156,6 @@ class TestRun:
             "task_input": {"name": "Alice"},
             "version": "production",
             "stream": False,
-            "use_cache": "when_available",
         }
         # Check for additional headers
         for key, value in headers.items():
@@ -171,3 +175,101 @@ class TestRun:
         assert len(reqs) == 2
         assert reqs[0].url == "http://localhost:8000/v1/_/tasks/123/schemas/1/run"
         assert reqs[1].url == "http://localhost:8000/v1/_/tasks/123/schemas/1/run"
+
+
+class TestTask:
+    @pytest.fixture
+    def patched_run_fn(self, client: Client):
+        with patch.object(client, "run", spec=client.run) as run_mock:
+            yield run_mock
+
+    def test_fn_name(self, client: Client):
+        @client.task(schema_id=1, task_id="123")
+        async def fn(task_input: HelloTaskInput) -> HelloTaskOutput: ...
+
+        assert fn.__name__ == "fn"
+        assert fn.__doc__ is None
+        assert callable(fn)
+
+    async def test_run_output_only(self, client: Client, patched_run_fn: AsyncMock):
+        @client.task(schema_id=1, task_id="123")
+        async def fn(task_input: HelloTaskInput) -> HelloTaskOutput: ...
+
+        patched_run_fn.return_value = Run(task_output=HelloTaskOutput(message="hello"))
+
+        output = await fn(HelloTaskInput(name="Alice"))
+
+        assert output == HelloTaskOutput(message="hello")
+
+    async def test_run_with_version(self, client: Client, patched_run_fn: AsyncMock):
+        @client.task(schema_id=1, task_id="123")
+        async def fn(task_input: HelloTaskInput) -> Run[HelloTaskOutput]: ...
+
+        patched_run_fn.return_value = Run(id="1", task_output=HelloTaskOutput(message="hello"))
+
+        output = await fn(HelloTaskInput(name="Alice"))
+
+        assert output.id == "1"
+        assert output.task_output == HelloTaskOutput(message="hello")
+        assert isinstance(output, Run)
+
+    async def test_stream(self, client: Client, httpx_mock: HTTPXMock):
+        # We avoid mocking the run fn directly here, python does weird things with
+        # having to await async iterators depending on how they are defined so instead we mock
+        # the underlying api call to check that we don't need the extra await
+
+        @client.task(schema_id=1, task_id="123")
+        def fn(task_input: HelloTaskInput) -> AsyncIterator[Run[HelloTaskOutput]]: ...
+
+        httpx_mock.add_response(
+            stream=IteratorStream(
+                [
+                    b'data: {"id":"1","task_output":{"message":""}}\n\n',
+                    b'data: {"id":"1","task_output":{"message":"hel"}}\n\ndata: {"id":"1","task_output":{"message":"hello"}}\n\n',  # noqa: E501
+                    b'data: {"id":"1","task_output":{"message":"hello"},"cost_usd":0.01,"duration_seconds":10.1}\n\n',
+                ],
+            ),
+        )
+
+        chunks = [chunk async for chunk in fn(HelloTaskInput(name="Alice"))]
+
+        assert chunks == [
+            Run(id="1", task_output=HelloTaskOutput(message="")),
+            Run(id="1", task_output=HelloTaskOutput(message="hel")),
+            Run(id="1", task_output=HelloTaskOutput(message="hello")),
+            Run(id="1", task_output=HelloTaskOutput(message="hello"), duration_seconds=10.1, cost_usd=0.01),
+        ]
+
+    async def test_stream_output_only(self, client: Client, httpx_mock: HTTPXMock):
+        @client.task(schema_id=1)
+        def fn(task_input: HelloTaskInput) -> AsyncIterator[HelloTaskOutput]: ...
+
+        httpx_mock.add_response(
+            stream=IteratorStream(
+                [
+                    b'data: {"id":"1","task_output":{"message":""}}\n\n',
+                    b'data: {"id":"1","task_output":{"message":"hel"}}\n\ndata: {"id":"1","task_output":{"message":"hello"}}\n\n',  # noqa: E501
+                    b'data: {"id":"1","task_output":{"message":"hello"},"cost_usd":0.01,"duration_seconds":10.1}\n\n',
+                ],
+            ),
+        )
+
+        chunks = [chunk async for chunk in fn(HelloTaskInput(name="Alice"))]
+
+        # We could remove duplicates but it would add a condition for everyone and every chunk
+        # that might not be useful.
+        assert chunks == [
+            HelloTaskOutput(message=""),
+            HelloTaskOutput(message="hel"),
+            HelloTaskOutput(message="hello"),
+            HelloTaskOutput(message="hello"),
+        ]
+
+
+@pytest.mark.parametrize(
+    ("env_var", "expected"),
+    [("p", "production"), ("production", "production"), ("dev", "dev"), ("staging", "staging"), ("1", 1)],
+)
+def test_compute_default_version_reference(env_var: str, expected: Any):
+    with patch.dict("os.environ", {"WORKFLOWAI_DEFAULT_VERSION": env_var}):
+        assert _compute_default_version_reference() == expected
