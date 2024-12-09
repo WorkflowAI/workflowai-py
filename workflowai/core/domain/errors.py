@@ -1,4 +1,6 @@
+from email.utils import parsedate_to_datetime
 from json import JSONDecodeError
+from time import time
 from typing import Any, Literal, Optional, Union
 
 from httpx import Response
@@ -53,6 +55,7 @@ ErrorCode = Union[
         # The request was invalid
         "bad_request",
         "invalid_file",
+        "connection_error",
     ],
     str,  # Using as a fallback to avoid validation error if an error code is added to the API
 ]
@@ -70,11 +73,34 @@ class ErrorResponse(BaseModel):
     task_run_id: Optional[str] = None
 
 
+def _retry_after_to_delay_seconds(retry_after: Any) -> Optional[float]:
+    if retry_after is None:
+        return None
+
+    try:
+        return float(retry_after)
+    except ValueError:
+        pass
+    try:
+        retry_after_date = parsedate_to_datetime(retry_after)
+        current_time = time()
+        return retry_after_date.timestamp() - current_time
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
 class WorkflowAIError(Exception):
-    def __init__(self, response: Optional[Response], error: BaseError, task_run_id: Optional[str] = None):
+    def __init__(
+        self,
+        response: Optional[Response],
+        error: BaseError,
+        task_run_id: Optional[str] = None,
+        retry_after_delay_seconds: Optional[float] = None,
+    ):
         self.error = error
         self.task_run_id = task_run_id
         self.response = response
+        self._retry_after_delay_seconds = retry_after_delay_seconds
 
     def __str__(self):
         return f"WorkflowAIError : [{self.error.code}] ({self.error.status_code}): [{self.error.message}]"
@@ -106,3 +132,13 @@ class WorkflowAIError(Exception):
             ),
             task_run_id=task_run_id,
         )
+
+    @property
+    def retry_after_delay_seconds(self) -> Optional[float]:
+        if self._retry_after_delay_seconds:
+            return self._retry_after_delay_seconds
+
+        if self.response:
+            return _retry_after_to_delay_seconds(self.response.headers.get("Retry-After"))
+
+        return None
