@@ -139,7 +139,7 @@ class TestAPIClientStream:
             # Split not at the end
             [b'data: {"a":"test"}', b'\n\ndata: {"a":"test2"}\n\n'],
             # Really messy
-            [b"dat", b'a: {"a":"', b'test"}', b"\n\ndata", b': {"a":"test2"}\n\n'],
+            [b"dat", b'a: {"a":"', b'test"}', b"\n", b"\ndata", b': {"a":"test2"}\n\n'],
         ],
     )
     async def test_stream_with_multiple_chunks(
