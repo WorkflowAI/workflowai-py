@@ -1,14 +1,16 @@
+import logging
 from typing import Any, AsyncIterator, Literal, Optional, TypeVar, Union, overload
 
 import httpx
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
-from workflowai.core.client._utils import split_chunks
 from workflowai.core.domain.errors import BaseError, ErrorResponse, WorkflowAIError
 
 # A type for return values
 _R = TypeVar("_R")
 _M = TypeVar("_M", bound=BaseModel)
+
+_logger = logging.getLogger("WorkflowAI")
 
 
 class APIClient:
@@ -106,6 +108,37 @@ class APIClient:
                 response=response,
             ) from exception
 
+    async def _wrap_sse(self, raw: AsyncIterator[bytes], termination_chars: bytes = b"\n\n"):
+        data = b""
+        in_data = False
+        async for chunk in raw:
+            data += chunk
+            if not in_data:
+                if data.startswith(b"data: "):
+                    data = data[6:]
+                    in_data = True
+                else:
+                    # We will wait for the next chunk, we might be in the middle
+                    # of 'data: '
+                    continue
+
+            # Splitting the chunk by separator
+            splits = data.split(b"\n\ndata: ")
+            if len(splits) > 1:
+                # Yielding the rest of the splits except the last one
+                for data in splits[0:-1]:
+                    yield data
+                # The last split could be incomplete
+                data = splits[-1]
+
+            if data.endswith(termination_chars):
+                yield data[: -len(termination_chars)]
+                data = b""
+                in_data = False
+
+        if data:
+            _logger.warning("Data left after processing", extra={"data": data})
+
     async def stream(
         self,
         method: Literal["GET", "POST"],
@@ -122,15 +155,14 @@ class APIClient:
             if not response.is_success:
                 # We need to read the response to get the error message
                 await response.aread()
-                response.raise_for_status()
+                await self.raise_for_status(response)
+                return
 
-            async for chunk in response.aiter_bytes():
-                payload = ""
+            async for chunk in self._wrap_sse(response.aiter_bytes()):
                 try:
-                    for payload in split_chunks(chunk):
-                        yield returns.model_validate_json(payload)
+                    yield returns.model_validate_json(chunk)
                 except ValidationError as e:
-                    raise self._extract_error(response, payload, e) from None
+                    raise self._extract_error(response, chunk, e) from None
 
     async def raise_for_status(self, response: httpx.Response):
         if response.status_code < 200 or response.status_code >= 300:

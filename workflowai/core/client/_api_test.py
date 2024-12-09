@@ -1,7 +1,9 @@
+from collections.abc import Awaitable, Callable
+
 import httpx
 import pytest
 from pydantic import BaseModel
-from pytest_httpx import HTTPXMock
+from pytest_httpx import HTTPXMock, IteratorStream
 
 from workflowai.core.client._api import APIClient
 from workflowai.core.domain.errors import WorkflowAIError
@@ -60,26 +62,95 @@ class TestAPIClientExtractError:
         assert e.value.response == response
 
 
-async def test_stream_404(httpx_mock: HTTPXMock):
-    class TestInputModel(BaseModel):
-        test_input: str
+@pytest.fixture
+def client() -> APIClient:
+    return APIClient(endpoint="https://blabla.com", api_key="test_api_key")
 
-    class TestOutputModel(BaseModel):
-        test_output: str
 
-    httpx_mock.add_response(status_code=404)
+class TestInputModel(BaseModel):
+    bla: str = "bla"
 
-    client = APIClient(endpoint="https://blabla.com", api_key="test_api_key")
 
-    try:
-        async for _ in client.stream(
-            method="GET",
-            path="test_path",
-            data=TestInputModel(test_input="test"),
-            returns=TestOutputModel,
-        ):
-            pass
-    except httpx.HTTPStatusError as e:
-        assert isinstance(e, httpx.HTTPStatusError)
-        assert e.response.status_code == 404
-        assert e.response.reason_phrase == "Not Found"
+class TestOutputModel(BaseModel):
+    a: str
+
+
+class TestAPIClientStream:
+    async def test_stream_404(self, httpx_mock: HTTPXMock, client: APIClient):
+        class TestInputModel(BaseModel):
+            test_input: str
+
+        class TestOutputModel(BaseModel):
+            test_output: str
+
+        httpx_mock.add_response(status_code=404)
+
+        with pytest.raises(WorkflowAIError) as e:  # noqa: PT012
+            async for _ in client.stream(
+                method="GET",
+                path="test_path",
+                data=TestInputModel(test_input="test"),
+                returns=TestOutputModel,
+            ):
+                pass
+
+        assert e.value.response
+        assert e.value.response.status_code == 404
+        assert e.value.response.reason_phrase == "Not Found"
+
+    @pytest.fixture
+    async def stream_fn(self, client: APIClient):
+        async def _stm():
+            return [
+                chunk
+                async for chunk in client.stream(
+                    method="GET",
+                    path="test_path",
+                    data=TestInputModel(),
+                    returns=TestOutputModel,
+                )
+            ]
+
+        return _stm
+
+    async def test_stream_with_single_chunk(
+        self,
+        stream_fn: Callable[[], Awaitable[list[TestOutputModel]]],
+        httpx_mock: HTTPXMock,
+    ):
+        httpx_mock.add_response(
+            stream=IteratorStream(
+                [
+                    b'data: {"a":"test"}\n\n',
+                ],
+            ),
+        )
+
+        chunks = await stream_fn()
+        assert chunks == [TestOutputModel(a="test")]
+
+    @pytest.mark.parametrize(
+        "streamed_chunks",
+        [
+            # 2 perfect chunks([b'data: {"a":"test"}\n\n', b'data: {"a":"test2"}\n\n'],),
+            [b'data: {"a":"test"}\n\n', b'data: {"a":"test2"}\n\n'],
+            # 2 chunks in one
+            [b'data: {"a":"test"}\n\ndata: {"a":"test2"}\n\n'],
+            # Split not at the end
+            [b'data: {"a":"test"}', b'\n\ndata: {"a":"test2"}\n\n'],
+            # Really messy
+            [b"dat", b'a: {"a":"', b'test"}', b"\n\ndata", b': {"a":"test2"}\n\n'],
+        ],
+    )
+    async def test_stream_with_multiple_chunks(
+        self,
+        stream_fn: Callable[[], Awaitable[list[TestOutputModel]]],
+        httpx_mock: HTTPXMock,
+        streamed_chunks: list[bytes],
+    ):
+        assert isinstance(streamed_chunks, list), "sanity check"
+        assert all(isinstance(chunk, bytes) for chunk in streamed_chunks), "sanity check"
+
+        httpx_mock.add_response(stream=IteratorStream(streamed_chunks))
+        chunks = await stream_fn()
+        assert chunks == [TestOutputModel(a="test"), TestOutputModel(a="test2")]
