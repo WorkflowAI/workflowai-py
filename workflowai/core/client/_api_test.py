@@ -154,3 +154,38 @@ class TestAPIClientStream:
         httpx_mock.add_response(stream=IteratorStream(streamed_chunks))
         chunks = await stream_fn()
         assert chunks == [TestOutputModel(a="test"), TestOutputModel(a="test2")]
+
+
+class TestReadAndConnectError:
+    @pytest.mark.parametrize("exception", [httpx.ReadError("arg"), httpx.ConnectError("arg")])
+    async def test_get(self, httpx_mock: HTTPXMock, client: APIClient, exception: Exception):
+        httpx_mock.add_exception(exception)
+
+        with pytest.raises(WorkflowAIError) as e:
+            await client.get(path="test_path", returns=TestOutputModel)
+
+        assert e.value.error.code == "connection_error"
+
+    @pytest.mark.parametrize("exception", [httpx.ReadError("arg"), httpx.ConnectError("arg")])
+    async def test_post(self, httpx_mock: HTTPXMock, client: APIClient, exception: Exception):
+        httpx_mock.add_exception(exception)
+
+        with pytest.raises(WorkflowAIError) as e:
+            await client.post(path="test_path", data=TestInputModel(), returns=TestOutputModel)
+
+        assert e.value.error.code == "connection_error"
+
+    @pytest.mark.parametrize("exception", [httpx.ReadError("arg"), httpx.ConnectError("arg")])
+    async def test_stream(self, httpx_mock: HTTPXMock, client: APIClient, exception: Exception):
+        httpx_mock.add_exception(exception)
+
+        with pytest.raises(WorkflowAIError) as e:  # noqa: PT012
+            async for _ in client.stream(
+                method="GET",
+                path="test_path",
+                data=TestInputModel(),
+                returns=TestOutputModel,
+            ):
+                pass
+
+        assert e.value.error.code == "connection_error"

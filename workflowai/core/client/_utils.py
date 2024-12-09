@@ -3,10 +3,8 @@
 # the delimiter is not withing a quoted string
 import asyncio
 import re
-from email.utils import parsedate_to_datetime
 from json import JSONDecodeError
 from time import time
-from typing import Any, Optional
 
 from workflowai.core.client._types import OutputValidator
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
@@ -22,22 +20,6 @@ def split_chunks(chunk: bytes):
         yield chunk_str[start : match.start() + 1]
         start = match.end() - 2
     yield chunk_str[start:]
-
-
-def retry_after_to_delay_seconds(retry_after: Any) -> Optional[float]:
-    if retry_after is None:
-        return None
-
-    try:
-        return float(retry_after)
-    except ValueError:
-        pass
-    try:
-        retry_after_date = parsedate_to_datetime(retry_after)
-        current_time = time()
-        return retry_after_date.timestamp() - current_time
-    except (TypeError, ValueError, OverflowError):
-        return None
 
 
 # Returns two functions:
@@ -60,13 +42,16 @@ def build_retryable_wait(
         return retry_count < max_retry_count and _leftover_delay() >= 0
 
     async def _wait_for_exception(e: WorkflowAIError):
-        if not e.response:
+        retry_after = e.retry_after_delay_seconds
+        if retry_after is None:
             raise e
 
         nonlocal retry_count
-        retry_after = retry_after_to_delay_seconds(e.response.headers.get("Retry-After"))
         leftover_delay = _leftover_delay()
         if not retry_after or leftover_delay < 0 or retry_count >= max_retry_count:
+            if not e.response:
+                raise e
+
             # Convert error to WorkflowAIError
             try:
                 response_json = e.response.json()

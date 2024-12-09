@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator, Literal, Optional, TypeVar, Union, overload
 
 import httpx
@@ -19,17 +20,26 @@ class APIClient:
         self.api_key = api_key
         self.source_headers = source_headers or {}
 
-    def _client(self) -> httpx.AsyncClient:
+    @asynccontextmanager
+    async def _client(self):
         source_headers = self.source_headers or {}
-        client = httpx.AsyncClient(
+        async with httpx.AsyncClient(
             base_url=self.endpoint,
             headers={
                 "Authorization": f"Bearer {self.api_key}",
                 **source_headers,
             },
             timeout=120.0,
-        )
-        return client
+        ) as client:
+            try:
+                yield client
+            except (httpx.ReadError, httpx.ConnectError) as e:
+                raise WorkflowAIError(
+                    response=None,
+                    error=BaseError(message="Could not read response", code="connection_error"),
+                    # We can retry after 10ms
+                    retry_after_delay_seconds=0.010,
+                ) from e
 
     async def get(self, path: str, returns: type[_R], query: Union[dict[str, Any], None] = None) -> _R:
         async with self._client() as client:

@@ -3,6 +3,7 @@ import json
 from typing import Any, AsyncIterator
 from unittest.mock import AsyncMock, patch
 
+import httpx
 import pytest
 from pytest_httpx import HTTPXMock, IteratorStream
 
@@ -13,6 +14,7 @@ from workflowai.core.client.client import (
     WorkflowAIClient,
     _compute_default_version_reference,  # pyright: ignore [reportPrivateUsage]
 )
+from workflowai.core.domain.errors import WorkflowAIError
 from workflowai.core.domain.run import Run
 
 
@@ -177,6 +179,26 @@ class TestRun:
         assert len(reqs) == 2
         assert reqs[0].url == "http://localhost:8000/v1/_/tasks/123/schemas/1/run"
         assert reqs[1].url == "http://localhost:8000/v1/_/tasks/123/schemas/1/run"
+
+    async def test_run_retries_on_connection_error(self, httpx_mock: HTTPXMock, client: Client):
+        task = HelloTask(id="123", schema_id=1)
+
+        httpx_mock.add_exception(httpx.ConnectError("arg"))
+        httpx_mock.add_response(json=fixtures_json("task_run.json"))
+
+        task_run = await client.run(task, task_input=HelloTaskInput(name="Alice"), max_retry_count=5)
+        assert task_run.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
+
+    async def test_max_retries(self, httpx_mock: HTTPXMock, client: Client):
+        task = HelloTask(id="123", schema_id=1)
+
+        httpx_mock.add_exception(httpx.ConnectError("arg"), is_reusable=True)
+
+        with pytest.raises(WorkflowAIError):
+            await client.run(task, task_input=HelloTaskInput(name="Alice"), max_retry_count=5)
+
+        reqs = httpx_mock.get_requests()
+        assert len(reqs) == 5
 
 
 class TestTask:
