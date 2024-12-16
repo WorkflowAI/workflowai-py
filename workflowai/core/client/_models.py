@@ -20,6 +20,8 @@ class RunRequest(BaseModel):
 
     metadata: Optional[dict[str, Any]] = None
 
+    labels: Optional[set[str]] = None
+
     private_fields: Optional[set[str]] = None
 
     stream: Optional[bool] = None

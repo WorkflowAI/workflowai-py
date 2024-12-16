@@ -95,6 +95,7 @@ class WorkflowAIClient:
             stream=stream,
             use_cache=kwargs.get("use_cache"),
             metadata=kwargs.get("metadata"),
+            labels=kwargs.get("labels"),
         )
 
         route = f"/v1/_/tasks/{task.id}/schemas/{task.schema_id}/run"
