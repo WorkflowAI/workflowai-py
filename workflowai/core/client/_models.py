@@ -20,7 +20,7 @@ class RunRequest(BaseModel):
 
     metadata: Optional[dict[str, Any]] = None
 
-    labels: Optional[set[str]] = None
+    labels: Optional[set[str]] = None  # deprecated, to be included in metadata
 
     private_fields: Optional[set[str]] = None
 
