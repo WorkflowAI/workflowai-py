@@ -29,6 +29,7 @@ class RunParams(TypedDict, Generic[TaskOutput]):
     version: NotRequired[Optional[VersionReference]]
     use_cache: NotRequired[CacheUsage]
     metadata: NotRequired[Optional[dict[str, Any]]]
+    labels: NotRequired[Optional[set[str]]]
     max_retry_delay: NotRequired[float]
     max_retry_count: NotRequired[float]
     validator: NotRequired[OutputValidator[TaskOutput]]
