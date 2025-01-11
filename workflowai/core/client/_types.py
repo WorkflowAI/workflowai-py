@@ -176,7 +176,7 @@ class Client(Protocol):
                 defined in the task is used. Defaults to None.
             stream (bool, optional): whether to stream the output. If True, the function returns an async iterator of
                 partial output objects. Defaults to False.
-            use_cache (CacheUsage, optional): how to use the cache. Defaults to "when_available".
+            use_cache (CacheUsage, optional): how to use the cache. Defaults to "auto".
             labels (Optional[set[str]], optional): a set of labels to attach to the run.
                 Labels are indexed and searchable. Defaults to None.
             metadata (Optional[dict[str, Any]], optional): a dictionary of metadata to attach to the run.
