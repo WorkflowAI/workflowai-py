@@ -177,9 +177,11 @@ class Client(Protocol):
             stream (bool, optional): whether to stream the output. If True, the function returns an async iterator of
                 partial output objects. Defaults to False.
             use_cache (CacheUsage, optional): how to use the cache. Defaults to "auto".
-                "auto" will use the cache if available, and the temperature is 0.
-                "always" will always use the cache if available.
-                "never" will never use the cache.
+                "auto" (default): if a previous run exists with the same version and input, and if
+                    the temperature is 0, the cached output is returned
+                "always": the cached output is returned when available, regardless
+                    of the temperature value
+                "never": the cache is never used
             labels (Optional[set[str]], optional): a set of labels to attach to the run.
                 Labels are indexed and searchable. Defaults to None.
             metadata (Optional[dict[str, Any]], optional): a dictionary of metadata to attach to the run.
