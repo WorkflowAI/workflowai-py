@@ -23,14 +23,14 @@ workflowai.init(api_key="test", url="http://localhost:8000")
 def _mock_response(httpx_mock: HTTPXMock, task_id: str = "city-to-capital"):
     httpx_mock.add_response(
         method="POST",
-        url=f"http://localhost:8000/v1/_/tasks/{task_id}/schemas/1/run",
+        url=f"http://localhost:8000/v1/_/agents/{task_id}/schemas/1/run",
         json={"id": "123", "task_output": {"capital": "Tokyo"}},
     )
 
 
 def _mock_stream(httpx_mock: HTTPXMock, task_id: str = "city-to-capital"):
     httpx_mock.add_response(
-        url=f"http://localhost:8000/v1/_/tasks/{task_id}/schemas/1/run",
+        url=f"http://localhost:8000/v1/_/agents/{task_id}/schemas/1/run",
         stream=IteratorStream(
             [
                 b'data: {"id":"1","task_output":{"capital":""}}\n\n',
@@ -43,7 +43,7 @@ def _mock_stream(httpx_mock: HTTPXMock, task_id: str = "city-to-capital"):
 
 def _check_request(request: Optional[Request], version: Any = "production", task_id: str = "city-to-capital"):
     assert request is not None
-    assert request.url == f"http://localhost:8000/v1/_/tasks/{task_id}/schemas/1/run"
+    assert request.url == f"http://localhost:8000/v1/_/agents/{task_id}/schemas/1/run"
     body = json.loads(request.content)
     assert body == {
         "task_input": {"city": "Hello"},
@@ -57,7 +57,7 @@ def _check_request(request: Optional[Request], version: Any = "production", task
 
 
 async def test_run_task(httpx_mock: HTTPXMock) -> None:
-    @workflowai.task(schema_id=1)
+    @workflowai.agent(schema_id=1)
     async def city_to_capital(task_input: CityToCapitalTaskInput) -> CityToCapitalTaskOutput: ...
 
     _mock_response(httpx_mock)
@@ -71,7 +71,7 @@ async def test_run_task(httpx_mock: HTTPXMock) -> None:
 
 
 async def test_run_task_run(httpx_mock: HTTPXMock) -> None:
-    @workflowai.task(schema_id=1)
+    @workflowai.agent(schema_id=1)
     async def city_to_capital(task_input: CityToCapitalTaskInput) -> Run[CityToCapitalTaskOutput]: ...
 
     _mock_response(httpx_mock)
@@ -86,7 +86,7 @@ async def test_run_task_run(httpx_mock: HTTPXMock) -> None:
 
 
 async def test_run_task_run_version(httpx_mock: HTTPXMock) -> None:
-    @workflowai.task(schema_id=1, version="staging")
+    @workflowai.agent(schema_id=1, version="staging")
     async def city_to_capital(task_input: CityToCapitalTaskInput) -> Run[CityToCapitalTaskOutput]: ...
 
     _mock_response(httpx_mock)
@@ -101,7 +101,7 @@ async def test_run_task_run_version(httpx_mock: HTTPXMock) -> None:
 
 
 async def test_stream_task_run(httpx_mock: HTTPXMock) -> None:
-    @workflowai.task(schema_id=1)
+    @workflowai.agent(schema_id=1)
     def city_to_capital(task_input: CityToCapitalTaskInput) -> AsyncIterator[CityToCapitalTaskOutput]: ...
 
     _mock_stream(httpx_mock)
@@ -118,7 +118,7 @@ async def test_stream_task_run(httpx_mock: HTTPXMock) -> None:
 
 
 async def test_stream_task_run_custom_id(httpx_mock: HTTPXMock) -> None:
-    @workflowai.task(schema_id=1, task_id="custom-id")
+    @workflowai.agent(schema_id=1, id="custom-id")
     def city_to_capital(task_input: CityToCapitalTaskInput) -> AsyncIterator[CityToCapitalTaskOutput]: ...
 
     _mock_stream(httpx_mock, task_id="custom-id")

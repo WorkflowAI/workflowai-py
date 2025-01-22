@@ -1,6 +1,6 @@
 from typing import Any, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing_extensions import NotRequired, TypedDict
 
 from workflowai.core.client._types import OutputValidator
@@ -63,3 +63,14 @@ class RunResponse(BaseModel):
             duration_seconds=self.duration_seconds,
             cost_usd=self.cost_usd,
         )
+
+
+class CreateAgentRequest(BaseModel):
+    id: str = Field(description="The agent id, must be unique per tenant and URL safe")
+    input_schema: dict[str, Any] = Field(description="The input schema for the agent")
+    output_schema: dict[str, Any] = Field(description="The output schema for the agent")
+
+
+class CreateAgentResponse(BaseModel):
+    id: str
+    schema_id: int
