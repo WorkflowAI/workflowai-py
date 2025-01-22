@@ -26,7 +26,7 @@ def _build_client(
 
 
 # By default the shared client is created using the default environment variables
-_shared_client: WorkflowAI = _build_client()
+shared_client: WorkflowAI = _build_client()
 
 
 def init(api_key: Optional[str] = None, url: Optional[str] = None, default_version: Optional[VersionReference] = None):
@@ -42,8 +42,8 @@ def init(api_key: Optional[str] = None, url: Optional[str] = None, default_versi
         client.Client: a client instance
     """
 
-    global _shared_client  # noqa: PLW0603
-    _shared_client = _build_client(url, api_key, default_version)
+    global shared_client  # noqa: PLW0603
+    shared_client = _build_client(url, api_key, default_version)
 
 
 @deprecated("Use `workflowai.agent` instead")
@@ -54,7 +54,7 @@ def task(
 ):
     from workflowai.core.client._fn_utils import agent_wrapper
 
-    return agent_wrapper(lambda: _shared_client.api, schema_id, task_id, version)
+    return agent_wrapper(lambda: shared_client.api, schema_id, task_id, version)
 
 
 def agent(
@@ -64,4 +64,4 @@ def agent(
 ):
     from workflowai.core.client._fn_utils import agent_wrapper
 
-    return agent_wrapper(lambda: _shared_client.api, schema_id=schema_id, agent_id=id, version=version)
+    return agent_wrapper(lambda: shared_client.api, schema_id=schema_id, agent_id=id, version=version)
