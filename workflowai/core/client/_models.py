@@ -8,13 +8,13 @@ from workflowai.core.domain.cache_usage import CacheUsage
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import TaskOutput
 from workflowai.core.domain.task_version import TaskVersion
-from workflowai.core.domain.task_version_properties import TaskVersionProperties
+from workflowai.core.domain.version_properties import VersionProperties as DVersionProperties
 
 
 class RunRequest(BaseModel):
     task_input: dict[str, Any]
 
-    version: Union[str, int]
+    version: Union[str, int, dict[str, Any]]
 
     use_cache: Optional[CacheUsage] = None
 
@@ -55,7 +55,7 @@ class RunResponse(BaseModel):
             task_output=validator(self.task_output),
             version=self.version
             and TaskVersion(
-                properties=TaskVersionProperties.model_construct(
+                properties=DVersionProperties.model_construct(
                     None,
                     **self.version.properties,
                 ),

@@ -2,15 +2,17 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from workflowai.core.domain.model import Model
 
-class TaskVersionProperties(BaseModel):
+
+class VersionProperties(BaseModel):
     """Properties that described a way a task run was executed.
     Although some keys are provided as an example, any key:value are accepted"""
 
     # Allow extra fields to support custom options
     model_config = ConfigDict(extra="allow")
 
-    model: Optional[str] = Field(
+    model: Optional[Model] = Field(
         default=None,
         description="The LLM model used for the run",
     )

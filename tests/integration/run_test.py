@@ -19,12 +19,22 @@ class CityToCapitalTaskOutput(BaseModel):
 
 workflowai.init(api_key="test", url="http://localhost:8000")
 
+_REGISTER_URL = "http://localhost:8000/v1/_/agents"
 
-def _mock_response(httpx_mock: HTTPXMock, task_id: str = "city-to-capital"):
+
+def _mock_register(httpx_mock: HTTPXMock, schema_id: int = 1, task_id: str = "city-to-capital", variant_id: str = "1"):
+    httpx_mock.add_response(
+        method="POST",
+        url=_REGISTER_URL,
+        json={"schema_id": schema_id, "variant_id": variant_id, "id": task_id},
+    )
+
+
+def _mock_response(httpx_mock: HTTPXMock, task_id: str = "city-to-capital", capital: str = "Tokyo"):
     httpx_mock.add_response(
         method="POST",
         url=f"http://localhost:8000/v1/_/agents/{task_id}/schemas/1/run",
-        json={"id": "123", "task_output": {"capital": "Tokyo"}},
+        json={"id": "123", "task_output": {"capital": capital}},
     )
 
 
@@ -132,3 +142,55 @@ async def test_stream_task_run_custom_id(httpx_mock: HTTPXMock) -> None:
         CityToCapitalTaskOutput(capital="Tokyo"),
         CityToCapitalTaskOutput(capital="Tokyo"),
     ]
+
+
+async def test_auto_register(httpx_mock: HTTPXMock):
+    @workflowai.agent()
+    async def city_to_capital(task_input: CityToCapitalTaskInput) -> CityToCapitalTaskOutput: ...
+
+    _mock_register(httpx_mock)
+
+    _mock_response(httpx_mock)
+
+    res = await city_to_capital(CityToCapitalTaskInput(city="Hello"))
+    assert res.capital == "Tokyo"
+
+    _mock_response(httpx_mock, capital="Paris")
+    # Run it a second time
+    res = await city_to_capital(CityToCapitalTaskInput(city="Hello"), use_cache="never")
+    assert res.capital == "Paris"
+
+    req = httpx_mock.get_requests()
+    assert len(req) == 3
+    assert req[0].url == _REGISTER_URL
+
+    req_body = json.loads(req[0].read())
+    assert req_body == {
+        "id": "city-to-capital",
+        "input_schema": {
+            "properties": {
+                "city": {
+                    "title": "City",
+                    "type": "string",
+                },
+            },
+            "required": [
+                "city",
+            ],
+            "title": "CityToCapitalTaskInput",
+            "type": "object",
+        },
+        "output_schema": {
+            "properties": {
+                "capital": {
+                    "title": "Capital",
+                    "type": "string",
+                },
+            },
+            "required": [
+                "capital",
+            ],
+            "title": "CityToCapitalTaskOutput",
+            "type": "object",
+        },
+    }

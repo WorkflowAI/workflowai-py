@@ -25,8 +25,10 @@ from workflowai.core.client._types import (
     TaskDecorator,
 )
 from workflowai.core.client.agent import Agent
+from workflowai.core.domain.model import Model
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import TaskInput, TaskOutput
+from workflowai.core.domain.version_properties import VersionProperties
 from workflowai.core.domain.version_reference import VersionReference
 
 # TODO: add sync support
@@ -114,6 +116,7 @@ def wrap_run_template(
     agent_id: str,
     schema_id: Optional[int],
     version: Optional[VersionReference],
+    model: Optional[Model],
     fn: RunTemplate[TaskInput, TaskOutput],
 ) -> Union[
     _RunnableAgent[TaskInput, TaskOutput],
@@ -122,6 +125,12 @@ def wrap_run_template(
     _RunnableStreamOutputOnlyAgent[TaskInput, TaskOutput],
 ]:
     stream, output_only, input_cls, output_cls = extract_fn_spec(fn)
+
+    if not version and (fn.__doc__ or model):
+        version = VersionProperties(
+            instructions=fn.__doc__,
+            model=model,
+        )
 
     if stream:
         task_cls = _RunnableStreamOutputOnlyAgent if output_only else _RunnableStreamAgent
@@ -146,10 +155,11 @@ def agent_wrapper(
     schema_id: Optional[int] = None,
     agent_id: Optional[str] = None,
     version: Optional[VersionReference] = None,
+    model: Optional[Model] = None,
 ) -> TaskDecorator:
     def wrap(fn: RunTemplate[TaskInput, TaskOutput]) -> FinalRunTemplate[TaskInput, TaskOutput]:
         tid = agent_id or agent_id_from_fn_name(fn)
-        return functools.wraps(fn)(wrap_run_template(client, tid, schema_id, version, fn))  # pyright: ignore [reportReturnType]
+        return functools.wraps(fn)(wrap_run_template(client, tid, schema_id, version, model, fn))  # pyright: ignore [reportReturnType]
 
     # pyright is unhappy with generics
     return wrap  # pyright: ignore [reportReturnType]

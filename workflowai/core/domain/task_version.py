@@ -1,10 +1,10 @@
 from pydantic import BaseModel, Field
 
-from workflowai.core.domain.task_version_properties import TaskVersionProperties
+from workflowai.core.domain.version_properties import VersionProperties
 
 
 class TaskVersion(BaseModel):
-    properties: TaskVersionProperties = Field(
-        default_factory=TaskVersionProperties,
+    properties: VersionProperties = Field(
+        default_factory=VersionProperties,
         description="The properties used for executing the run.",
     )

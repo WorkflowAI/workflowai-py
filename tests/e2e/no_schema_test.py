@@ -10,15 +10,13 @@ class SummarizeTaskInput(BaseModel):
 
 
 class SummarizeTaskOutput(BaseModel):
-    summary: Optional[str] = None
+    summary_points: Optional[list[str]] = None
 
 
 @workflowai.agent(id="summarize")
-async def summarize(task_input: SummarizeTaskInput) -> SummarizeTaskOutput:
-    """Use bullet points"""
-    ...
+async def summarize(task_input: SummarizeTaskInput) -> SummarizeTaskOutput: ...
 
 
 async def test_summarize():
     summarized = await summarize(SummarizeTaskInput(text="Hello, world!"))
-    assert summarized.summary
+    assert summarized.summary_points

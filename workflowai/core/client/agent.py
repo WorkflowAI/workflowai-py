@@ -1,5 +1,5 @@
 from collections.abc import Awaitable, Callable
-from typing import Generic, NamedTuple, Optional, Union
+from typing import Any, Generic, NamedTuple, Optional, Union
 
 from typing_extensions import Unpack
 
@@ -10,6 +10,7 @@ from workflowai.core.client._utils import build_retryable_wait, global_default_v
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import TaskInput, TaskOutput
+from workflowai.core.domain.version_properties import VersionProperties
 from workflowai.core.domain.version_reference import VersionReference
 
 
@@ -27,7 +28,7 @@ class Agent(Generic[TaskInput, TaskOutput]):
         self.schema_id = schema_id
         self.input_cls = input_cls
         self.output_cls = output_cls
-        self.version = version or global_default_version_reference()
+        self.version: VersionReference = version or global_default_version_reference()
         self._api = (lambda: api) if isinstance(api, APIClient) else api
 
     @property
@@ -41,14 +42,29 @@ class Agent(Generic[TaskInput, TaskOutput]):
         wait_for_exception: Callable[[WorkflowAIError], Awaitable[None]]
         schema_id: int
 
+    def _sanitize_version(self, version: Optional[VersionReference]) -> Union[str, int, dict[str, Any]]:
+        if not version:
+            version = self.version
+        if not isinstance(version, VersionProperties):
+            return version
+
+        dumped = version.model_dump(by_alias=True)
+        if not dumped.get("model"):
+            import workflowai
+
+            dumped["model"] = workflowai.DEFAULT_MODEL
+        return dumped
+
     async def _prepare_run(self, task_input: TaskInput, stream: bool, **kwargs: Unpack[RunParams[TaskOutput]]):
         schema_id = self.schema_id
         if not schema_id:
             schema_id = await self.register()
 
+        version = self._sanitize_version(kwargs.get("version"))
+
         request = RunRequest(
             task_input=task_input.model_dump(by_alias=True),
-            version=kwargs.get("version") or self.version,
+            version=version,
             stream=stream,
             use_cache=kwargs.get("use_cache"),
             metadata=kwargs.get("metadata"),
