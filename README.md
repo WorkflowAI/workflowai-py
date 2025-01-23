@@ -2,6 +2,10 @@
 
 A library to use WorkflowAI with Python
 
+## Context
+
+WorkflowAI is a platform for building agents.
+
 ## Installation
 
 `workflowai` requires a python >= 3.9.
@@ -129,7 +133,7 @@ def say_hello(input: Input) -> Output:
 ### Version from code or deployments
 
 Setting a docstring or a model in the agent decorator signals the client that the agent parameters are
-fixed and configured via code. 
+fixed and configured via code.
 
 Handling the agent parameters in code is useful to get started but may be limited in the long run:
 
@@ -166,4 +170,43 @@ def say_hello(input: Input) -> AsyncIterator[Output]:
 @workflowai.agent()
 def say_hello(input: Input) -> AsyncIterator[Run[Output]]:
     ...
+```
+
+### Tools
+
+WorkflowAI has a few tools that can be used to enhance the agent's capabilities:
+
+- `@browser-text` allows fetching the content of a web page
+- `@search` allows performing a web search
+
+To use a tool, simply add it's handles to the instructions (the function docstring):
+
+```python
+@workflowai.agent()
+def say_hello(input: Input) -> Output:
+    """
+    You can use @search and @browser-text to retrieve information about the name.
+    """
+    ...
+```
+
+### Error handling
+
+Agents can raise errors, for example when the underlying model fails to generate a response or when
+there are content moderation issues.
+
+All errors are wrapped in a `WorkflowAIError` that contains details about what happened.
+The most interesting fields are:
+
+- `code` is a string that identifies the type of error, see the [errors.py](./workflowai/core/domain/errors.py) file for more details
+- `message` is a human readable message that describes the error
+
+The `WorkflowAIError` is raised when the agent is called, so you can handle it like any other exception.
+
+```python
+try:
+    await say_hello(Input(name="John"))
+except WorkflowAIError as e:
+    print(e.code)
+    print(e.message)
 ```
