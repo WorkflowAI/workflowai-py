@@ -2,6 +2,7 @@
 # By adding the " at the end we more or less guarantee that
 # the delimiter is not withing a quoted string
 import asyncio
+import os
 import re
 from json import JSONDecodeError
 from time import time
@@ -9,6 +10,8 @@ from time import time
 from workflowai.core.client._types import OutputValidator
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
 from workflowai.core.domain.task import TaskOutput
+from workflowai.core.domain.version_reference import VersionReference
+from workflowai.core.logger import logger
 
 delimiter = re.compile(r'\}\n\ndata: \{"')
 
@@ -84,3 +87,21 @@ def build_retryable_wait(
 
 def tolerant_validator(m: type[TaskOutput]) -> OutputValidator[TaskOutput]:
     return lambda payload: m.model_construct(None, **payload)
+
+
+def global_default_version_reference() -> VersionReference:
+    version = os.getenv("WORKFLOWAI_DEFAULT_VERSION")
+    if not version:
+        return "production"
+
+    if version in {"dev", "staging", "production"}:
+        return version  # pyright: ignore [reportReturnType]
+
+    try:
+        return int(version)
+    except ValueError:
+        pass
+
+    logger.warning("Invalid default version: %s", version)
+
+    return "production"

@@ -3,6 +3,7 @@ from collections.abc import Callable
 from typing import (
     Any,
     AsyncIterator,
+    Generic,
     NamedTuple,
     Optional,
     Sequence,
@@ -16,19 +17,18 @@ from typing import (
 from pydantic import BaseModel
 from typing_extensions import Unpack
 
+from workflowai.core.client._api import APIClient
 from workflowai.core.client._types import (
-    Client,
-    FinalRunFn,
-    FinalRunFnOutputOnly,
     FinalRunTemplate,
-    FinalStreamRunFn,
-    FinalStreamRunFnOutputOnly,
     RunParams,
     RunTemplate,
     TaskDecorator,
 )
+from workflowai.core.client.agent import Agent
+from workflowai.core.domain.model import Model
 from workflowai.core.domain.run import Run
-from workflowai.core.domain.task import Task, TaskInput, TaskOutput
+from workflowai.core.domain.task import TaskInput, TaskOutput
+from workflowai.core.domain.version_properties import VersionProperties
 from workflowai.core.domain.version_reference import VersionReference
 
 # TODO: add sync support
@@ -52,7 +52,7 @@ def check_return_type(return_type_hint: Type[Any]) -> tuple[bool, Type[BaseModel
     raise ValueError("Function must have a return type hint that is a subclass of Pydantic's 'BaseModel' or 'Run'")
 
 
-class ExtractFnData(NamedTuple):
+class RunFunctionSpec(NamedTuple):
     stream: bool
     output_only: bool
     input_cls: Type[BaseModel]
@@ -66,7 +66,7 @@ def is_async_iterator(t: type[Any]) -> bool:
     return issubclass(ori, AsyncIterator)
 
 
-def extract_fn_data(fn: RunTemplate[TaskInput, TaskOutput]) -> ExtractFnData:
+def extract_fn_spec(fn: RunTemplate[TaskInput, TaskOutput]) -> RunFunctionSpec:
     hints = get_type_hints(fn)
     if "return" not in hints:
         raise ValueError("Function must have a return type hint")
@@ -87,91 +87,79 @@ def extract_fn_data(fn: RunTemplate[TaskInput, TaskOutput]) -> ExtractFnData:
         stream = False
         output_only, output_cls = check_return_type(return_type_hint)
 
-    return ExtractFnData(stream, output_only, input_cls, output_cls)
+    return RunFunctionSpec(stream, output_only, input_cls, output_cls)
 
 
-def _wrap_run(client: Callable[[], Client], task: Task[TaskInput, TaskOutput]) -> FinalRunFn[TaskInput, TaskOutput]:
-    async def wrap(task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]) -> Run[TaskOutput]:
-        return await client().run(task, task_input, stream=False, **kwargs)
-
-    return wrap
+class _RunnableAgent(Agent[TaskInput, TaskOutput], Generic[TaskInput, TaskOutput]):
+    async def __call__(self, task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]):
+        return await self.run(task_input, **kwargs)
 
 
-def _wrap_run_output_only(
-    client: Callable[[], Client],
-    task: Task[TaskInput, TaskOutput],
-) -> FinalRunFnOutputOnly[TaskInput, TaskOutput]:
-    async def wrap(task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]) -> TaskOutput:
-        run = await client().run(task, task_input, stream=False, **kwargs)
-        return run.task_output
-
-    return wrap
+class _RunnableOutputOnlyAgent(Agent[TaskInput, TaskOutput], Generic[TaskInput, TaskOutput]):
+    async def __call__(self, task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]):
+        return (await self.run(task_input, **kwargs)).task_output
 
 
-def _wrap_stream_run(
-    client: Callable[[], Client],
-    task: Task[TaskInput, TaskOutput],
-) -> FinalStreamRunFn[TaskInput, TaskOutput]:
-    async def wrap(task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]) -> AsyncIterator[Run[TaskOutput]]:
-        s = await client().run(task, task_input, stream=True, **kwargs)
-        async for chunk in s:
-            yield chunk
-
-    return wrap
+class _RunnableStreamAgent(Agent[TaskInput, TaskOutput], Generic[TaskInput, TaskOutput]):
+    def __call__(self, task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]):
+        return self.stream(task_input, **kwargs)
 
 
-def _wrap_stream_run_output_only(
-    client: Callable[[], Client],
-    task: Task[TaskInput, TaskOutput],
-) -> FinalStreamRunFnOutputOnly[TaskInput, TaskOutput]:
-    async def wrap(task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]) -> AsyncIterator[TaskOutput]:
-        s = await client().run(task, task_input, stream=True, **kwargs)
-        async for chunk in s:
+class _RunnableStreamOutputOnlyAgent(Agent[TaskInput, TaskOutput], Generic[TaskInput, TaskOutput]):
+    async def __call__(self, task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]):
+        async for chunk in self.stream(task_input, **kwargs):
             yield chunk.task_output
-
-    # TODO: not sure what's going on here...
-    return wrap  # pyright: ignore [reportReturnType]
 
 
 def wrap_run_template(
-    client: Callable[[], Client],
-    task_id: str,
-    task_schema_id: int,
+    client: Callable[[], APIClient],
+    agent_id: str,
+    schema_id: Optional[int],
     version: Optional[VersionReference],
+    model: Optional[Model],
     fn: RunTemplate[TaskInput, TaskOutput],
-):
-    stream, output_only, input_cls, output_cls = extract_fn_data(fn)
-    # There is some co / contravariant issue here...
-    task: Task[TaskInput, TaskOutput] = Task(  # pyright: ignore [reportAssignmentType]
-        id=task_id,
-        schema_id=task_schema_id,
-        input_class=input_cls,
-        output_class=output_cls,
+) -> Union[
+    _RunnableAgent[TaskInput, TaskOutput],
+    _RunnableOutputOnlyAgent[TaskInput, TaskOutput],
+    _RunnableStreamAgent[TaskInput, TaskOutput],
+    _RunnableStreamOutputOnlyAgent[TaskInput, TaskOutput],
+]:
+    stream, output_only, input_cls, output_cls = extract_fn_spec(fn)
+
+    if not version and (fn.__doc__ or model):
+        version = VersionProperties(
+            instructions=fn.__doc__,
+            model=model,
+        )
+
+    if stream:
+        task_cls = _RunnableStreamOutputOnlyAgent if output_only else _RunnableStreamAgent
+    else:
+        task_cls = _RunnableOutputOnlyAgent if output_only else _RunnableAgent
+    return task_cls(  # pyright: ignore [reportUnknownVariableType]
+        agent_id=agent_id,
+        input_cls=input_cls,
+        output_cls=output_cls,
+        api=client,
+        schema_id=schema_id,
         version=version,
     )
 
-    if stream:
-        if output_only:
-            return _wrap_stream_run_output_only(client, task)
-        return _wrap_stream_run(client, task)
-    if output_only:
-        return _wrap_run_output_only(client, task)
-    return _wrap_run(client, task)
 
-
-def task_id_from_fn_name(fn: Any) -> str:
+def agent_id_from_fn_name(fn: Any) -> str:
     return fn.__name__.replace("_", "-").lower()
 
 
-def task_wrapper(
-    client: Callable[[], Client],
-    schema_id: int,
-    task_id: Optional[str] = None,
+def agent_wrapper(
+    client: Callable[[], APIClient],
+    schema_id: Optional[int] = None,
+    agent_id: Optional[str] = None,
     version: Optional[VersionReference] = None,
+    model: Optional[Model] = None,
 ) -> TaskDecorator:
     def wrap(fn: RunTemplate[TaskInput, TaskOutput]) -> FinalRunTemplate[TaskInput, TaskOutput]:
-        tid = task_id or task_id_from_fn_name(fn)
-        return functools.wraps(fn)(wrap_run_template(client, tid, schema_id, version, fn))  # pyright: ignore [reportReturnType]
+        tid = agent_id or agent_id_from_fn_name(fn)
+        return functools.wraps(fn)(wrap_run_template(client, tid, schema_id, version, model, fn))  # pyright: ignore [reportReturnType]
 
-    # TODO: pyright is unhappy with generics
+    # pyright is unhappy with generics
     return wrap  # pyright: ignore [reportReturnType]

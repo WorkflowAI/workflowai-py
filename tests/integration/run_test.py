@@ -19,18 +19,28 @@ class CityToCapitalTaskOutput(BaseModel):
 
 workflowai.init(api_key="test", url="http://localhost:8000")
 
+_REGISTER_URL = "http://localhost:8000/v1/_/agents"
 
-def _mock_response(httpx_mock: HTTPXMock, task_id: str = "city-to-capital"):
+
+def _mock_register(httpx_mock: HTTPXMock, schema_id: int = 1, task_id: str = "city-to-capital", variant_id: str = "1"):
     httpx_mock.add_response(
         method="POST",
-        url=f"http://localhost:8000/v1/_/tasks/{task_id}/schemas/1/run",
-        json={"id": "123", "task_output": {"capital": "Tokyo"}},
+        url=_REGISTER_URL,
+        json={"schema_id": schema_id, "variant_id": variant_id, "id": task_id},
+    )
+
+
+def _mock_response(httpx_mock: HTTPXMock, task_id: str = "city-to-capital", capital: str = "Tokyo"):
+    httpx_mock.add_response(
+        method="POST",
+        url=f"http://localhost:8000/v1/_/agents/{task_id}/schemas/1/run",
+        json={"id": "123", "task_output": {"capital": capital}},
     )
 
 
 def _mock_stream(httpx_mock: HTTPXMock, task_id: str = "city-to-capital"):
     httpx_mock.add_response(
-        url=f"http://localhost:8000/v1/_/tasks/{task_id}/schemas/1/run",
+        url=f"http://localhost:8000/v1/_/agents/{task_id}/schemas/1/run",
         stream=IteratorStream(
             [
                 b'data: {"id":"1","task_output":{"capital":""}}\n\n',
@@ -43,7 +53,7 @@ def _mock_stream(httpx_mock: HTTPXMock, task_id: str = "city-to-capital"):
 
 def _check_request(request: Optional[Request], version: Any = "production", task_id: str = "city-to-capital"):
     assert request is not None
-    assert request.url == f"http://localhost:8000/v1/_/tasks/{task_id}/schemas/1/run"
+    assert request.url == f"http://localhost:8000/v1/_/agents/{task_id}/schemas/1/run"
     body = json.loads(request.content)
     assert body == {
         "task_input": {"city": "Hello"},
@@ -57,7 +67,7 @@ def _check_request(request: Optional[Request], version: Any = "production", task
 
 
 async def test_run_task(httpx_mock: HTTPXMock) -> None:
-    @workflowai.task(schema_id=1)
+    @workflowai.agent(schema_id=1)
     async def city_to_capital(task_input: CityToCapitalTaskInput) -> CityToCapitalTaskOutput: ...
 
     _mock_response(httpx_mock)
@@ -71,7 +81,7 @@ async def test_run_task(httpx_mock: HTTPXMock) -> None:
 
 
 async def test_run_task_run(httpx_mock: HTTPXMock) -> None:
-    @workflowai.task(schema_id=1)
+    @workflowai.agent(schema_id=1)
     async def city_to_capital(task_input: CityToCapitalTaskInput) -> Run[CityToCapitalTaskOutput]: ...
 
     _mock_response(httpx_mock)
@@ -86,7 +96,7 @@ async def test_run_task_run(httpx_mock: HTTPXMock) -> None:
 
 
 async def test_run_task_run_version(httpx_mock: HTTPXMock) -> None:
-    @workflowai.task(schema_id=1, version="staging")
+    @workflowai.agent(schema_id=1, version="staging")
     async def city_to_capital(task_input: CityToCapitalTaskInput) -> Run[CityToCapitalTaskOutput]: ...
 
     _mock_response(httpx_mock)
@@ -101,7 +111,7 @@ async def test_run_task_run_version(httpx_mock: HTTPXMock) -> None:
 
 
 async def test_stream_task_run(httpx_mock: HTTPXMock) -> None:
-    @workflowai.task(schema_id=1)
+    @workflowai.agent(schema_id=1)
     def city_to_capital(task_input: CityToCapitalTaskInput) -> AsyncIterator[CityToCapitalTaskOutput]: ...
 
     _mock_stream(httpx_mock)
@@ -118,7 +128,7 @@ async def test_stream_task_run(httpx_mock: HTTPXMock) -> None:
 
 
 async def test_stream_task_run_custom_id(httpx_mock: HTTPXMock) -> None:
-    @workflowai.task(schema_id=1, task_id="custom-id")
+    @workflowai.agent(schema_id=1, id="custom-id")
     def city_to_capital(task_input: CityToCapitalTaskInput) -> AsyncIterator[CityToCapitalTaskOutput]: ...
 
     _mock_stream(httpx_mock, task_id="custom-id")
@@ -132,3 +142,55 @@ async def test_stream_task_run_custom_id(httpx_mock: HTTPXMock) -> None:
         CityToCapitalTaskOutput(capital="Tokyo"),
         CityToCapitalTaskOutput(capital="Tokyo"),
     ]
+
+
+async def test_auto_register(httpx_mock: HTTPXMock):
+    @workflowai.agent()
+    async def city_to_capital(task_input: CityToCapitalTaskInput) -> CityToCapitalTaskOutput: ...
+
+    _mock_register(httpx_mock)
+
+    _mock_response(httpx_mock)
+
+    res = await city_to_capital(CityToCapitalTaskInput(city="Hello"))
+    assert res.capital == "Tokyo"
+
+    _mock_response(httpx_mock, capital="Paris")
+    # Run it a second time
+    res = await city_to_capital(CityToCapitalTaskInput(city="Hello"), use_cache="never")
+    assert res.capital == "Paris"
+
+    req = httpx_mock.get_requests()
+    assert len(req) == 3
+    assert req[0].url == _REGISTER_URL
+
+    req_body = json.loads(req[0].read())
+    assert req_body == {
+        "id": "city-to-capital",
+        "input_schema": {
+            "properties": {
+                "city": {
+                    "title": "City",
+                    "type": "string",
+                },
+            },
+            "required": [
+                "city",
+            ],
+            "title": "CityToCapitalTaskInput",
+            "type": "object",
+        },
+        "output_schema": {
+            "properties": {
+                "capital": {
+                    "title": "Capital",
+                    "type": "string",
+                },
+            },
+            "required": [
+                "capital",
+            ],
+            "title": "CityToCapitalTaskOutput",
+            "type": "object",
+        },
+    }

@@ -1,11 +1,14 @@
 import os
 from typing import Optional
 
-from workflowai.core.client import Client as Client
+from typing_extensions import deprecated
+
+from workflowai.core.client._types import TaskDecorator
+from workflowai.core.client.client import WorkflowAI as WorkflowAI
 from workflowai.core.domain.cache_usage import CacheUsage as CacheUsage
 from workflowai.core.domain.errors import WorkflowAIError as WorkflowAIError
+from workflowai.core.domain.model import Model as Model
 from workflowai.core.domain.run import Run as Run
-from workflowai.core.domain.task import Task as Task
 from workflowai.core.domain.task_version import TaskVersion as TaskVersion
 from workflowai.core.domain.version_reference import (
     VersionReference as VersionReference,
@@ -16,10 +19,8 @@ def _build_client(
     endpoint: Optional[str] = None,
     api_key: Optional[str] = None,
     default_version: Optional[VersionReference] = None,
-) -> Client:
-    from workflowai.core.client.client import WorkflowAIClient
-
-    return WorkflowAIClient(
+):
+    return WorkflowAI(
         endpoint=endpoint or os.getenv("WORKFLOWAI_API_URL"),
         api_key=api_key or os.getenv("WORKFLOWAI_API_KEY", ""),
         default_version=default_version,
@@ -27,7 +28,10 @@ def _build_client(
 
 
 # By default the shared client is created using the default environment variables
-shared_client: Client = _build_client()
+shared_client: WorkflowAI = _build_client()
+
+# The default model to use when running agents without a deployment
+DEFAULT_MODEL: Model = os.getenv("WORKFLOWAI_DEFAULT_MODEL", "gemini-1.5-pro-latest")
 
 
 def init(api_key: Optional[str] = None, url: Optional[str] = None, default_version: Optional[VersionReference] = None):
@@ -47,11 +51,29 @@ def init(api_key: Optional[str] = None, url: Optional[str] = None, default_versi
     shared_client = _build_client(url, api_key, default_version)
 
 
+@deprecated("Use `workflowai.agent` instead")
 def task(
-    schema_id: int,
+    schema_id: Optional[int] = None,
     task_id: Optional[str] = None,
     version: Optional[VersionReference] = None,
 ):
-    from workflowai.core.client._fn_utils import task_wrapper
+    from workflowai.core.client._fn_utils import agent_wrapper
 
-    return task_wrapper(lambda: shared_client, schema_id, task_id, version)
+    return agent_wrapper(lambda: shared_client.api, schema_id, task_id, version)
+
+
+def agent(
+    id: Optional[str] = None,  # noqa: A002
+    schema_id: Optional[int] = None,
+    version: Optional[VersionReference] = None,
+    model: Optional[Model] = None,
+) -> TaskDecorator:
+    from workflowai.core.client._fn_utils import agent_wrapper
+
+    return agent_wrapper(
+        lambda: shared_client.api,
+        schema_id=schema_id,
+        agent_id=id,
+        version=version,
+        model=model,
+    )

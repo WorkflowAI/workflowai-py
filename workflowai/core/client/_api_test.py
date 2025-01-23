@@ -67,20 +67,20 @@ def client() -> APIClient:
     return APIClient(endpoint="https://blabla.com", api_key="test_api_key")
 
 
-class TestInputModel(BaseModel):
+class _TestInputModel(BaseModel):
     bla: str = "bla"
 
 
-class TestOutputModel(BaseModel):
+class _TestOutputModel(BaseModel):
     a: str
 
 
 class TestAPIClientStream:
     async def test_stream_404(self, httpx_mock: HTTPXMock, client: APIClient):
-        class TestInputModel(BaseModel):
+        class _TestInputModel(BaseModel):
             test_input: str
 
-        class TestOutputModel(BaseModel):
+        class _TestOutputModel(BaseModel):
             test_output: str
 
         httpx_mock.add_response(status_code=404)
@@ -89,8 +89,8 @@ class TestAPIClientStream:
             async for _ in client.stream(
                 method="GET",
                 path="test_path",
-                data=TestInputModel(test_input="test"),
-                returns=TestOutputModel,
+                data=_TestInputModel(test_input="test"),
+                returns=_TestOutputModel,
             ):
                 pass
 
@@ -106,8 +106,8 @@ class TestAPIClientStream:
                 async for chunk in client.stream(
                     method="GET",
                     path="test_path",
-                    data=TestInputModel(),
-                    returns=TestOutputModel,
+                    data=_TestInputModel(),
+                    returns=_TestOutputModel,
                 )
             ]
 
@@ -115,7 +115,7 @@ class TestAPIClientStream:
 
     async def test_stream_with_single_chunk(
         self,
-        stream_fn: Callable[[], Awaitable[list[TestOutputModel]]],
+        stream_fn: Callable[[], Awaitable[list[_TestOutputModel]]],
         httpx_mock: HTTPXMock,
     ):
         httpx_mock.add_response(
@@ -127,7 +127,7 @@ class TestAPIClientStream:
         )
 
         chunks = await stream_fn()
-        assert chunks == [TestOutputModel(a="test")]
+        assert chunks == [_TestOutputModel(a="test")]
 
     @pytest.mark.parametrize(
         "streamed_chunks",
@@ -144,7 +144,7 @@ class TestAPIClientStream:
     )
     async def test_stream_with_multiple_chunks(
         self,
-        stream_fn: Callable[[], Awaitable[list[TestOutputModel]]],
+        stream_fn: Callable[[], Awaitable[list[_TestOutputModel]]],
         httpx_mock: HTTPXMock,
         streamed_chunks: list[bytes],
     ):
@@ -153,7 +153,7 @@ class TestAPIClientStream:
 
         httpx_mock.add_response(stream=IteratorStream(streamed_chunks))
         chunks = await stream_fn()
-        assert chunks == [TestOutputModel(a="test"), TestOutputModel(a="test2")]
+        assert chunks == [_TestOutputModel(a="test"), _TestOutputModel(a="test2")]
 
 
 class TestReadAndConnectError:
@@ -162,7 +162,7 @@ class TestReadAndConnectError:
         httpx_mock.add_exception(exception)
 
         with pytest.raises(WorkflowAIError) as e:
-            await client.get(path="test_path", returns=TestOutputModel)
+            await client.get(path="test_path", returns=_TestOutputModel)
 
         assert e.value.error.code == "connection_error"
 
@@ -171,7 +171,7 @@ class TestReadAndConnectError:
         httpx_mock.add_exception(exception)
 
         with pytest.raises(WorkflowAIError) as e:
-            await client.post(path="test_path", data=TestInputModel(), returns=TestOutputModel)
+            await client.post(path="test_path", data=_TestInputModel(), returns=_TestOutputModel)
 
         assert e.value.error.code == "connection_error"
 
@@ -183,8 +183,8 @@ class TestReadAndConnectError:
             async for _ in client.stream(
                 method="GET",
                 path="test_path",
-                data=TestInputModel(),
-                returns=TestOutputModel,
+                data=_TestInputModel(),
+                returns=_TestOutputModel,
             ):
                 pass
 

@@ -3,7 +3,6 @@ from typing import (
     Any,
     AsyncIterator,
     Generic,
-    Literal,
     Optional,
     Protocol,
     TypeVar,
@@ -16,7 +15,7 @@ from typing_extensions import NotRequired, TypedDict, Unpack
 
 from workflowai.core.domain.cache_usage import CacheUsage
 from workflowai.core.domain.run import Run
-from workflowai.core.domain.task import Task, TaskInput, TaskOutput
+from workflowai.core.domain.task import TaskInput, TaskOutput
 from workflowai.core.domain.version_reference import VersionReference
 
 TaskInputContra = TypeVar("TaskInputContra", bound=BaseModel, contravariant=True)
@@ -133,72 +132,3 @@ class TaskDecorator(Protocol):
     ) -> FinalStreamRunFnOutputOnly[TaskInput, TaskOutput]: ...
 
     def __call__(self, fn: RunTemplate[TaskInput, TaskOutput]) -> FinalRunTemplate[TaskInput, TaskOutput]: ...
-
-
-class Client(Protocol):
-    """A client to interact with the WorkflowAI API"""
-
-    @overload
-    async def run(
-        self,
-        task: Task[TaskInput, TaskOutput],
-        task_input: TaskInput,
-        stream: Literal[False] = False,
-        **kwargs: Unpack[RunParams[TaskOutput]],
-    ) -> Run[TaskOutput]: ...
-
-    @overload
-    async def run(
-        self,
-        task: Task[TaskInput, TaskOutput],
-        task_input: TaskInput,
-        stream: Literal[True] = True,
-        **kwargs: Unpack[RunParams[TaskOutput]],
-    ) -> AsyncIterator[Run[TaskOutput]]: ...
-
-    async def run(
-        self,
-        task: Task[TaskInput, TaskOutput],
-        task_input: TaskInput,
-        stream: bool = False,
-        **kwargs: Unpack[RunParams[TaskOutput]],
-    ) -> Union[Run[TaskOutput], AsyncIterator[Run[TaskOutput]]]:
-        """Run a task
-
-        Args:
-            task (Task[TaskInput, TaskOutput]): the task to run
-            task_input (TaskInput): the input to the task
-            version (Optional[TaskVersionReference], optional): the version of the task to run. If not provided,
-                the version defined in the task is used. Defaults to None.
-            environment (Optional[str], optional): the environment to run the task in. If not provided, the environment
-                defined in the task is used. Defaults to None.
-            iteration (Optional[int], optional): the iteration of the task to run. If not provided, the iteration
-                defined in the task is used. Defaults to None.
-            stream (bool, optional): whether to stream the output. If True, the function returns an async iterator of
-                partial output objects. Defaults to False.
-            use_cache (CacheUsage, optional): how to use the cache. Defaults to "auto".
-                "auto" (default): if a previous run exists with the same version and input, and if
-                    the temperature is 0, the cached output is returned
-                "always": the cached output is returned when available, regardless
-                    of the temperature value
-                "never": the cache is never used
-            labels (Optional[set[str]], optional): a set of labels to attach to the run.
-                Labels are indexed and searchable. Defaults to None.
-            metadata (Optional[dict[str, Any]], optional): a dictionary of metadata to attach to the run.
-                Defaults to None.
-            retry_delay (int, optional): The initial delay between retries in milliseconds. Defaults to 5000.
-            max_retry_delay (int, optional): The maximum delay between retries in milliseconds. Defaults to 60000.
-            max_retry_count (int, optional): The maximum number of retry attempts. Defaults to 1.
-
-        Returns:
-            Union[TaskRun[TaskInput, TaskOutput], AsyncIterator[TaskOutput]]: the task run object
-                or an async iterator of output objects
-        """
-        ...
-
-    def task(
-        self,
-        schema_id: int,
-        task_id: Optional[str] = None,
-        version: Optional[VersionReference] = None,
-    ) -> TaskDecorator: ...

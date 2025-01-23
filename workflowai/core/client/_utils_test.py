@@ -1,8 +1,9 @@
-from unittest.mock import Mock
+from typing import Any
+from unittest.mock import Mock, patch
 
 import pytest
 
-from workflowai.core.client._utils import build_retryable_wait, split_chunks
+from workflowai.core.client._utils import build_retryable_wait, global_default_version_reference, split_chunks
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
 
 
@@ -32,3 +33,12 @@ class TestBuildRetryableWait:
         assert should_retry()
         await wait_for_exception(request_error)
         assert not should_retry()
+
+
+@pytest.mark.parametrize(
+    ("env_var", "expected"),
+    [("p", "production"), ("production", "production"), ("dev", "dev"), ("staging", "staging"), ("1", 1)],
+)
+def test_global_default_version_reference(env_var: str, expected: Any):
+    with patch.dict("os.environ", {"WORKFLOWAI_DEFAULT_VERSION": env_var}):
+        assert global_default_version_reference() == expected
