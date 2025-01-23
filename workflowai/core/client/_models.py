@@ -7,7 +7,7 @@ from workflowai.core.client._types import OutputValidator
 from workflowai.core.domain.cache_usage import CacheUsage
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import AgentOutput
-from workflowai.core.domain.task_version import TaskVersion
+from workflowai.core.domain.version import Version as DVersion
 from workflowai.core.domain.version_properties import VersionProperties as DVersionProperties
 
 
@@ -54,7 +54,7 @@ class RunResponse(BaseModel):
             schema_id=task_schema_id,
             output=validator(self.task_output),
             version=self.version
-            and TaskVersion(
+            and DVersion(
                 properties=DVersionProperties.model_construct(
                     None,
                     **self.version.properties,

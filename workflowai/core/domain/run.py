@@ -4,7 +4,7 @@ from typing import Any, Generic, Optional
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 
 from workflowai.core.domain.task import AgentOutput
-from workflowai.core.domain.task_version import TaskVersion
+from workflowai.core.domain.version import Version
 
 
 class Run(BaseModel, Generic[AgentOutput]):
@@ -26,7 +26,7 @@ class Run(BaseModel, Generic[AgentOutput]):
     duration_seconds: Optional[float] = None
     cost_usd: Optional[float] = None
 
-    version: Optional[TaskVersion] = Field(
+    version: Optional[Version] = Field(
         default=None,
         description="The version of the agent that was run. Only provided if the version differs from the version"
         " specified in the request, for example in case of a model fallback",
