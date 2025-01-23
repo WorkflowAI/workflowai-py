@@ -13,7 +13,7 @@ class SummarizeTaskOutput(BaseModel):
     summary_points: Optional[list[str]] = None
 
 
-@workflowai.agent(id="summarize")
+@workflowai.agent(id="summarize", model="gemini-1.5-flash-latest")
 async def summarize(task_input: SummarizeTaskInput) -> SummarizeTaskOutput: ...
 
 

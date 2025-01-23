@@ -127,7 +127,7 @@ class Agent(Generic[TaskInput, TaskOutput]):
         last_error = None
         while prepared_run.should_retry():
             try:
-                res = await self.api.post(prepared_run.route, prepared_run.request, returns=RunResponse)
+                res = await self.api.post(prepared_run.route, prepared_run.request, returns=RunResponse, run=True)
                 return res.to_domain(self.agent_id, prepared_run.schema_id, validator)
             except WorkflowAIError as e:  # noqa: PERF203
                 last_error = e
@@ -174,6 +174,7 @@ class Agent(Generic[TaskInput, TaskOutput]):
                     path=prepared_run.route,
                     data=prepared_run.request,
                     returns=RunResponse,
+                    run=True,
                 ):
                     yield chunk.to_domain(self.agent_id, prepared_run.schema_id, validator)
                 return

@@ -20,11 +20,16 @@ class APIClient:
         self.api_key = api_key
         self.source_headers = source_headers or {}
 
+    def _get_endpoint(self, run: bool = False):
+        if run:
+            return self.endpoint
+        return self.endpoint.replace("https://run.", "https://api.")
+
     @asynccontextmanager
-    async def _client(self):
+    async def _client(self, run: bool = False):
         source_headers = self.source_headers or {}
         async with httpx.AsyncClient(
-            base_url=self.endpoint,
+            base_url=self._get_endpoint(run),
             headers={
                 "Authorization": f"Bearer {self.api_key}",
                 **source_headers,
@@ -48,18 +53,19 @@ class APIClient:
             return TypeAdapter(returns).validate_python(response.json())
 
     @overload
-    async def post(self, path: str, data: BaseModel, returns: type[_R]) -> _R: ...
+    async def post(self, path: str, data: BaseModel, returns: type[_R], run: bool = False) -> _R: ...
 
     @overload
-    async def post(self, path: str, data: BaseModel) -> None: ...
+    async def post(self, path: str, data: BaseModel, returns: None = None, run: bool = False) -> None: ...
 
     async def post(
         self,
         path: str,
         data: BaseModel,
         returns: Optional[type[_R]] = None,
+        run: bool = False,
     ) -> Optional[_R]:
-        async with self._client() as client:
+        async with self._client(run) as client:
             response = await client.post(
                 path,
                 content=data.model_dump_json(exclude_none=True),
@@ -155,8 +161,9 @@ class APIClient:
         path: str,
         data: BaseModel,
         returns: type[_M],
+        run: bool = False,
     ) -> AsyncIterator[_M]:
-        async with self._client() as client, client.stream(
+        async with self._client(run=run) as client, client.stream(
             method,
             path,
             content=data.model_dump_json(exclude_none=True),

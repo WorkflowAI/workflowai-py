@@ -17,9 +17,9 @@ class CityToCapitalTaskOutput(BaseModel):
     capital: str
 
 
-workflowai.init(api_key="test", url="http://localhost:8000")
+workflowai.init(api_key="test", url="https://run.workflowai.dev")
 
-_REGISTER_URL = "http://localhost:8000/v1/_/agents"
+_REGISTER_URL = "https://api.workflowai.dev/v1/_/agents"
 
 
 def _mock_register(httpx_mock: HTTPXMock, schema_id: int = 1, task_id: str = "city-to-capital", variant_id: str = "1"):
@@ -33,14 +33,14 @@ def _mock_register(httpx_mock: HTTPXMock, schema_id: int = 1, task_id: str = "ci
 def _mock_response(httpx_mock: HTTPXMock, task_id: str = "city-to-capital", capital: str = "Tokyo"):
     httpx_mock.add_response(
         method="POST",
-        url=f"http://localhost:8000/v1/_/agents/{task_id}/schemas/1/run",
+        url=f"https://run.workflowai.dev/v1/_/agents/{task_id}/schemas/1/run",
         json={"id": "123", "task_output": {"capital": capital}},
     )
 
 
 def _mock_stream(httpx_mock: HTTPXMock, task_id: str = "city-to-capital"):
     httpx_mock.add_response(
-        url=f"http://localhost:8000/v1/_/agents/{task_id}/schemas/1/run",
+        url=f"https://run.workflowai.dev/v1/_/agents/{task_id}/schemas/1/run",
         stream=IteratorStream(
             [
                 b'data: {"id":"1","task_output":{"capital":""}}\n\n',
@@ -53,7 +53,7 @@ def _mock_stream(httpx_mock: HTTPXMock, task_id: str = "city-to-capital"):
 
 def _check_request(request: Optional[Request], version: Any = "production", task_id: str = "city-to-capital"):
     assert request is not None
-    assert request.url == f"http://localhost:8000/v1/_/agents/{task_id}/schemas/1/run"
+    assert request.url == f"https://run.workflowai.dev/v1/_/agents/{task_id}/schemas/1/run"
     body = json.loads(request.content)
     assert body == {
         "task_input": {"city": "Hello"},
