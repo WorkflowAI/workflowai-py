@@ -6,13 +6,12 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]"
       # Alpha versions
       - "v[0-9]+.[0-9]+.[0-9]a[0-9]+"
-  # Dispatch does not work because of trusted publishers in pypi
-  # workflow_dispatch:
-  #   inputs:
-  #     branch:
-  #       description: Branch that contains the release
-  #       required: true
-  #       type: string
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch that contains the release
+        type: string
+        default: main
 
 jobs:
   publish:
@@ -50,8 +49,8 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           PACKAGE_VERSION=$(poetry version -s)
-          if [[ ! "$PACKAGE_VERSION" =~ .*a[0-9]+$ ]]; then
-            echo "Error: Package version ($PACKAGE_VERSION) is not an alpha version (should end with 'aN' where N is a number)"
+          if [[ ! "$PACKAGE_VERSION" =~ .*(a|dev)[0-9]+$ ]]; then
+            echo "Error: Package version ($PACKAGE_VERSION) is not an alpha version (should end with 'aN' or 'devN' where N is a number)"
             exit 1
           fi
 
