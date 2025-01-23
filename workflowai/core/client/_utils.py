@@ -9,7 +9,7 @@ from time import time
 
 from workflowai.core.client._types import OutputValidator
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
-from workflowai.core.domain.task import TaskOutput
+from workflowai.core.domain.task import AgentOutput
 from workflowai.core.domain.version_reference import VersionReference
 from workflowai.core.logger import logger
 
@@ -85,7 +85,7 @@ def build_retryable_wait(
     return _should_retry, _wait_for_exception
 
 
-def tolerant_validator(m: type[TaskOutput]) -> OutputValidator[TaskOutput]:
+def tolerant_validator(m: type[AgentOutput]) -> OutputValidator[AgentOutput]:
     return lambda payload: m.model_construct(None, **payload)
 
 

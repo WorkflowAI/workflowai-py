@@ -73,9 +73,9 @@ async def test_run_task(httpx_mock: HTTPXMock) -> None:
     _mock_response(httpx_mock)
 
     task_input = CityToCapitalTaskInput(city="Hello")
-    task_output = await city_to_capital(task_input)
+    output = await city_to_capital(task_input)
 
-    assert task_output.capital == "Tokyo"
+    assert output.capital == "Tokyo"
 
     _check_request(httpx_mock.get_request())
 
@@ -90,7 +90,7 @@ async def test_run_task_run(httpx_mock: HTTPXMock) -> None:
     with_run = await city_to_capital(task_input)
 
     assert with_run.id == "123"
-    assert with_run.task_output.capital == "Tokyo"
+    assert with_run.output.capital == "Tokyo"
 
     _check_request(httpx_mock.get_request())
 
@@ -105,7 +105,7 @@ async def test_run_task_run_version(httpx_mock: HTTPXMock) -> None:
     with_run = await city_to_capital(task_input)
 
     assert with_run.id == "123"
-    assert with_run.task_output.capital == "Tokyo"
+    assert with_run.output.capital == "Tokyo"
 
     _check_request(httpx_mock.get_request(), version="staging")
 

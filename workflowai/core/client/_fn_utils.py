@@ -1,4 +1,5 @@
 import functools
+import inspect
 from collections.abc import Callable
 from typing import (
     Any,
@@ -19,15 +20,15 @@ from typing_extensions import Unpack
 
 from workflowai.core.client._api import APIClient
 from workflowai.core.client._types import (
+    AgentDecorator,
     FinalRunTemplate,
     RunParams,
     RunTemplate,
-    TaskDecorator,
 )
 from workflowai.core.client.agent import Agent
 from workflowai.core.domain.model import Model
 from workflowai.core.domain.run import Run
-from workflowai.core.domain.task import TaskInput, TaskOutput
+from workflowai.core.domain.task import AgentInput, AgentOutput
 from workflowai.core.domain.version_properties import VersionProperties
 from workflowai.core.domain.version_reference import VersionReference
 
@@ -66,17 +67,28 @@ def is_async_iterator(t: type[Any]) -> bool:
     return issubclass(ori, AsyncIterator)
 
 
-def extract_fn_spec(fn: RunTemplate[TaskInput, TaskOutput]) -> RunFunctionSpec:
+def _first_arg_name(fn: Callable[..., Any]) -> Optional[str]:
+    sig = inspect.signature(fn)
+    for param in sig.parameters.values():
+        if param.kind == param.POSITIONAL_OR_KEYWORD:
+            return param.name
+    return None
+
+
+def extract_fn_spec(fn: RunTemplate[AgentInput, AgentOutput]) -> RunFunctionSpec:
+    first_arg_name = _first_arg_name(fn)
+    if not first_arg_name:
+        raise ValueError("Function must have a first positional argument")
     hints = get_type_hints(fn)
     if "return" not in hints:
         raise ValueError("Function must have a return type hint")
-    if "task_input" not in hints:
-        raise ValueError("Function must have a task_input parameter")
+    if first_arg_name not in hints:
+        raise ValueError("Function must have a first positional parameter")
 
     return_type_hint = hints["return"]
-    input_cls = hints["task_input"]
+    input_cls = hints[first_arg_name]
     if not issubclass(input_cls, BaseModel):
-        raise ValueError("task_input must be a subclass of BaseModel")
+        raise ValueError("First positional parameter must be a subclass of BaseModel")
 
     output_cls = None
 
@@ -90,25 +102,25 @@ def extract_fn_spec(fn: RunTemplate[TaskInput, TaskOutput]) -> RunFunctionSpec:
     return RunFunctionSpec(stream, output_only, input_cls, output_cls)
 
 
-class _RunnableAgent(Agent[TaskInput, TaskOutput], Generic[TaskInput, TaskOutput]):
-    async def __call__(self, task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]):
-        return await self.run(task_input, **kwargs)
+class _RunnableAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOutput]):
+    async def __call__(self, input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):  # noqa: A002
+        return await self.run(input, **kwargs)
 
 
-class _RunnableOutputOnlyAgent(Agent[TaskInput, TaskOutput], Generic[TaskInput, TaskOutput]):
-    async def __call__(self, task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]):
-        return (await self.run(task_input, **kwargs)).task_output
+class _RunnableOutputOnlyAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOutput]):
+    async def __call__(self, input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):  # noqa: A002
+        return (await self.run(input, **kwargs)).output
 
 
-class _RunnableStreamAgent(Agent[TaskInput, TaskOutput], Generic[TaskInput, TaskOutput]):
-    def __call__(self, task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]):
-        return self.stream(task_input, **kwargs)
+class _RunnableStreamAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOutput]):
+    def __call__(self, input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):  # noqa: A002
+        return self.stream(input, **kwargs)
 
 
-class _RunnableStreamOutputOnlyAgent(Agent[TaskInput, TaskOutput], Generic[TaskInput, TaskOutput]):
-    async def __call__(self, task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]):
-        async for chunk in self.stream(task_input, **kwargs):
-            yield chunk.task_output
+class _RunnableStreamOutputOnlyAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOutput]):
+    async def __call__(self, input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):  # noqa: A002
+        async for chunk in self.stream(input, **kwargs):
+            yield chunk.output
 
 
 def wrap_run_template(
@@ -117,12 +129,12 @@ def wrap_run_template(
     schema_id: Optional[int],
     version: Optional[VersionReference],
     model: Optional[Model],
-    fn: RunTemplate[TaskInput, TaskOutput],
+    fn: RunTemplate[AgentInput, AgentOutput],
 ) -> Union[
-    _RunnableAgent[TaskInput, TaskOutput],
-    _RunnableOutputOnlyAgent[TaskInput, TaskOutput],
-    _RunnableStreamAgent[TaskInput, TaskOutput],
-    _RunnableStreamOutputOnlyAgent[TaskInput, TaskOutput],
+    _RunnableAgent[AgentInput, AgentOutput],
+    _RunnableOutputOnlyAgent[AgentInput, AgentOutput],
+    _RunnableStreamAgent[AgentInput, AgentOutput],
+    _RunnableStreamOutputOnlyAgent[AgentInput, AgentOutput],
 ]:
     stream, output_only, input_cls, output_cls = extract_fn_spec(fn)
 
@@ -156,8 +168,8 @@ def agent_wrapper(
     agent_id: Optional[str] = None,
     version: Optional[VersionReference] = None,
     model: Optional[Model] = None,
-) -> TaskDecorator:
-    def wrap(fn: RunTemplate[TaskInput, TaskOutput]) -> FinalRunTemplate[TaskInput, TaskOutput]:
+) -> AgentDecorator:
+    def wrap(fn: RunTemplate[AgentInput, AgentOutput]) -> FinalRunTemplate[AgentInput, AgentOutput]:
         tid = agent_id or agent_id_from_fn_name(fn)
         return functools.wraps(fn)(wrap_run_template(client, tid, schema_id, version, model, fn))  # pyright: ignore [reportReturnType]
 

@@ -42,10 +42,10 @@ class TestRunResponseToDomain:
 
         parsed = chunk.to_domain(task_id="1", task_schema_id=1, validator=tolerant_validator(_TaskOutput))
         assert isinstance(parsed, Run)
-        assert parsed.task_output.a == 1
+        assert parsed.output.a == 1
         # b is not defined
         with pytest.raises(AttributeError):
-            assert parsed.task_output.b
+            assert parsed.output.b
 
     def test_no_version_optional(self):
         chunk = RunResponse.model_validate_json('{"id": "1", "task_output": {"a": 1}}')
@@ -53,8 +53,8 @@ class TestRunResponseToDomain:
 
         parsed = chunk.to_domain(task_id="1", task_schema_id=1, validator=tolerant_validator(_TaskOutputOpt))
         assert isinstance(parsed, Run)
-        assert parsed.task_output.a == 1
-        assert parsed.task_output.b is None
+        assert parsed.output.a == 1
+        assert parsed.output.b is None
 
     def test_with_version(self):
         chunk = RunResponse.model_validate_json(
@@ -64,8 +64,8 @@ class TestRunResponseToDomain:
 
         parsed = chunk.to_domain(task_id="1", task_schema_id=1, validator=tolerant_validator(_TaskOutput))
         assert isinstance(parsed, Run)
-        assert parsed.task_output.a == 1
-        assert parsed.task_output.b == "test"
+        assert parsed.output.a == 1
+        assert parsed.output.b == "test"
 
         assert parsed.cost_usd == 0.1
         assert parsed.duration_seconds == 1

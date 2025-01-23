@@ -58,8 +58,8 @@ class TestRun:
         task_run = await agent.run(task_input=HelloTaskInput(name="Alice"))
 
         assert task_run.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
-        assert task_run.task_id == "123"
-        assert task_run.task_schema_id == 1
+        assert task_run.agent_id == "123"
+        assert task_run.schema_id == 1
 
         reqs = httpx_mock.get_requests()
         assert len(reqs) == 1
@@ -85,7 +85,7 @@ class TestRun:
 
         chunks = [chunk async for chunk in agent.stream(task_input=HelloTaskInput(name="Alice"))]
 
-        outputs = [chunk.task_output for chunk in chunks]
+        outputs = [chunk.output for chunk in chunks]
         assert outputs == [
             HelloTaskOutput(message=""),
             HelloTaskOutput(message="hel"),
@@ -119,14 +119,14 @@ class TestRun:
 
         chunks = [chunk async for chunk in agent_not_optional.stream(task_input=HelloTaskInput(name="Alice"))]
 
-        messages = [chunk.task_output.message for chunk in chunks]
+        messages = [chunk.output.message for chunk in chunks]
         assert messages == ["", "hel", "hello", "hello"]
 
         for chunk in chunks[:-1]:
             with pytest.raises(AttributeError):
                 # Since the field is not optional, it will raise an attribute error
-                assert chunk.task_output.another_field
-        assert chunks[-1].task_output.another_field == "test"
+                assert chunk.output.another_field
+        assert chunks[-1].output.another_field == "test"
 
         last_message = chunks[-1]
         assert isinstance(last_message, Run)

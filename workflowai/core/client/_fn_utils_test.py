@@ -21,16 +21,16 @@ from workflowai.core.client._models import RunResponse
 from workflowai.core.domain.run import Run
 
 
-async def say_hello(task_input: HelloTaskInput) -> HelloTaskOutput: ...
+async def say_hello(_: HelloTaskInput) -> HelloTaskOutput: ...
 
 
-async def say_hello_run(task_input: HelloTaskInput) -> Run[HelloTaskOutput]: ...
+async def say_hello_run(bla: HelloTaskInput) -> Run[HelloTaskOutput]: ...
 
 
-def stream_hello(task_input: HelloTaskInput) -> AsyncIterator[HelloTaskOutput]: ...
+def stream_hello(_: HelloTaskInput) -> AsyncIterator[HelloTaskOutput]: ...
 
 
-def stream_hello_run(task_input: HelloTaskInput) -> AsyncIterator[Run[HelloTaskOutput]]: ...
+def stream_hello_run(_: HelloTaskInput) -> AsyncIterator[Run[HelloTaskOutput]]: ...
 
 
 class TestGetGenericArgs:
@@ -76,7 +76,7 @@ class TestAgentWrapper:
         run = await wrapped(HelloTaskInput(name="World"))
         assert isinstance(run, Run)
         assert run.id == "1"
-        assert run.task_output == HelloTaskOutput(message="Hello, World!")
+        assert run.output == HelloTaskOutput(message="Hello, World!")
 
     def fn_stream(self, task_input: HelloTaskInput) -> AsyncIterator[Run[HelloTaskOutput]]: ...
 
@@ -89,7 +89,7 @@ class TestAgentWrapper:
         assert len(chunks) == 1
         assert isinstance(chunks[0], Run)
         assert chunks[0].id == "1"
-        assert chunks[0].task_output == HelloTaskOutput(message="Hello, World!")
+        assert chunks[0].output == HelloTaskOutput(message="Hello, World!")
 
     async def fn_run_output_only(self, task_input: HelloTaskInput) -> HelloTaskOutput: ...
 

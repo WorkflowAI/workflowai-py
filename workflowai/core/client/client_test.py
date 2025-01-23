@@ -39,9 +39,9 @@ class TestAgentDecorator:
         async def fn(task_input: HelloTaskInput) -> HelloTaskOutput: ...
 
         mock_run_fn.return_value = Run(
-            task_output=HelloTaskOutput(message="hello"),
-            task_id="123",
-            task_schema_id=1,
+            output=HelloTaskOutput(message="hello"),
+            agent_id="123",
+            schema_id=1,
         )
 
         output = await fn(HelloTaskInput(name="Alice"))
@@ -54,16 +54,16 @@ class TestAgentDecorator:
 
         mock_run_fn.return_value = Run(
             id="1",
-            task_output=HelloTaskOutput(message="hello"),
-            task_id="123",
-            task_schema_id=1,
+            output=HelloTaskOutput(message="hello"),
+            agent_id="123",
+            schema_id=1,
         )
 
-        output = await fn(HelloTaskInput(name="Alice"))
+        run = await fn(HelloTaskInput(name="Alice"))
 
-        assert output.id == "1"
-        assert output.task_output == HelloTaskOutput(message="hello")
-        assert isinstance(output, Run)
+        assert run.id == "1"
+        assert run.output == HelloTaskOutput(message="hello")
+        assert isinstance(run, Run)
 
     async def test_stream(self, workflowai: WorkflowAI, httpx_mock: HTTPXMock):
         # We avoid mocking the run fn directly here, python does weird things with
@@ -86,7 +86,7 @@ class TestAgentDecorator:
         chunks = [chunk async for chunk in fn(HelloTaskInput(name="Alice"))]
 
         def _run(output: HelloTaskOutput, **kwargs: Any) -> Run[HelloTaskOutput]:
-            return Run(id="1", task_id="123", task_schema_id=1, task_output=output, **kwargs)
+            return Run(id="1", agent_id="123", schema_id=1, output=output, **kwargs)
 
         assert chunks == [
             _run(HelloTaskOutput(message="")),

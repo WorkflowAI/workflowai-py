@@ -3,13 +3,13 @@ from typing import Optional
 
 from typing_extensions import deprecated
 
-from workflowai.core.client._types import TaskDecorator
+from workflowai.core.client._types import AgentDecorator
 from workflowai.core.client.client import WorkflowAI as WorkflowAI
 from workflowai.core.domain.cache_usage import CacheUsage as CacheUsage
 from workflowai.core.domain.errors import WorkflowAIError as WorkflowAIError
 from workflowai.core.domain.model import Model as Model
 from workflowai.core.domain.run import Run as Run
-from workflowai.core.domain.task_version import TaskVersion as TaskVersion
+from workflowai.core.domain.version import Version as Version
 from workflowai.core.domain.version_reference import (
     VersionReference as VersionReference,
 )
@@ -67,7 +67,7 @@ def agent(
     schema_id: Optional[int] = None,
     version: Optional[VersionReference] = None,
     model: Optional[Model] = None,
-) -> TaskDecorator:
+) -> AgentDecorator:
     from workflowai.core.client._fn_utils import agent_wrapper
 
     return agent_wrapper(
