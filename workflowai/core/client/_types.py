@@ -18,8 +18,8 @@ from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import AgentInput, AgentOutput
 from workflowai.core.domain.version_reference import VersionReference
 
-TaskInputContra = TypeVar("TaskInputContra", bound=BaseModel, contravariant=True)
-TaskOutputCov = TypeVar("TaskOutputCov", bound=BaseModel, covariant=True)
+AgentInputContra = TypeVar("AgentInputContra", bound=BaseModel, contravariant=True)
+AgentOutputCov = TypeVar("AgentOutputCov", bound=BaseModel, covariant=True)
 
 OutputValidator = Callable[[dict[str, Any]], AgentOutput]
 
@@ -34,26 +34,26 @@ class RunParams(TypedDict, Generic[AgentOutput]):
     validator: NotRequired[OutputValidator[AgentOutput]]
 
 
-class RunFn(Protocol, Generic[TaskInputContra, AgentOutput]):
-    async def __call__(self, task_input: TaskInputContra) -> Run[AgentOutput]: ...
+class RunFn(Protocol, Generic[AgentInputContra, AgentOutput]):
+    async def __call__(self, task_input: AgentInputContra) -> Run[AgentOutput]: ...
 
 
-class RunFnOutputOnly(Protocol, Generic[TaskInputContra, TaskOutputCov]):
-    async def __call__(self, task_input: TaskInputContra) -> TaskOutputCov: ...
+class RunFnOutputOnly(Protocol, Generic[AgentInputContra, AgentOutputCov]):
+    async def __call__(self, task_input: AgentInputContra) -> AgentOutputCov: ...
 
 
-class StreamRunFn(Protocol, Generic[TaskInputContra, AgentOutput]):
+class StreamRunFn(Protocol, Generic[AgentInputContra, AgentOutput]):
     def __call__(
         self,
-        task_input: TaskInputContra,
+        task_input: AgentInputContra,
     ) -> AsyncIterator[Run[AgentOutput]]: ...
 
 
-class StreamRunFnOutputOnly(Protocol, Generic[TaskInputContra, TaskOutputCov]):
+class StreamRunFnOutputOnly(Protocol, Generic[AgentInputContra, AgentOutputCov]):
     def __call__(
         self,
-        task_input: TaskInputContra,
-    ) -> AsyncIterator[TaskOutputCov]: ...
+        task_input: AgentInputContra,
+    ) -> AsyncIterator[AgentOutputCov]: ...
 
 
 RunTemplate = Union[
@@ -75,36 +75,36 @@ class _BaseProtocol(Protocol):
     __code__: Any
 
 
-class FinalRunFn(_BaseProtocol, Protocol, Generic[TaskInputContra, AgentOutput]):
+class FinalRunFn(_BaseProtocol, Protocol, Generic[AgentInputContra, AgentOutput]):
     async def __call__(
         self,
-        task_input: TaskInputContra,
+        input: AgentInputContra,  # noqa: A002
         **kwargs: Unpack[RunParams[AgentOutput]],
     ) -> Run[AgentOutput]: ...
 
 
-class FinalRunFnOutputOnly(_BaseProtocol, Protocol, Generic[TaskInputContra, AgentOutput]):
+class FinalRunFnOutputOnly(_BaseProtocol, Protocol, Generic[AgentInputContra, AgentOutput]):
     async def __call__(
         self,
-        task_input: TaskInputContra,
+        input: AgentInputContra,  # noqa: A002
         **kwargs: Unpack[RunParams[AgentOutput]],
     ) -> AgentOutput: ...
 
 
-class FinalStreamRunFn(_BaseProtocol, Protocol, Generic[TaskInputContra, AgentOutput]):
+class FinalStreamRunFn(_BaseProtocol, Protocol, Generic[AgentInputContra, AgentOutput]):
     def __call__(
         self,
-        task_input: TaskInputContra,
+        input: AgentInputContra,  # noqa: A002
         **kwargs: Unpack[RunParams[AgentOutput]],
     ) -> AsyncIterator[Run[AgentOutput]]: ...
 
 
-class FinalStreamRunFnOutputOnly(_BaseProtocol, Protocol, Generic[TaskInputContra, TaskOutputCov]):
+class FinalStreamRunFnOutputOnly(_BaseProtocol, Protocol, Generic[AgentInputContra, AgentOutputCov]):
     def __call__(
         self,
-        task_input: TaskInputContra,
+        input: AgentInputContra,  # noqa: A002
         **kwargs: Unpack[RunParams[AgentOutput]],
-    ) -> AsyncIterator[TaskOutputCov]: ...
+    ) -> AsyncIterator[AgentOutputCov]: ...
 
 
 FinalRunTemplate = Union[
@@ -115,7 +115,7 @@ FinalRunTemplate = Union[
 ]
 
 
-class TaskDecorator(Protocol):
+class AgentDecorator(Protocol):
     @overload
     def __call__(self, fn: RunFn[AgentInput, AgentOutput]) -> FinalRunFn[AgentInput, AgentOutput]: ...
 

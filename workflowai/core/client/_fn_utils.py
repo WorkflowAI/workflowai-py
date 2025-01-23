@@ -19,10 +19,10 @@ from typing_extensions import Unpack
 
 from workflowai.core.client._api import APIClient
 from workflowai.core.client._types import (
+    AgentDecorator,
     FinalRunTemplate,
     RunParams,
     RunTemplate,
-    TaskDecorator,
 )
 from workflowai.core.client.agent import Agent
 from workflowai.core.domain.model import Model
@@ -91,23 +91,23 @@ def extract_fn_spec(fn: RunTemplate[AgentInput, AgentOutput]) -> RunFunctionSpec
 
 
 class _RunnableAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOutput]):
-    async def __call__(self, task_input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):
-        return await self.run(task_input, **kwargs)
+    async def __call__(self, input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):  # noqa: A002
+        return await self.run(input, **kwargs)
 
 
 class _RunnableOutputOnlyAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOutput]):
-    async def __call__(self, task_input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):
-        return (await self.run(task_input, **kwargs)).output
+    async def __call__(self, input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):  # noqa: A002
+        return (await self.run(input, **kwargs)).output
 
 
 class _RunnableStreamAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOutput]):
-    def __call__(self, task_input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):
-        return self.stream(task_input, **kwargs)
+    def __call__(self, input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):  # noqa: A002
+        return self.stream(input, **kwargs)
 
 
 class _RunnableStreamOutputOnlyAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOutput]):
-    async def __call__(self, task_input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):
-        async for chunk in self.stream(task_input, **kwargs):
+    async def __call__(self, input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):  # noqa: A002
+        async for chunk in self.stream(input, **kwargs):
             yield chunk.output
 
 
@@ -156,7 +156,7 @@ def agent_wrapper(
     agent_id: Optional[str] = None,
     version: Optional[VersionReference] = None,
     model: Optional[Model] = None,
-) -> TaskDecorator:
+) -> AgentDecorator:
     def wrap(fn: RunTemplate[AgentInput, AgentOutput]) -> FinalRunTemplate[AgentInput, AgentOutput]:
         tid = agent_id or agent_id_from_fn_name(fn)
         return functools.wraps(fn)(wrap_run_template(client, tid, schema_id, version, model, fn))  # pyright: ignore [reportReturnType]
