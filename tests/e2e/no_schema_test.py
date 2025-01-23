@@ -14,7 +14,7 @@ class SummarizeTaskOutput(BaseModel):
 
 
 @workflowai.agent(id="summarize", model="gemini-1.5-flash-latest")
-async def summarize(task_input: SummarizeTaskInput) -> SummarizeTaskOutput: ...
+async def summarize(_: SummarizeTaskInput) -> SummarizeTaskOutput: ...
 
 
 async def test_summarize():

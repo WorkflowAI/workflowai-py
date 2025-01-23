@@ -35,25 +35,19 @@ class RunParams(TypedDict, Generic[AgentOutput]):
 
 
 class RunFn(Protocol, Generic[AgentInputContra, AgentOutput]):
-    async def __call__(self, task_input: AgentInputContra) -> Run[AgentOutput]: ...
+    async def __call__(self, _: AgentInputContra, /) -> Run[AgentOutput]: ...
 
 
 class RunFnOutputOnly(Protocol, Generic[AgentInputContra, AgentOutputCov]):
-    async def __call__(self, task_input: AgentInputContra) -> AgentOutputCov: ...
+    async def __call__(self, _: AgentInputContra, /) -> AgentOutputCov: ...
 
 
 class StreamRunFn(Protocol, Generic[AgentInputContra, AgentOutput]):
-    def __call__(
-        self,
-        task_input: AgentInputContra,
-    ) -> AsyncIterator[Run[AgentOutput]]: ...
+    def __call__(self, _: AgentInputContra, /) -> AsyncIterator[Run[AgentOutput]]: ...
 
 
 class StreamRunFnOutputOnly(Protocol, Generic[AgentInputContra, AgentOutputCov]):
-    def __call__(
-        self,
-        task_input: AgentInputContra,
-    ) -> AsyncIterator[AgentOutputCov]: ...
+    def __call__(self, _: AgentInputContra, /) -> AsyncIterator[AgentOutputCov]: ...
 
 
 RunTemplate = Union[
@@ -78,7 +72,8 @@ class _BaseProtocol(Protocol):
 class FinalRunFn(_BaseProtocol, Protocol, Generic[AgentInputContra, AgentOutput]):
     async def __call__(
         self,
-        input: AgentInputContra,  # noqa: A002
+        _: AgentInputContra,
+        /,
         **kwargs: Unpack[RunParams[AgentOutput]],
     ) -> Run[AgentOutput]: ...
 
@@ -86,7 +81,8 @@ class FinalRunFn(_BaseProtocol, Protocol, Generic[AgentInputContra, AgentOutput]
 class FinalRunFnOutputOnly(_BaseProtocol, Protocol, Generic[AgentInputContra, AgentOutput]):
     async def __call__(
         self,
-        input: AgentInputContra,  # noqa: A002
+        _: AgentInputContra,
+        /,
         **kwargs: Unpack[RunParams[AgentOutput]],
     ) -> AgentOutput: ...
 
@@ -94,7 +90,8 @@ class FinalRunFnOutputOnly(_BaseProtocol, Protocol, Generic[AgentInputContra, Ag
 class FinalStreamRunFn(_BaseProtocol, Protocol, Generic[AgentInputContra, AgentOutput]):
     def __call__(
         self,
-        input: AgentInputContra,  # noqa: A002
+        _: AgentInputContra,
+        /,
         **kwargs: Unpack[RunParams[AgentOutput]],
     ) -> AsyncIterator[Run[AgentOutput]]: ...
 
@@ -102,7 +99,8 @@ class FinalStreamRunFn(_BaseProtocol, Protocol, Generic[AgentInputContra, AgentO
 class FinalStreamRunFnOutputOnly(_BaseProtocol, Protocol, Generic[AgentInputContra, AgentOutputCov]):
     def __call__(
         self,
-        input: AgentInputContra,  # noqa: A002
+        _: AgentInputContra,
+        /,
         **kwargs: Unpack[RunParams[AgentOutput]],
     ) -> AsyncIterator[AgentOutputCov]: ...
 

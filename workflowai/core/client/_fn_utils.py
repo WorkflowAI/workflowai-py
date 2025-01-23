@@ -1,4 +1,5 @@
 import functools
+import inspect
 from collections.abc import Callable
 from typing import (
     Any,
@@ -66,17 +67,28 @@ def is_async_iterator(t: type[Any]) -> bool:
     return issubclass(ori, AsyncIterator)
 
 
+def _first_arg_name(fn: Callable[..., Any]) -> Optional[str]:
+    sig = inspect.signature(fn)
+    for param in sig.parameters.values():
+        if param.kind == param.POSITIONAL_OR_KEYWORD:
+            return param.name
+    return None
+
+
 def extract_fn_spec(fn: RunTemplate[AgentInput, AgentOutput]) -> RunFunctionSpec:
+    first_arg_name = _first_arg_name(fn)
+    if not first_arg_name:
+        raise ValueError("Function must have a first positional argument")
     hints = get_type_hints(fn)
     if "return" not in hints:
         raise ValueError("Function must have a return type hint")
-    if "task_input" not in hints:
-        raise ValueError("Function must have a task_input parameter")
+    if first_arg_name not in hints:
+        raise ValueError("Function must have a first positional parameter")
 
     return_type_hint = hints["return"]
-    input_cls = hints["task_input"]
+    input_cls = hints[first_arg_name]
     if not issubclass(input_cls, BaseModel):
-        raise ValueError("task_input must be a subclass of BaseModel")
+        raise ValueError("First positional parameter must be a subclass of BaseModel")
 
     output_cls = None
 

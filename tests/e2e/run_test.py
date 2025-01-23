@@ -27,7 +27,7 @@ class ExtractProductReviewSentimentTaskOutput(BaseModel):
 
 @workflowai.agent(id="extract-product-review-sentiment", schema_id=1)
 def extract_product_review_sentiment(
-    task_input: ExtractProductReviewSentimentTaskInput,
+    _: ExtractProductReviewSentimentTaskInput,
 ) -> AsyncIterator[ExtractProductReviewSentimentTaskOutput]: ...
 
 
