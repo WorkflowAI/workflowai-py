@@ -6,7 +6,7 @@ from typing_extensions import NotRequired, TypedDict
 from workflowai.core.client._types import OutputValidator
 from workflowai.core.domain.cache_usage import CacheUsage
 from workflowai.core.domain.run import Run
-from workflowai.core.domain.task import TaskOutput
+from workflowai.core.domain.task import AgentOutput
 from workflowai.core.domain.task_version import TaskVersion
 from workflowai.core.domain.version_properties import VersionProperties as DVersionProperties
 
@@ -47,12 +47,12 @@ class RunResponse(BaseModel):
     duration_seconds: Optional[float] = None
     cost_usd: Optional[float] = None
 
-    def to_domain(self, task_id: str, task_schema_id: int, validator: OutputValidator[TaskOutput]) -> Run[TaskOutput]:
+    def to_domain(self, task_id: str, task_schema_id: int, validator: OutputValidator[AgentOutput]) -> Run[AgentOutput]:
         return Run(
             id=self.id,
-            task_id=task_id,
-            task_schema_id=task_schema_id,
-            task_output=validator(self.task_output),
+            agent_id=task_id,
+            schema_id=task_schema_id,
+            output=validator(self.task_output),
             version=self.version
             and TaskVersion(
                 properties=DVersionProperties.model_construct(

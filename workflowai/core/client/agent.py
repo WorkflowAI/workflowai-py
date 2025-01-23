@@ -9,17 +9,17 @@ from workflowai.core.client._types import RunParams
 from workflowai.core.client._utils import build_retryable_wait, global_default_version_reference, tolerant_validator
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
 from workflowai.core.domain.run import Run
-from workflowai.core.domain.task import TaskInput, TaskOutput
+from workflowai.core.domain.task import AgentInput, AgentOutput
 from workflowai.core.domain.version_properties import VersionProperties
 from workflowai.core.domain.version_reference import VersionReference
 
 
-class Agent(Generic[TaskInput, TaskOutput]):
+class Agent(Generic[AgentInput, AgentOutput]):
     def __init__(
         self,
         agent_id: str,
-        input_cls: type[TaskInput],
-        output_cls: type[TaskOutput],
+        input_cls: type[AgentInput],
+        output_cls: type[AgentOutput],
         api: Union[APIClient, Callable[[], APIClient]],
         schema_id: Optional[int] = None,
         version: Optional[VersionReference] = None,
@@ -55,7 +55,7 @@ class Agent(Generic[TaskInput, TaskOutput]):
             dumped["model"] = workflowai.DEFAULT_MODEL
         return dumped
 
-    async def _prepare_run(self, task_input: TaskInput, stream: bool, **kwargs: Unpack[RunParams[TaskOutput]]):
+    async def _prepare_run(self, task_input: AgentInput, stream: bool, **kwargs: Unpack[RunParams[AgentOutput]]):
         schema_id = self.schema_id
         if not schema_id:
             schema_id = await self.register()
@@ -94,13 +94,13 @@ class Agent(Generic[TaskInput, TaskOutput]):
 
     async def run(
         self,
-        task_input: TaskInput,
-        **kwargs: Unpack[RunParams[TaskOutput]],
-    ) -> Run[TaskOutput]:
+        task_input: AgentInput,
+        **kwargs: Unpack[RunParams[AgentOutput]],
+    ) -> Run[AgentOutput]:
         """Run the agent
 
         Args:
-            task_input (TaskInput): the input to the task
+            task_input (AgentInput): the input to the task
             version (Optional[TaskVersionReference], optional): the version of the task to run. If not provided,
                 the version defined in the task is used. Defaults to None.
             use_cache (CacheUsage, optional): how to use the cache. Defaults to "auto".
@@ -118,7 +118,7 @@ class Agent(Generic[TaskInput, TaskOutput]):
             max_retry_count (int, optional): The maximum number of retry attempts. Defaults to 1.
 
         Returns:
-            Union[TaskRun[TaskInput, TaskOutput], AsyncIterator[TaskOutput]]: the task run object
+            Union[TaskRun[AgentInput, AgentOutput], AsyncIterator[AgentOutput]]: the task run object
                 or an async iterator of output objects
         """
         prepared_run = await self._prepare_run(task_input, stream=False, **kwargs)
@@ -137,13 +137,13 @@ class Agent(Generic[TaskInput, TaskOutput]):
 
     async def stream(
         self,
-        task_input: TaskInput,
-        **kwargs: Unpack[RunParams[TaskOutput]],
+        task_input: AgentInput,
+        **kwargs: Unpack[RunParams[AgentOutput]],
     ):
         """Stream the output of the agent
 
         Args:
-            task_input (TaskInput): the input to the task
+            task_input (AgentInput): the input to the task
             version (Optional[TaskVersionReference], optional): the version of the task to run. If not provided,
                 the version defined in the task is used. Defaults to None.
             use_cache (CacheUsage, optional): how to use the cache. Defaults to "auto".
@@ -161,7 +161,7 @@ class Agent(Generic[TaskInput, TaskOutput]):
             max_retry_count (int, optional): The maximum number of retry attempts. Defaults to 1.
 
         Returns:
-            Union[TaskRun[TaskInput, TaskOutput], AsyncIterator[TaskOutput]]: the task run object
+            Union[TaskRun[AgentInput, AgentOutput], AsyncIterator[AgentOutput]]: the task run object
                 or an async iterator of output objects
         """
         prepared_run = await self._prepare_run(task_input, stream=True, **kwargs)

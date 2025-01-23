@@ -28,9 +28,9 @@ async def city_to_capital(task_input: CityToCapitalTaskInput) -> CityToCapitalTa
 def main(city: str) -> None:
     async def _inner() -> None:
         task_input = CityToCapitalTaskInput(city=city)
-        task_output = await city_to_capital(task_input)
+        output = await city_to_capital(task_input)
 
-        rprint(task_output)
+        rprint(output)
 
     aiorun(_inner())
 

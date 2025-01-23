@@ -27,7 +27,7 @@ from workflowai.core.client._types import (
 from workflowai.core.client.agent import Agent
 from workflowai.core.domain.model import Model
 from workflowai.core.domain.run import Run
-from workflowai.core.domain.task import TaskInput, TaskOutput
+from workflowai.core.domain.task import AgentInput, AgentOutput
 from workflowai.core.domain.version_properties import VersionProperties
 from workflowai.core.domain.version_reference import VersionReference
 
@@ -66,7 +66,7 @@ def is_async_iterator(t: type[Any]) -> bool:
     return issubclass(ori, AsyncIterator)
 
 
-def extract_fn_spec(fn: RunTemplate[TaskInput, TaskOutput]) -> RunFunctionSpec:
+def extract_fn_spec(fn: RunTemplate[AgentInput, AgentOutput]) -> RunFunctionSpec:
     hints = get_type_hints(fn)
     if "return" not in hints:
         raise ValueError("Function must have a return type hint")
@@ -90,25 +90,25 @@ def extract_fn_spec(fn: RunTemplate[TaskInput, TaskOutput]) -> RunFunctionSpec:
     return RunFunctionSpec(stream, output_only, input_cls, output_cls)
 
 
-class _RunnableAgent(Agent[TaskInput, TaskOutput], Generic[TaskInput, TaskOutput]):
-    async def __call__(self, task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]):
+class _RunnableAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOutput]):
+    async def __call__(self, task_input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):
         return await self.run(task_input, **kwargs)
 
 
-class _RunnableOutputOnlyAgent(Agent[TaskInput, TaskOutput], Generic[TaskInput, TaskOutput]):
-    async def __call__(self, task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]):
-        return (await self.run(task_input, **kwargs)).task_output
+class _RunnableOutputOnlyAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOutput]):
+    async def __call__(self, task_input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):
+        return (await self.run(task_input, **kwargs)).output
 
 
-class _RunnableStreamAgent(Agent[TaskInput, TaskOutput], Generic[TaskInput, TaskOutput]):
-    def __call__(self, task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]):
+class _RunnableStreamAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOutput]):
+    def __call__(self, task_input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):
         return self.stream(task_input, **kwargs)
 
 
-class _RunnableStreamOutputOnlyAgent(Agent[TaskInput, TaskOutput], Generic[TaskInput, TaskOutput]):
-    async def __call__(self, task_input: TaskInput, **kwargs: Unpack[RunParams[TaskOutput]]):
+class _RunnableStreamOutputOnlyAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOutput]):
+    async def __call__(self, task_input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):
         async for chunk in self.stream(task_input, **kwargs):
-            yield chunk.task_output
+            yield chunk.output
 
 
 def wrap_run_template(
@@ -117,12 +117,12 @@ def wrap_run_template(
     schema_id: Optional[int],
     version: Optional[VersionReference],
     model: Optional[Model],
-    fn: RunTemplate[TaskInput, TaskOutput],
+    fn: RunTemplate[AgentInput, AgentOutput],
 ) -> Union[
-    _RunnableAgent[TaskInput, TaskOutput],
-    _RunnableOutputOnlyAgent[TaskInput, TaskOutput],
-    _RunnableStreamAgent[TaskInput, TaskOutput],
-    _RunnableStreamOutputOnlyAgent[TaskInput, TaskOutput],
+    _RunnableAgent[AgentInput, AgentOutput],
+    _RunnableOutputOnlyAgent[AgentInput, AgentOutput],
+    _RunnableStreamAgent[AgentInput, AgentOutput],
+    _RunnableStreamOutputOnlyAgent[AgentInput, AgentOutput],
 ]:
     stream, output_only, input_cls, output_cls = extract_fn_spec(fn)
 
@@ -157,7 +157,7 @@ def agent_wrapper(
     version: Optional[VersionReference] = None,
     model: Optional[Model] = None,
 ) -> TaskDecorator:
-    def wrap(fn: RunTemplate[TaskInput, TaskOutput]) -> FinalRunTemplate[TaskInput, TaskOutput]:
+    def wrap(fn: RunTemplate[AgentInput, AgentOutput]) -> FinalRunTemplate[AgentInput, AgentOutput]:
         tid = agent_id or agent_id_from_fn_name(fn)
         return functools.wraps(fn)(wrap_run_template(client, tid, schema_id, version, model, fn))  # pyright: ignore [reportReturnType]
 

@@ -15,38 +15,38 @@ from typing_extensions import NotRequired, TypedDict, Unpack
 
 from workflowai.core.domain.cache_usage import CacheUsage
 from workflowai.core.domain.run import Run
-from workflowai.core.domain.task import TaskInput, TaskOutput
+from workflowai.core.domain.task import AgentInput, AgentOutput
 from workflowai.core.domain.version_reference import VersionReference
 
 TaskInputContra = TypeVar("TaskInputContra", bound=BaseModel, contravariant=True)
 TaskOutputCov = TypeVar("TaskOutputCov", bound=BaseModel, covariant=True)
 
-OutputValidator = Callable[[dict[str, Any]], TaskOutput]
+OutputValidator = Callable[[dict[str, Any]], AgentOutput]
 
 
-class RunParams(TypedDict, Generic[TaskOutput]):
+class RunParams(TypedDict, Generic[AgentOutput]):
     version: NotRequired[Optional[VersionReference]]
     use_cache: NotRequired[CacheUsage]
     metadata: NotRequired[Optional[dict[str, Any]]]
     labels: NotRequired[Optional[set[str]]]
     max_retry_delay: NotRequired[float]
     max_retry_count: NotRequired[float]
-    validator: NotRequired[OutputValidator[TaskOutput]]
+    validator: NotRequired[OutputValidator[AgentOutput]]
 
 
-class RunFn(Protocol, Generic[TaskInputContra, TaskOutput]):
-    async def __call__(self, task_input: TaskInputContra) -> Run[TaskOutput]: ...
+class RunFn(Protocol, Generic[TaskInputContra, AgentOutput]):
+    async def __call__(self, task_input: TaskInputContra) -> Run[AgentOutput]: ...
 
 
 class RunFnOutputOnly(Protocol, Generic[TaskInputContra, TaskOutputCov]):
     async def __call__(self, task_input: TaskInputContra) -> TaskOutputCov: ...
 
 
-class StreamRunFn(Protocol, Generic[TaskInputContra, TaskOutput]):
+class StreamRunFn(Protocol, Generic[TaskInputContra, AgentOutput]):
     def __call__(
         self,
         task_input: TaskInputContra,
-    ) -> AsyncIterator[Run[TaskOutput]]: ...
+    ) -> AsyncIterator[Run[AgentOutput]]: ...
 
 
 class StreamRunFnOutputOnly(Protocol, Generic[TaskInputContra, TaskOutputCov]):
@@ -57,10 +57,10 @@ class StreamRunFnOutputOnly(Protocol, Generic[TaskInputContra, TaskOutputCov]):
 
 
 RunTemplate = Union[
-    RunFn[TaskInput, TaskOutput],
-    RunFnOutputOnly[TaskInput, TaskOutput],
-    StreamRunFn[TaskInput, TaskOutput],
-    StreamRunFnOutputOnly[TaskInput, TaskOutput],
+    RunFn[AgentInput, AgentOutput],
+    RunFnOutputOnly[AgentInput, AgentOutput],
+    StreamRunFn[AgentInput, AgentOutput],
+    StreamRunFnOutputOnly[AgentInput, AgentOutput],
 ]
 
 
@@ -75,60 +75,63 @@ class _BaseProtocol(Protocol):
     __code__: Any
 
 
-class FinalRunFn(_BaseProtocol, Protocol, Generic[TaskInputContra, TaskOutput]):
+class FinalRunFn(_BaseProtocol, Protocol, Generic[TaskInputContra, AgentOutput]):
     async def __call__(
         self,
         task_input: TaskInputContra,
-        **kwargs: Unpack[RunParams[TaskOutput]],
-    ) -> Run[TaskOutput]: ...
+        **kwargs: Unpack[RunParams[AgentOutput]],
+    ) -> Run[AgentOutput]: ...
 
 
-class FinalRunFnOutputOnly(_BaseProtocol, Protocol, Generic[TaskInputContra, TaskOutput]):
+class FinalRunFnOutputOnly(_BaseProtocol, Protocol, Generic[TaskInputContra, AgentOutput]):
     async def __call__(
         self,
         task_input: TaskInputContra,
-        **kwargs: Unpack[RunParams[TaskOutput]],
-    ) -> TaskOutput: ...
+        **kwargs: Unpack[RunParams[AgentOutput]],
+    ) -> AgentOutput: ...
 
 
-class FinalStreamRunFn(_BaseProtocol, Protocol, Generic[TaskInputContra, TaskOutput]):
+class FinalStreamRunFn(_BaseProtocol, Protocol, Generic[TaskInputContra, AgentOutput]):
     def __call__(
         self,
         task_input: TaskInputContra,
-        **kwargs: Unpack[RunParams[TaskOutput]],
-    ) -> AsyncIterator[Run[TaskOutput]]: ...
+        **kwargs: Unpack[RunParams[AgentOutput]],
+    ) -> AsyncIterator[Run[AgentOutput]]: ...
 
 
 class FinalStreamRunFnOutputOnly(_BaseProtocol, Protocol, Generic[TaskInputContra, TaskOutputCov]):
     def __call__(
         self,
         task_input: TaskInputContra,
-        **kwargs: Unpack[RunParams[TaskOutput]],
+        **kwargs: Unpack[RunParams[AgentOutput]],
     ) -> AsyncIterator[TaskOutputCov]: ...
 
 
 FinalRunTemplate = Union[
-    FinalRunFn[TaskInput, TaskOutput],
-    FinalRunFnOutputOnly[TaskInput, TaskOutput],
-    FinalStreamRunFn[TaskInput, TaskOutput],
-    FinalStreamRunFnOutputOnly[TaskInput, TaskOutput],
+    FinalRunFn[AgentInput, AgentOutput],
+    FinalRunFnOutputOnly[AgentInput, AgentOutput],
+    FinalStreamRunFn[AgentInput, AgentOutput],
+    FinalStreamRunFnOutputOnly[AgentInput, AgentOutput],
 ]
 
 
 class TaskDecorator(Protocol):
     @overload
-    def __call__(self, fn: RunFn[TaskInput, TaskOutput]) -> FinalRunFn[TaskInput, TaskOutput]: ...
-
-    @overload
-    def __call__(self, fn: RunFnOutputOnly[TaskInput, TaskOutput]) -> FinalRunFnOutputOnly[TaskInput, TaskOutput]: ...
-
-    @overload
-    def __call__(self, fn: StreamRunFn[TaskInput, TaskOutput]) -> FinalStreamRunFn[TaskInput, TaskOutput]: ...
+    def __call__(self, fn: RunFn[AgentInput, AgentOutput]) -> FinalRunFn[AgentInput, AgentOutput]: ...
 
     @overload
     def __call__(
         self,
-        fn: StreamRunFnOutputOnly[TaskInput, TaskOutput],
-    ) -> FinalStreamRunFnOutputOnly[TaskInput, TaskOutput]: ...
+        fn: RunFnOutputOnly[AgentInput, AgentOutput],
+    ) -> FinalRunFnOutputOnly[AgentInput, AgentOutput]: ...
 
-    def __call__(self, fn: RunTemplate[TaskInput, TaskOutput]) -> FinalRunTemplate[TaskInput, TaskOutput]: ...
+    @overload
+    def __call__(self, fn: StreamRunFn[AgentInput, AgentOutput]) -> FinalStreamRunFn[AgentInput, AgentOutput]: ...
+
+    @overload
+    def __call__(
+        self,
+        fn: StreamRunFnOutputOnly[AgentInput, AgentOutput],
+    ) -> FinalStreamRunFnOutputOnly[AgentInput, AgentOutput]: ...
+
+    def __call__(self, fn: RunTemplate[AgentInput, AgentOutput]) -> FinalRunTemplate[AgentInput, AgentOutput]: ...

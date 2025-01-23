@@ -52,7 +52,7 @@ async def test_run_task(
 ):
     task_input = ExtractProductReviewSentimentTaskInput(review_text="This product is amazing!")
     run = await extract_product_review_sentiment_agent.run(task_input=task_input, use_cache="never")
-    assert run.task_output.sentiment == Sentiment.POSITIVE
+    assert run.output.sentiment == Sentiment.POSITIVE
 
 
 async def test_stream_task(
