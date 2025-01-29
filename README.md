@@ -121,7 +121,7 @@ WorkflowAI supports a long list of models. The source of truth for models we sup
 You can set the model explicitly in the agent decorator:
 
 ```python
-@workflowai.agent(model="gpt-4o")
+@workflowai.agent(model=Model.GPT_4O_LATEST)
 def say_hello(input: Input) -> Output:
     ...
 ```

@@ -4,6 +4,7 @@ from typing import Any, Generic, Optional
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 
 from workflowai.core.domain.task import AgentOutput
+from workflowai.core.domain.tool_call import ToolCall, ToolCallRequest
 from workflowai.core.domain.version import Version
 
 
@@ -33,3 +34,6 @@ class Run(BaseModel, Generic[AgentOutput]):
     )
 
     metadata: Optional[dict[str, Any]] = None
+
+    tool_calls: Optional[list[ToolCall]] = None
+    tool_call_requests: Optional[list[ToolCallRequest]] = None

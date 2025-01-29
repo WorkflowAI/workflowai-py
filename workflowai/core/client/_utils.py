@@ -7,11 +7,11 @@ import re
 from json import JSONDecodeError
 from time import time
 
+from workflowai.core._logger import logger
 from workflowai.core.client._types import OutputValidator
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
 from workflowai.core.domain.task import AgentOutput
 from workflowai.core.domain.version_reference import VersionReference
-from workflowai.core.logger import logger
 
 delimiter = re.compile(r'\}\n\ndata: \{"')
 

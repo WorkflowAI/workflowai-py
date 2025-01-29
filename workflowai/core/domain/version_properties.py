@@ -2,7 +2,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from workflowai.core.domain.model import Model
+from workflowai.core.domain.model import ModelOrStr
 
 
 class VersionProperties(BaseModel):
@@ -12,7 +12,7 @@ class VersionProperties(BaseModel):
     # Allow extra fields to support custom options
     model_config = ConfigDict(extra="allow")
 
-    model: Optional[Model] = Field(
+    model: Optional[ModelOrStr] = Field(
         default=None,
         description="The LLM model used for the run",
     )
