@@ -3,12 +3,13 @@ from typing import Any, Literal, Optional, Union
 from pydantic import BaseModel, Field
 from typing_extensions import NotRequired, TypedDict
 
-from workflowai.core.client._types import OutputValidator
+from workflowai.core._common_types import OutputValidator
 from workflowai.core.domain.cache_usage import CacheUsage
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import AgentOutput
 from workflowai.core.domain.tool_call import ToolCall as DToolCall
 from workflowai.core.domain.tool_call import ToolCallRequest as DToolCallRequest
+from workflowai.core.domain.tool_call import ToolCallResult as DToolCallResult
 from workflowai.core.domain.version import Version as DVersion
 from workflowai.core.domain.version_properties import VersionProperties as DVersionProperties
 from workflowai.core.utils._iter import safe_map_list
@@ -29,6 +30,29 @@ class RunRequest(BaseModel):
     labels: Optional[set[str]] = None  # deprecated, to be included in metadata
 
     private_fields: Optional[set[str]] = None
+
+    stream: Optional[bool] = None
+
+
+class ReplyRequest(BaseModel):
+    user_response: Optional[str] = None
+    version: Union[str, int, dict[str, Any]]
+    metadata: Optional[dict[str, Any]] = None
+
+    class ToolResult(BaseModel):
+        id: str
+        output: Optional[Any]
+        error: Optional[str]
+
+        @classmethod
+        def from_domain(cls, tool_result: DToolCallResult):
+            return cls(
+                id=tool_result.id,
+                output=tool_result.output,
+                error=tool_result.error,
+            )
+
+    tool_results: Optional[list[ToolResult]] = None
 
     stream: Optional[bool] = None
 
@@ -107,7 +131,7 @@ class RunResponse(BaseModel):
             id=self.id,
             agent_id=task_id,
             schema_id=task_schema_id,
-            output=validator(self.task_output),
+            output=validator(self.task_output, self.tool_call_requests is not None),
             version=self.version and self.version.to_domain(),
             duration_seconds=self.duration_seconds,
             cost_usd=self.cost_usd,

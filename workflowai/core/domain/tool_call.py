@@ -22,8 +22,9 @@ class ToolCallRequest(BaseModel):
     input: dict[str, Any]
 
 
-class ToolCallOutput(BaseModel):
+class ToolCallResult(BaseModel):
     """The output of a tool call"""
 
     id: str
-    output: dict[str, Any]
+    output: Optional[Any] = None
+    error: Optional[str] = None

@@ -1,17 +1,31 @@
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterable
 from typing import Any, Generic, NamedTuple, Optional, Union
 
 from typing_extensions import Unpack
 
+from workflowai.core._common_types import OutputValidator
 from workflowai.core.client._api import APIClient
-from workflowai.core.client._models import CreateAgentRequest, CreateAgentResponse, RunRequest, RunResponse
+from workflowai.core.client._models import (
+    CreateAgentRequest,
+    CreateAgentResponse,
+    ReplyRequest,
+    RunRequest,
+    RunResponse,
+)
 from workflowai.core.client._types import RunParams
-from workflowai.core.client._utils import build_retryable_wait, global_default_version_reference, tolerant_validator
+from workflowai.core.client._utils import (
+    build_retryable_wait,
+    global_default_version_reference,
+    intolerant_validator,
+    tolerant_validator,
+)
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import AgentInput, AgentOutput
+from workflowai.core.domain.tool_call import ToolCallResult
 from workflowai.core.domain.version_properties import VersionProperties
 from workflowai.core.domain.version_reference import VersionReference
+from workflowai.core.utils._vars import BM
 
 
 class Agent(Generic[AgentInput, AgentOutput]):
@@ -35,8 +49,8 @@ class Agent(Generic[AgentInput, AgentOutput]):
     def api(self) -> APIClient:
         return self._api()
 
-    class _PreparedRun(NamedTuple):
-        request: RunRequest
+    class _PreparedRun(NamedTuple, Generic[BM]):
+        request: BM
         route: str
         should_retry: Callable[[], bool]
         wait_for_exception: Callable[[WorkflowAIError], Awaitable[None]]
@@ -78,6 +92,35 @@ class Agent(Generic[AgentInput, AgentOutput]):
         )
         return self._PreparedRun(request, route, should_retry, wait_for_exception, schema_id)
 
+    async def _prepare_reply(
+        self,
+        run_id: str,
+        user_response: Optional[str],
+        tool_results: Optional[Iterable[ToolCallResult]],
+        stream: bool,
+        **kwargs: Unpack[RunParams[AgentOutput]],
+    ):
+        if not self.schema_id:
+            raise ValueError("schema_id is required")
+        version = self._sanitize_version(kwargs.get("version"))
+
+        request = ReplyRequest(
+            user_response=user_response,
+            version=version,
+            stream=stream,
+            metadata=kwargs.get("metadata"),
+            tool_results=[ReplyRequest.ToolResult.from_domain(tool_result) for tool_result in tool_results]
+            if tool_results
+            else None,
+        )
+        route = f"/v1/_/agents/{self.agent_id}/runs/{run_id}/reply"
+        should_retry, wait_for_exception = build_retryable_wait(
+            kwargs.get("max_retry_delay", 60),
+            kwargs.get("max_retry_count", 1),
+        )
+
+        return self._PreparedRun(request, route, should_retry, wait_for_exception, self.schema_id)
+
     async def register(self):
         """Registers the agent and returns the schema id"""
         res = await self.api.post(
@@ -91,6 +134,16 @@ class Agent(Generic[AgentInput, AgentOutput]):
         )
         self.schema_id = res.schema_id
         return res.schema_id
+
+    def _build_run(
+        self,
+        chunk: RunResponse,
+        schema_id: int,
+        validator: OutputValidator[AgentOutput],
+    ) -> Run[AgentOutput]:
+        run = chunk.to_domain(self.agent_id, schema_id, validator)
+        run._agent = self  # pyright: ignore [reportPrivateUsage]
+        return run
 
     async def run(
         self,
@@ -122,13 +175,13 @@ class Agent(Generic[AgentInput, AgentOutput]):
                 or an async iterator of output objects
         """
         prepared_run = await self._prepare_run(task_input, stream=False, **kwargs)
-        validator = kwargs.get("validator") or self.output_cls.model_validate
+        validator = kwargs.get("validator") or intolerant_validator(self.output_cls)
 
         last_error = None
         while prepared_run.should_retry():
             try:
                 res = await self.api.post(prepared_run.route, prepared_run.request, returns=RunResponse, run=True)
-                return res.to_domain(self.agent_id, prepared_run.schema_id, validator)
+                return self._build_run(res, prepared_run.schema_id, validator)
             except WorkflowAIError as e:  # noqa: PERF203
                 last_error = e
                 await prepared_run.wait_for_exception(e)
@@ -176,7 +229,20 @@ class Agent(Generic[AgentInput, AgentOutput]):
                     returns=RunResponse,
                     run=True,
                 ):
-                    yield chunk.to_domain(self.agent_id, prepared_run.schema_id, validator)
+                    yield self._build_run(chunk, prepared_run.schema_id, validator)
                 return
             except WorkflowAIError as e:  # noqa: PERF203
                 await prepared_run.wait_for_exception(e)
+
+    async def reply(
+        self,
+        run_id: str,
+        user_response: Optional[str] = None,
+        tool_results: Optional[Iterable[ToolCallResult]] = None,
+        **kwargs: Unpack[RunParams[AgentOutput]],
+    ):
+        prepared_run = await self._prepare_reply(run_id, user_response, tool_results, stream=False, **kwargs)
+        validator = kwargs.get("validator") or intolerant_validator(self.output_cls)
+
+        res = await self.api.post(prepared_run.route, prepared_run.request, returns=RunResponse, run=True)
+        return self._build_run(res, prepared_run.schema_id, validator)

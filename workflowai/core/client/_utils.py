@@ -6,9 +6,10 @@ import os
 import re
 from json import JSONDecodeError
 from time import time
+from typing import Any
 
+from workflowai.core._common_types import OutputValidator
 from workflowai.core._logger import logger
-from workflowai.core.client._types import OutputValidator
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
 from workflowai.core.domain.task import AgentOutput
 from workflowai.core.domain.version_reference import VersionReference
@@ -86,7 +87,21 @@ def build_retryable_wait(
 
 
 def tolerant_validator(m: type[AgentOutput]) -> OutputValidator[AgentOutput]:
-    return lambda payload: m.model_construct(None, **payload)
+    def _validator(data: dict[str, Any], has_tool_call_requests: bool) -> AgentOutput:  # noqa: ARG001
+        return m.model_construct(None, **data)
+
+    return _validator
+
+
+def intolerant_validator(m: type[AgentOutput]) -> OutputValidator[AgentOutput]:
+    def _validator(data: dict[str, Any], has_tool_call_requests: bool) -> AgentOutput:
+        # When we have tool call requests, the output can be empty
+        if has_tool_call_requests:
+            return m.model_construct(None, **data)
+
+        return m.model_validate(data)
+
+    return _validator
 
 
 def global_default_version_reference() -> VersionReference:
