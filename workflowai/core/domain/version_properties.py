@@ -1,8 +1,9 @@
-from typing import Optional
+from typing import Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from workflowai.core.domain.model import Model
+from workflowai.core.domain.model import ModelOrStr
+from workflowai.core.domain.tool import Tool
 
 
 class VersionProperties(BaseModel):
@@ -12,7 +13,7 @@ class VersionProperties(BaseModel):
     # Allow extra fields to support custom options
     model_config = ConfigDict(extra="allow")
 
-    model: Optional[Model] = Field(
+    model: Optional[ModelOrStr] = Field(
         default=None,
         description="The LLM model used for the run",
     )
@@ -41,4 +42,9 @@ class VersionProperties(BaseModel):
     runner_version: Optional[str] = Field(
         default=None,
         description="The version of the runner used",
+    )
+
+    enabled_tools: Optional[list[Union[str, Tool]]] = Field(
+        default=None,
+        description="The tools enabled for the run. A string can be used to refer to a tool hosted by WorkflowAI",
     )

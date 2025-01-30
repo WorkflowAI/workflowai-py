@@ -1,6 +1,6 @@
 import functools
 import inspect
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import (
     Any,
     AsyncIterator,
@@ -26,7 +26,7 @@ from workflowai.core.client._types import (
     RunTemplate,
 )
 from workflowai.core.client.agent import Agent
-from workflowai.core.domain.model import Model
+from workflowai.core.domain.model import ModelOrStr
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import AgentInput, AgentOutput
 from workflowai.core.domain.version_properties import VersionProperties
@@ -128,8 +128,9 @@ def wrap_run_template(
     agent_id: str,
     schema_id: Optional[int],
     version: Optional[VersionReference],
-    model: Optional[Model],
+    model: Optional[ModelOrStr],
     fn: RunTemplate[AgentInput, AgentOutput],
+    tools: Optional[Iterable[Callable[..., Any]]] = None,
 ) -> Union[
     _RunnableAgent[AgentInput, AgentOutput],
     _RunnableOutputOnlyAgent[AgentInput, AgentOutput],
@@ -155,6 +156,7 @@ def wrap_run_template(
         api=client,
         schema_id=schema_id,
         version=version,
+        tools=tools,
     )
 
 
@@ -167,11 +169,12 @@ def agent_wrapper(
     schema_id: Optional[int] = None,
     agent_id: Optional[str] = None,
     version: Optional[VersionReference] = None,
-    model: Optional[Model] = None,
+    model: Optional[ModelOrStr] = None,
+    tools: Optional[Iterable[Callable[..., Any]]] = None,
 ) -> AgentDecorator:
     def wrap(fn: RunTemplate[AgentInput, AgentOutput]) -> FinalRunTemplate[AgentInput, AgentOutput]:
         tid = agent_id or agent_id_from_fn_name(fn)
-        return functools.wraps(fn)(wrap_run_template(client, tid, schema_id, version, model, fn))  # pyright: ignore [reportReturnType]
+        return functools.wraps(fn)(wrap_run_template(client, tid, schema_id, version, model, fn, tools))  # pyright: ignore [reportReturnType]
 
     # pyright is unhappy with generics
     return wrap  # pyright: ignore [reportReturnType]

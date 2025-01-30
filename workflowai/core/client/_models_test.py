@@ -5,8 +5,9 @@ from pydantic import BaseModel, ValidationError
 
 from tests.utils import fixture_text
 from workflowai.core.client._models import RunResponse
-from workflowai.core.client._utils import tolerant_validator
+from workflowai.core.client._utils import intolerant_validator, tolerant_validator
 from workflowai.core.domain.run import Run
+from workflowai.core.domain.tool_call import ToolCallRequest
 
 
 @pytest.mark.parametrize(
@@ -75,4 +76,14 @@ class TestRunResponseToDomain:
             '{"id": "1", "task_output": {"a": 1}, "version": {"properties": {"a": 1, "b": "test"}}}',
         )
         with pytest.raises(ValidationError):
-            chunk.to_domain(task_id="1", task_schema_id=1, validator=_TaskOutput.model_validate)
+            chunk.to_domain(task_id="1", task_schema_id=1, validator=intolerant_validator(_TaskOutput))
+
+    def test_with_tool_calls(self):
+        chunk = RunResponse.model_validate_json(
+            '{"id": "1", "task_output": {}, "tool_call_requests": [{"id": "1", "name": "test", "input": {"a": 1}}]}',
+        )
+        assert chunk
+
+        parsed = chunk.to_domain(task_id="1", task_schema_id=1, validator=tolerant_validator(_TaskOutput))
+        assert isinstance(parsed, Run)
+        assert parsed.tool_call_requests == [ToolCallRequest(id="1", name="test", input={"a": 1})]
