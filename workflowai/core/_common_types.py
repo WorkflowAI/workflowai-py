@@ -21,11 +21,16 @@ class OutputValidator(Protocol, Generic[AgentOutputCov]):
     def __call__(self, data: dict[str, Any], has_tool_call_requests: bool) -> AgentOutputCov: ...
 
 
-class RunParams(TypedDict, Generic[AgentOutput]):
+class BaseRunParams(TypedDict):
     version: NotRequired[Optional["VersionReference"]]
     use_cache: NotRequired["CacheUsage"]
     metadata: NotRequired[Optional[dict[str, Any]]]
     labels: NotRequired[Optional[set[str]]]
     max_retry_delay: NotRequired[float]
     max_retry_count: NotRequired[float]
+
+    max_tool_iterations: NotRequired[int]  # 10 by default
+
+
+class RunParams(BaseRunParams, Generic[AgentOutput]):
     validator: NotRequired[OutputValidator["AgentOutput"]]

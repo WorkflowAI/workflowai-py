@@ -1,5 +1,6 @@
 import os
-from typing import Optional
+from collections.abc import Callable, Iterable
+from typing import Any, Optional
 
 from typing_extensions import deprecated
 
@@ -68,6 +69,7 @@ def agent(
     schema_id: Optional[int] = None,
     version: Optional[VersionReference] = None,
     model: Optional["model.ModelOrStr"] = None,
+    tools: Optional[Iterable[Callable[..., Any]]] = None,
 ) -> AgentDecorator:
     from workflowai.core.client._fn_utils import agent_wrapper
 
@@ -77,4 +79,5 @@ def agent(
         agent_id=id,
         version=version,
         model=model,
+        tools=tools,
     )

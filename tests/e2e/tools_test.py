@@ -1,4 +1,8 @@
+from datetime import datetime
+from typing import Annotated
+
 from pydantic import BaseModel
+from zoneinfo import ZoneInfo
 
 from workflowai import Run, agent
 from workflowai.core.domain.model import Model
@@ -15,26 +19,24 @@ class AnswerQuestionOutput(BaseModel):
     answer: str = ""
 
 
-_GET_CURRENT_TIME_TOOL = Tool(
-    name="get_current_time",
-    description="Get the current time",
-    input_schema={},
-    output_schema={
-        "properties": {
-            "time": {"type": "string", "description": "The current time"},
+async def test_manual_tool():
+    get_current_time_tool = Tool(
+        name="get_current_time",
+        description="Get the current time",
+        input_schema={},
+        output_schema={
+            "properties": {
+                "time": {"type": "string", "description": "The current time"},
+            },
         },
-    },
-)
+    )
 
+    @agent(
+        id="answer-question",
+        version=VersionProperties(model=Model.GPT_4O_LATEST, enabled_tools=[get_current_time_tool]),
+    )
+    async def answer_question(_: AnswerQuestionInput) -> Run[AnswerQuestionOutput]: ...
 
-@agent(
-    id="answer-question",
-    version=VersionProperties(model=Model.GPT_4O_LATEST, enabled_tools=[_GET_CURRENT_TIME_TOOL]),
-)
-async def answer_question(_: AnswerQuestionInput) -> Run[AnswerQuestionOutput]: ...
-
-
-async def test_tools():
     run = await answer_question(AnswerQuestionInput(question="What is the current time spelled out in French?"))
     assert not run.output.answer
 
@@ -44,3 +46,19 @@ async def test_tools():
 
     replied = await run.reply(tool_results=[ToolCallResult(id=run.tool_call_requests[0].id, output={"time": "12:00"})])
     assert replied.output.answer
+
+
+async def test_auto_tool():
+    def get_current_time(timezone: Annotated[str, "The timezone to get the current time in. e-g Europe/Paris"]) -> str:
+        """Return the current time in the given timezone in iso format"""
+        return datetime.now(ZoneInfo(timezone)).isoformat()
+
+    @agent(
+        id="answer-question",
+        tools=[get_current_time],
+        version=VersionProperties(model=Model.GPT_4O_LATEST),
+    )
+    async def answer_question(_: AnswerQuestionInput) -> Run[AnswerQuestionOutput]: ...
+
+    run = await answer_question(AnswerQuestionInput(question="What is the current time in Paris?"))
+    assert run.output.answer
