@@ -1,6 +1,6 @@
 # WorkflowAI Python
 
-A library to use WorkflowAI with Python
+A library to use [WorkflowAI](https://workflowai.com) with Python
 
 ## Context
 
@@ -171,6 +171,65 @@ def say_hello(input: Input) -> AsyncIterator[Output]:
 def say_hello(input: Input) -> AsyncIterator[Run[Output]]:
     ...
 ```
+
+### Images
+
+Add images as input to an agent by using the `Image` class. The `content` should be a base64 encoded string.
+
+```python
+from workflowai.fields import Image
+
+class ImageInput(BaseModel):
+    image: Image = Field(description="The image to analyze")
+
+# use base64 to include the image inline
+image = Image(content_type='image/jpeg', data='<base 64 encoded data>')
+
+# You can also use the `url` property to pass an image URL.
+image = Image(url="https://example.com/image.jpg")
+```
+
+An example of using image as input is available in [city_identifier.py](./examples/images/city_identifier.py).
+
+### Files (PDF, .txt, ...)
+
+Use the `File` class to pass files as input to an agent. Different LLMs support different file types.
+
+```python
+from workflowai.fields import File
+...
+
+class PDFQuestionInput(BaseModel):
+    pdf: File = Field(description="The PDF document to analyze")
+    question: str = Field(description="The question to answer about the PDF content")
+
+class PDFAnswerOutput(BaseModel):
+    answer: str = Field(description="The answer to the question based on the PDF content")
+    quotes: List[str] = Field(description="Relevant quotes from the PDF that support the answer")
+
+@workflowai.agent(id="pdf-answer", model=Model.CLAUDE_3_5_SONNET_LATEST)
+async def answer_pdf_question(input: PDFQuestionInput) -> PDFAnswerOutput:
+    """
+    Analyze the provided PDF document and answer the given question.
+    Provide a clear and concise answer based on the content found in the PDF.
+    """
+    ...
+
+pdf = File(content_type='application/pdf', data='<base 64 encoded data>')
+question = "What are the key findings in this report?"
+
+output = await answer_pdf_question(PDFQuestionInput(pdf=pdf, question=question))
+# Print the answer and supporting quotes
+print("Answer:", output.answer)
+print("\nSupporting quotes:")
+for quote in output.quotes:
+    print(f"- {quote}")
+```
+An example of using a PDF as input is available in [pdf_answer.py](./examples/pdf_answer.py).
+
+### Audio
+
+[todo]
 
 ### Tools
 
