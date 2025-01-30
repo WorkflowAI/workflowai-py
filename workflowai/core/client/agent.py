@@ -2,6 +2,7 @@ import asyncio
 from collections.abc import Awaitable, Callable, Iterable
 from typing import Any, Generic, NamedTuple, Optional, Union, cast
 
+from pydantic import BaseModel
 from typing_extensions import Unpack
 
 from workflowai.core._common_types import BaseRunParams, OutputValidator
@@ -28,7 +29,6 @@ from workflowai.core.domain.tool_call import ToolCallRequest, ToolCallResult
 from workflowai.core.domain.version_properties import VersionProperties
 from workflowai.core.domain.version_reference import VersionReference
 from workflowai.core.utils._tools import tool_schema
-from workflowai.core.utils._vars import BM
 
 
 class Agent(Generic[AgentInput, AgentOutput]):
@@ -59,8 +59,9 @@ class Agent(Generic[AgentInput, AgentOutput]):
     def api(self) -> APIClient:
         return self._api()
 
-    class _PreparedRun(NamedTuple, Generic[BM]):
-        request: BM
+    class _PreparedRun(NamedTuple):
+        # would be nice to use a generic here, but python 3.9 does not support generic NamedTuple
+        request: BaseModel
         route: str
         should_retry: Callable[[], bool]
         wait_for_exception: Callable[[WorkflowAIError], Awaitable[None]]
