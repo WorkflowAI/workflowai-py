@@ -4,6 +4,8 @@ from typing import Any, Callable, get_type_hints
 
 from pydantic import BaseModel
 
+from workflowai.core.utils._schema_generator import JsonSchemaGenerator
+
 ToolFunction = Callable[..., Any]
 
 
@@ -57,10 +59,23 @@ def _get_type_schema(param_type: type) -> dict[str, Any]:
     if param_type is bool:
         return {"type": "boolean"}
 
-    if isinstance(param_type, BaseModel):
-        return param_type.model_json_schema()
+    if issubclass(param_type, BaseModel):
+        return param_type.model_json_schema(by_alias=True, schema_generator=JsonSchemaGenerator)
 
     raise ValueError(f"Unsupported type: {param_type}")
+
+
+def _schema_from_type_hint(param_type_hint: Any) -> dict[str, Any]:
+    param_type = param_type_hint.__origin__ if hasattr(param_type_hint, "__origin__") else param_type_hint
+    if not isinstance(param_type, type):
+        raise ValueError(f"Unsupported type: {param_type}")
+
+    param_description = param_type_hint.__metadata__[0] if hasattr(param_type_hint, "__metadata__") else None
+    param_schema = _get_type_schema(param_type)
+    if param_description:
+        param_schema["description"] = param_description
+
+    return param_schema
 
 
 def _build_input_schema(sig: inspect.Signature, type_hints: dict[str, Any]) -> dict[str, Any]:
@@ -70,13 +85,7 @@ def _build_input_schema(sig: inspect.Signature, type_hints: dict[str, Any]) -> d
         if param_name == "self":
             continue
 
-        param_type_hint = type_hints[param_name]
-        param_type = param_type_hint.__origin__ if hasattr(param_type_hint, "__origin__") else param_type_hint
-        param_description = param_type_hint.__metadata__[0] if hasattr(param_type_hint, "__metadata__") else None
-
-        param_schema = _get_type_schema(param_type) if isinstance(param_type, type) else {"type": "string"}
-        if param_description is not None:
-            param_schema["description"] = param_description
+        param_schema = _schema_from_type_hint(type_hints[param_name])
 
         if param.default is inspect.Parameter.empty:
             input_schema["required"].append(param_name)
@@ -91,9 +100,4 @@ def _build_output_schema(type_hints: dict[str, Any]) -> dict[str, Any]:
     if not return_type:
         raise ValueError("Return type annotation is required")
 
-    return_type_base = return_type.__origin__ if hasattr(return_type, "__origin__") else return_type
-
-    if not isinstance(return_type_base, type):
-        raise ValueError(f"Unsupported return type: {return_type_base}")
-
-    return _get_type_schema(return_type_base)
+    return _schema_from_type_hint(return_type)
