@@ -21,7 +21,7 @@ class CityToCapitalTaskOutput(BaseModel):
     )
 
 
-@workflowai.task(schema_id=1)
+@workflowai.agent(schema_id=1)
 async def city_to_capital(task_input: CityToCapitalTaskInput) -> CityToCapitalTaskOutput: ...
 
 
