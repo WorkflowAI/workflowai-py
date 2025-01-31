@@ -30,11 +30,17 @@ def _mock_register(httpx_mock: HTTPXMock, schema_id: int = 1, task_id: str = "ci
     )
 
 
-def _mock_response(httpx_mock: HTTPXMock, task_id: str = "city-to-capital", capital: str = "Tokyo"):
+def _mock_response(
+    httpx_mock: HTTPXMock,
+    task_id: str = "city-to-capital",
+    capital: str = "Tokyo",
+    json: Optional[dict[str, Any]] = None,
+    url: Optional[str] = None,
+):
     httpx_mock.add_response(
         method="POST",
-        url=f"https://run.workflowai.dev/v1/_/agents/{task_id}/schemas/1/run",
-        json={"id": "123", "task_output": {"capital": capital}},
+        url=url or f"https://run.workflowai.dev/v1/_/agents/{task_id}/schemas/1/run",
+        json=json or {"id": "123", "task_output": {"capital": capital}},
     )
 
 
@@ -194,3 +200,64 @@ async def test_auto_register(httpx_mock: HTTPXMock):
             "type": "object",
         },
     }
+
+
+async def test_run_with_tool(httpx_mock: HTTPXMock):
+    class _SayHelloToolInput(BaseModel):
+        name: str
+
+    class _SayHelloToolOutput(BaseModel):
+        message: str
+
+    def say_hello(tool_input: _SayHelloToolInput) -> _SayHelloToolOutput:
+        return _SayHelloToolOutput(message=f"Hello {tool_input.name}")
+
+    @workflowai.agent(id="city-to-capital", tools=[say_hello])
+    async def city_to_capital(task_input: CityToCapitalTaskInput) -> CityToCapitalTaskOutput:
+        """Say hello to the user"""
+        ...
+
+    _mock_register(httpx_mock)
+
+    # First response will respond a tool call request
+    _mock_response(
+        httpx_mock,
+        json={
+            "id": "1234",
+            "task_output": {},
+            "tool_call_requests": [
+                {
+                    "id": "say_hello_1",
+                    "name": "say_hello",
+                    "input": {"tool_input": {"name": "john"}},
+                },
+            ],
+        },
+    )
+
+    # Second response will respond the final output
+    _mock_response(httpx_mock, url="https://run.workflowai.dev/v1/_/agents/city-to-capital/runs/1234/reply")
+
+    task_input = CityToCapitalTaskInput(city="Hello")
+    output = await city_to_capital(task_input)
+    assert output.capital == "Tokyo"
+
+    assert len(httpx_mock.get_requests()) == 3
+
+    run_req = httpx_mock.get_request(url="https://run.workflowai.dev/v1/_/agents/city-to-capital/schemas/1/run")
+    assert run_req is not None
+    run_req_body = json.loads(run_req.content)
+    assert run_req_body["task_input"] == {"city": "Hello"}
+    assert set(run_req_body["version"].keys()) == {"enabled_tools", "instructions", "model"}
+    assert len(run_req_body["version"]["enabled_tools"]) == 1
+    assert run_req_body["version"]["enabled_tools"][0]["name"] == "say_hello"
+
+    reply_req = httpx_mock.get_request(url="https://run.workflowai.dev/v1/_/agents/city-to-capital/runs/1234/reply")
+    assert reply_req is not None
+    reply_req_body = json.loads(reply_req.content)
+    assert reply_req_body["tool_results"] == [
+        {
+            "id": "say_hello_1",
+            "output": {"message": "Hello john"},
+        },
+    ]
