@@ -32,6 +32,8 @@ from workflowai.core.utils._tools import tool_schema
 
 
 class Agent(Generic[AgentInput, AgentOutput]):
+    _DEFAULT_MAX_ITERATIONS = 10
+
     def __init__(
         self,
         agent_id: str,
@@ -216,6 +218,8 @@ class Agent(Generic[AgentInput, AgentOutput]):
         run._agent = self  # pyright: ignore [reportPrivateUsage]
 
         if run.tool_call_requests:
+            if current_iteration >= kwargs.get("max_iterations", self._DEFAULT_MAX_ITERATIONS):
+                raise WorkflowAIError(error=BaseError(message="max tool iterations reached"), response=None)
             with_reply = await self._execute_tools(
                 run_id=run.id,
                 tool_call_requests=run.tool_call_requests,

@@ -1,6 +1,8 @@
 from enum import Enum
 from typing import Annotated
 
+from pydantic import BaseModel
+
 from workflowai.core.utils._tools import tool_schema
 
 
@@ -69,4 +71,44 @@ class TestToolSchema:
         }
         assert schema.output_schema == {
             "type": "string",
+        }
+
+    def test_with_base_model_in_input(self):
+        class TestModel(BaseModel):
+            name: str
+
+        def sample_func(model: TestModel) -> str: ...
+
+        schema = tool_schema(sample_func)
+
+        assert schema.input_schema == {
+            "type": "object",
+            "properties": {
+                "model": {
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                        },
+                    },
+                    "required": [
+                        "name",
+                    ],
+                    "type": "object",
+                },
+            },
+            "required": ["model"],
+        }
+
+    def test_with_base_model_in_output(self):
+        class TestModel(BaseModel):
+            val: int
+
+        def sample_func() -> TestModel: ...
+
+        schema = tool_schema(sample_func)
+
+        assert schema.output_schema == {
+            "type": "object",
+            "properties": {"val": {"type": "integer"}},
+            "required": ["val"],
         }
