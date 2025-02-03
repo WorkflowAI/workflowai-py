@@ -7,6 +7,7 @@ from typing_extensions import Unpack
 
 from workflowai.core import _common_types
 from workflowai.core.client import _types
+from workflowai.core.domain.errors import BaseError
 from workflowai.core.domain.task import AgentOutput
 from workflowai.core.domain.tool_call import ToolCall, ToolCallRequest, ToolCallResult
 from workflowai.core.domain.version import Version
@@ -41,6 +42,11 @@ class Run(BaseModel, Generic[AgentOutput]):
 
     tool_calls: Optional[list[ToolCall]] = None
     tool_call_requests: Optional[list[ToolCallRequest]] = None
+
+    error: Optional[BaseError] = Field(
+        default=None,
+        description="An error that occurred during the run. Only provided if the run failed.",
+    )
 
     _agent: Optional["_AgentBase[AgentOutput]"] = None
 

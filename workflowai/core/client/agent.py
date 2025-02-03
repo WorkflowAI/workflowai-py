@@ -203,6 +203,16 @@ class Agent(Generic[AgentInput, AgentOutput]):
             **kwargs,
         )
 
+    def _build_run_no_tools(
+        self,
+        chunk: RunResponse,
+        schema_id: int,
+        validator: OutputValidator[AgentOutput],
+    ) -> Run[AgentOutput]:
+        run = chunk.to_domain(self.agent_id, schema_id, validator)
+        run._agent = self  # pyright: ignore [reportPrivateUsage]
+        return run
+
     async def _build_run(
         self,
         chunk: RunResponse,
@@ -211,8 +221,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
         current_iteration: int,
         **kwargs: Unpack[BaseRunParams],
     ) -> Run[AgentOutput]:
-        run = chunk.to_domain(self.agent_id, schema_id, validator)
-        run._agent = self  # pyright: ignore [reportPrivateUsage]
+        run = self._build_run_no_tools(chunk, schema_id, validator)
 
         if run.tool_call_requests:
             if current_iteration >= kwargs.get("max_iterations", self._DEFAULT_MAX_ITERATIONS):

@@ -222,9 +222,16 @@ def get_current_time(timezone: Annotated[str, "The timezone to get the current t
     """Return the current time in the given timezone in iso format"""
     return datetime.now(ZoneInfo(timezone)).isoformat()
 
+# Tools can also be async
+async def fetch_webpage(url: str) -> str:
+    """Fetch the content of a webpage"""
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+        return response.text
+
 @agent(
     id="answer-question",
-    tools=[get_current_time],
+    tools=[get_current_time, fetch_webpage],
     version=VersionProperties(model=Model.GPT_4O_LATEST),
 )
 async def answer_question(_: AnswerQuestionInput) -> Run[AnswerQuestionOutput]: ...
@@ -367,4 +374,29 @@ def say_hello_tolerant(_: Input) -> AsyncIterator[OutputTolerant]:
 async for run in say_hello(Input(name="John")):
     print(run.output.greeting1) # will be empty if the model has not generated it yet
 
+```
+
+#### Field properties
+
+Pydantic allows a variety of other validation criteria for fields: minimum, maximum, pattern, etc.
+This additional criteria are included the JSON Schema that is sent to WorkflowAI, and are sent to the model.
+
+```python
+class Input(BaseModel):
+    name: str = Field(min_length=3, max_length=10)
+    age: int = Field(ge=18, le=100)
+    email: str = Field(pattern=r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
+```
+
+These arguments can be used to stir the model in the right direction. The caveat is have a
+validation that is too strict can lead to invalid generations. In case of an invalid generation:
+
+- WorkflowAI retries the inference once by providing the model with the invalid output and the validation error
+- if the model still fails to generate a valid output, the run will fail with an `InvalidGenerationError`.
+  the partial output is available in the `partial_output` attribute of the `InvalidGenerationError`
+
+```python
+
+@agent()
+def my_agent(_: Input) -> :...
 ```
