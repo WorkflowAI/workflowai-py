@@ -26,7 +26,7 @@ from workflowai.core.client._types import (
     RunParams,
     RunTemplate,
 )
-from workflowai.core.client._utils import tolerant_validator
+from workflowai.core.client._utils import intolerant_validator
 from workflowai.core.client.agent import Agent
 from workflowai.core.domain.errors import InvalidGenerationError
 from workflowai.core.domain.model import ModelOrStr
@@ -113,8 +113,8 @@ class _RunnableAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOu
         except InvalidGenerationError as e:
             if e.partial_output and e.run_id:
                 try:
-                    validator, _ = self._sanitize_validator(kwargs, tolerant_validator(self.output_cls))
-                    return self._build_run_no_tools(
+                    validator, _ = self._sanitize_validator(kwargs, intolerant_validator(self.output_cls))
+                    run = self._build_run_no_tools(
                         chunk=RunResponse(
                             id=e.run_id,
                             task_output=e.partial_output,
@@ -122,6 +122,9 @@ class _RunnableAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOu
                         schema_id=self.schema_id or 0,
                         validator=validator,
                     )
+                    run.error = e.error
+                    return run
+
                 except ValidationError:
                     # Error is not recoverable so not returning anything
                     pass

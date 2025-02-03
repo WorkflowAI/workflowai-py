@@ -36,6 +36,20 @@ ProviderErrorCode = Literal[
     # The requested model does not support the requested generation mode
     # (e-g a model that does not support images generation was sent an image)
     "model_does_not_support_mode",
+    # Invalid file provided
+    "invalid_file",
+    # The maximum number of tool call iterations was reached
+    "max_tool_call_iteration",
+    # The current configuration does not support structured generation
+    "structured_generation_error",
+    # The content was moderated
+    "content_moderation",
+    # Task banned
+    "task_banned",
+    # The request timed out
+    "timeout",
+    # Agent run failed
+    "agent_run_failed",
 ]
 
 ErrorCode = Union[
@@ -110,7 +124,7 @@ class WorkflowAIError(Exception):
 
     @classmethod
     def error_cls(cls, code: str):
-        if code == "invalid_generation" or code == "failed_generation":
+        if code == "invalid_generation" or code == "failed_generation" or code == "agent_run_failed":
             return InvalidGenerationError
         return cls
 
