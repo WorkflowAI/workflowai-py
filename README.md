@@ -427,3 +427,7 @@ async for run in say_hello(Input(name="John")):
     print(run.output.greeting1) # will be empty if the model has not generated it yet
 
 ```
+
+## Workflows
+
+For advanced workflow patterns and examples, please refer to the [Workflows README](examples/workflows/README.md) for more details.
