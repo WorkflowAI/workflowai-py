@@ -157,6 +157,8 @@ You can configure the agent function to stream or return the full run object, si
 
 ```python
 # Return the full run object, useful if you want to extract metadata like cost or duration
+# The generated function also tries to recover from errors in the generation process and will attempt to process final
+# outputs even when there is a partial error.
 @workflowai.agent()
 async def say_hello(input: Input) -> Run[Output]:
     ...
@@ -171,6 +173,38 @@ def say_hello(input: Input) -> AsyncIterator[Output]:
 def say_hello(input: Input) -> AsyncIterator[Run[Output]]:
     ...
 ```
+
+### Replying to a run
+
+Some use cases require the ability to have a back and forth between the client and the LLM. For example:
+
+- tools [see below](#tools) use the reply ability internally
+- chatbots
+- correcting the LLM output
+
+In WorkflowAI, this is done by replying to a run. A reply can contain:
+
+- a user response
+- tool results
+
+<!-- TODO: find a better example for reply -->
+
+```python
+# Returning the full run object is required to use the reply feature
+@workflowai.agent()
+async def say_hello(input: Input) -> Run[Output]:
+    ...
+
+run = await say_hello(Input(name="John"))
+run = await run.reply(user_response="Now say hello to his brother James")
+```
+
+The output of a reply to a run has the same type as the original run, which makes it easy to iterate towards the
+construction of a final output.
+
+> To allow run iterations, it is very important to have outputs that are tolerant to missing fields, aka that
+> have default values for most of their fields. Otherwise the agent will throw a WorkflowAIError on missing fields
+> and the run chain will be broken.
 
 ### Tools
 
@@ -266,6 +300,29 @@ try:
 except WorkflowAIError as e:
     print(e.code)
     print(e.message)
+```
+
+#### Recoverable errors
+
+Sometimes, the LLM outputs an object that is partially valid, good examples are:
+
+- the model context window was exceeded during the generation
+- the model decided that a tool call result was a failure
+
+In this case, an agent that returns an output only will always raise an `InvalidGenerationError` which
+subclasses `WorkflowAIError`.
+
+However, an agent that returns a full run object will try to recover from the error by using the partial output.
+
+```python
+
+run = await agent(input=Input(name="John"))
+
+# The run will have an error
+assert run.error is not None
+
+# The run will have a partial output
+assert run.output is not None
 ```
 
 ### Definining input and output types
