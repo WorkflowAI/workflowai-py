@@ -472,3 +472,7 @@ validation that is too strict can lead to invalid generations. In case of an inv
 @agent()
 def my_agent(_: Input) -> :...
 ```
+
+## Contributing
+
+See the [CONTRIBUTING.md](./CONTRIBUTING.md) file for more details.
