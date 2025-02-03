@@ -121,6 +121,8 @@ WorkflowAI supports a long list of models. The source of truth for models we sup
 You can set the model explicitly in the agent decorator:
 
 ```python
+from workflowai import Model
+
 @workflowai.agent(model=Model.GPT_4O_LATEST)
 def say_hello(input: Input) -> Output:
     ...
@@ -151,18 +153,31 @@ def say_hello(input: Input) -> AsyncIterator[Run[Output]]:
     ...
 ```
 
-### Streaming and advanced usage
+### The Run object
 
-You can configure the agent function to stream or return the full run object, simply by changing the type annotation.
+Although having an agent only return the run output covers most use cases, some use cases require having more
+information about the run.
+
+By changing the type annotation of the agent function to `Run[Output]`, the generated function will return
+the full run object.
 
 ```python
-# Return the full run object, useful if you want to extract metadata like cost or duration
-# The generated function also tries to recover from errors in the generation process and will attempt to process final
-# outputs even when there is a partial error.
 @workflowai.agent()
-async def say_hello(input: Input) -> Run[Output]:
-    ...
+async def say_hello(input: Input) -> Run[Output]: ...
 
+
+run = await say_hello(Input(name="John"))
+print(run.output) # the output, as before
+print(run.model) # the model used for the run
+print(run.cost_usd) # the cost of the run in USD
+print(run.duration_seconds) # the duration of the inference in seconds
+```
+
+### Streaming
+
+You can configure the agent function to stream by changing the type annotation to an AsyncIterator.
+
+```python
 # Stream the output, the output is filled as it is generated
 @workflowai.agent()
 def say_hello(input: Input) -> AsyncIterator[Output]:

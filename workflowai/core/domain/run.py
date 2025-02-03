@@ -80,6 +80,12 @@ class Run(BaseModel, Generic[AgentOutput]):
             **kwargs,
         )
 
+    @property
+    def model(self):
+        if self.version is None:
+            return None
+        return self.version.properties.model
+
 
 class _AgentBase(Protocol, Generic[AgentOutput]):
     async def reply(
