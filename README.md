@@ -626,6 +626,10 @@ validation that is too strict can lead to invalid generations. In case of an inv
 def my_agent(_: Input) -> :...
 ```
 
+## Workflows
+
+For advanced workflow patterns and examples, please refer to the [Workflows README](examples/workflows/README.md) for more details.
+
 ## Contributing
 
 See the [CONTRIBUTING.md](./CONTRIBUTING.md) file for more details.

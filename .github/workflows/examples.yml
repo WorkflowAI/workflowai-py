@@ -14,6 +14,8 @@ env:
 
 jobs:
   examples:
+    # TODO: we should run only in prod
+    environment: staging
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
