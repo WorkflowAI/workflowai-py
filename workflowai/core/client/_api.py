@@ -112,7 +112,7 @@ class APIClient:
     ) -> WorkflowAIError:
         try:
             res = ErrorResponse.model_validate_json(data)
-            return WorkflowAIError(error=res.error, task_run_id=res.task_run_id, response=response)
+            return WorkflowAIError(error=res.error, run_id=res.id, response=response, partial_output=res.task_output)
         except ValidationError:
             raise WorkflowAIError(
                 error=BaseError(

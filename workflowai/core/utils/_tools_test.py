@@ -22,10 +22,9 @@ class TestToolSchema:
             """Sample function for testing"""
             ...
 
-        schema = tool_schema(sample_func)
+        input_schema, output_schema = tool_schema(sample_func)
 
-        assert schema.name == "sample_func"
-        assert schema.input_schema == {
+        assert input_schema.schema == {
             "type": "object",
             "properties": {
                 "name": {
@@ -33,7 +32,7 @@ class TestToolSchema:
                     "description": "The name parameter",
                 },
                 "age": {
-                    "type": "number",
+                    "type": "integer",
                 },
                 "height": {
                     "type": "number",
@@ -48,28 +47,27 @@ class TestToolSchema:
             },
             "required": ["name", "age", "height", "is_active"],  # 'mode' is not required
         }
-        assert schema.output_schema == {
+        assert output_schema.schema == {
             "type": "boolean",
         }
-        assert schema.description == "Sample function for testing"
 
     def test_method_with_self(self):
         class TestClass:
             def sample_method(self, value: int) -> str:
                 return str(value)
 
-        schema = tool_schema(TestClass.sample_method)
+        input_schema, output_schema = tool_schema(TestClass.sample_method)
 
-        assert schema.input_schema == {
+        assert input_schema.schema == {
             "type": "object",
             "properties": {
                 "value": {
-                    "type": "number",
+                    "type": "integer",
                 },
             },
             "required": ["value"],
         }
-        assert schema.output_schema == {
+        assert output_schema.schema == {
             "type": "string",
         }
 
@@ -79,9 +77,9 @@ class TestToolSchema:
 
         def sample_func(model: TestModel) -> str: ...
 
-        schema = tool_schema(sample_func)
+        input_schema, output_schema = tool_schema(sample_func)
 
-        assert schema.input_schema == {
+        assert input_schema.schema == {
             "type": "object",
             "properties": {
                 "model": {
@@ -99,16 +97,29 @@ class TestToolSchema:
             "required": ["model"],
         }
 
+        assert input_schema.deserializer is not None
+        assert input_schema.deserializer({"model": {"name": "John"}}) == {"model": TestModel(name="John")}
+
+        assert output_schema.schema == {
+            "type": "string",
+        }
+        assert output_schema.deserializer is None
+
     def test_with_base_model_in_output(self):
         class TestModel(BaseModel):
             val: int
 
         def sample_func() -> TestModel: ...
 
-        schema = tool_schema(sample_func)
+        input_schema, output_schema = tool_schema(sample_func)
 
-        assert schema.output_schema == {
+        assert input_schema.schema == {}
+        assert input_schema.deserializer is None
+
+        assert output_schema.schema == {
             "type": "object",
             "properties": {"val": {"type": "integer"}},
             "required": ["val"],
         }
+        assert output_schema.serializer is not None
+        assert output_schema.serializer(TestModel(val=10)) == {"val": 10}

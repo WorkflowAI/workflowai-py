@@ -64,6 +64,7 @@ unfixable = []
 # in bin we use rich.print
 "bin/*" = ["T201"]
 "*_test.py" = ["S101"]
+"conftest.py" = ["S101"]
 
 [tool.pyright]
 pythonVersion = "3.9"
