@@ -38,7 +38,14 @@ poetry run pytest tests/e2e
 
 #### Configuring VSCode
 
-Suggested extensions are available in the [.vscode/extensions.json](.vscode/extensions.json) file.
+Suggested extensions are available in the [.vscode/extensions.json](.vscode/extensions.json) file. When you open this project in VSCode or Cursor, you'll be prompted to install these recommended extensions automatically.
+
+To manually install recommended extensions:
+1. Open VSCode/Cursor Command Palette (Cmd/Ctrl + Shift + P)
+2. Type "Show Recommended Extensions"
+3. Install the ones marked with @recommended
+
+These extensions will help ensure consistent code quality and style across all contributors.
 
 ### Dependencies
 
