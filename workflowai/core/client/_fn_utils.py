@@ -15,17 +15,20 @@ from typing import (
     get_type_hints,
 )
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from typing_extensions import Unpack
 
 from workflowai.core.client._api import APIClient
+from workflowai.core.client._models import RunResponse
 from workflowai.core.client._types import (
     AgentDecorator,
     FinalRunTemplate,
     RunParams,
     RunTemplate,
 )
+from workflowai.core.client._utils import intolerant_validator
 from workflowai.core.client.agent import Agent
+from workflowai.core.domain.errors import InvalidGenerationError
 from workflowai.core.domain.model import ModelOrStr
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import AgentInput, AgentOutput
@@ -104,7 +107,28 @@ def extract_fn_spec(fn: RunTemplate[AgentInput, AgentOutput]) -> RunFunctionSpec
 
 class _RunnableAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOutput]):
     async def __call__(self, input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):  # noqa: A002
-        return await self.run(input, **kwargs)
+        """An agent that returns a run object. Handles recoverable errors when possible"""
+        try:
+            return await self.run(input, **kwargs)
+        except InvalidGenerationError as e:
+            if e.partial_output and e.run_id:
+                try:
+                    validator, _ = self._sanitize_validator(kwargs, intolerant_validator(self.output_cls))
+                    run = self._build_run_no_tools(
+                        chunk=RunResponse(
+                            id=e.run_id,
+                            task_output=e.partial_output,
+                        ),
+                        schema_id=self.schema_id or 0,
+                        validator=validator,
+                    )
+                    run.error = e.error
+                    return run
+
+                except ValidationError:
+                    # Error is not recoverable so not returning anything
+                    pass
+            raise e
 
 
 class _RunnableOutputOnlyAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOutput]):

@@ -121,6 +121,8 @@ WorkflowAI supports a long list of models. The source of truth for models we sup
 You can set the model explicitly in the agent decorator:
 
 ```python
+from workflowai import Model
+
 @workflowai.agent(model=Model.GPT_4O_LATEST)
 def say_hello(input: Input) -> Output:
     ...
@@ -151,16 +153,31 @@ def say_hello(input: Input) -> AsyncIterator[Run[Output]]:
     ...
 ```
 
-### Streaming and advanced usage
+### The Run object
 
-You can configure the agent function to stream or return the full run object, simply by changing the type annotation.
+Although having an agent only return the run output covers most use cases, some use cases require having more
+information about the run.
+
+By changing the type annotation of the agent function to `Run[Output]`, the generated function will return
+the full run object.
 
 ```python
-# Return the full run object, useful if you want to extract metadata like cost or duration
 @workflowai.agent()
-async def say_hello(input: Input) -> Run[Output]:
-    ...
+async def say_hello(input: Input) -> Run[Output]: ...
 
+
+run = await say_hello(Input(name="John"))
+print(run.output) # the output, as before
+print(run.model) # the model used for the run
+print(run.cost_usd) # the cost of the run in USD
+print(run.duration_seconds) # the duration of the inference in seconds
+```
+
+### Streaming
+
+You can configure the agent function to stream by changing the type annotation to an AsyncIterator.
+
+```python
 # Stream the output, the output is filled as it is generated
 @workflowai.agent()
 def say_hello(input: Input) -> AsyncIterator[Output]:
@@ -171,6 +188,38 @@ def say_hello(input: Input) -> AsyncIterator[Output]:
 def say_hello(input: Input) -> AsyncIterator[Run[Output]]:
     ...
 ```
+
+### Replying to a run
+
+Some use cases require the ability to have a back and forth between the client and the LLM. For example:
+
+- tools [see below](#tools) use the reply ability internally
+- chatbots
+- correcting the LLM output
+
+In WorkflowAI, this is done by replying to a run. A reply can contain:
+
+- a user response
+- tool results
+
+<!-- TODO: find a better example for reply -->
+
+```python
+# Returning the full run object is required to use the reply feature
+@workflowai.agent()
+async def say_hello(input: Input) -> Run[Output]:
+    ...
+
+run = await say_hello(Input(name="John"))
+run = await run.reply(user_response="Now say hello to his brother James")
+```
+
+The output of a reply to a run has the same type as the original run, which makes it easy to iterate towards the
+construction of a final output.
+
+> To allow run iterations, it is very important to have outputs that are tolerant to missing fields, aka that
+> have default values for most of their fields. Otherwise the agent will throw a WorkflowAIError on missing fields
+> and the run chain will be broken.
 
 ### Tools
 
@@ -222,9 +271,16 @@ def get_current_time(timezone: Annotated[str, "The timezone to get the current t
     """Return the current time in the given timezone in iso format"""
     return datetime.now(ZoneInfo(timezone)).isoformat()
 
+# Tools can also be async
+async def fetch_webpage(url: str) -> str:
+    """Fetch the content of a webpage"""
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+        return response.text
+
 @agent(
     id="answer-question",
-    tools=[get_current_time],
+    tools=[get_current_time, fetch_webpage],
     version=VersionProperties(model=Model.GPT_4O_LATEST),
 )
 async def answer_question(_: AnswerQuestionInput) -> Run[AnswerQuestionOutput]: ...
@@ -259,6 +315,29 @@ try:
 except WorkflowAIError as e:
     print(e.code)
     print(e.message)
+```
+
+#### Recoverable errors
+
+Sometimes, the LLM outputs an object that is partially valid, good examples are:
+
+- the model context window was exceeded during the generation
+- the model decided that a tool call result was a failure
+
+In this case, an agent that returns an output only will always raise an `InvalidGenerationError` which
+subclasses `WorkflowAIError`.
+
+However, an agent that returns a full run object will try to recover from the error by using the partial output.
+
+```python
+
+run = await agent(input=Input(name="John"))
+
+# The run will have an error
+assert run.error is not None
+
+# The run will have a partial output
+assert run.output is not None
 ```
 
 ### Definining input and output types
@@ -368,3 +447,32 @@ async for run in say_hello(Input(name="John")):
     print(run.output.greeting1) # will be empty if the model has not generated it yet
 
 ```
+
+#### Field properties
+
+Pydantic allows a variety of other validation criteria for fields: minimum, maximum, pattern, etc.
+This additional criteria are included the JSON Schema that is sent to WorkflowAI, and are sent to the model.
+
+```python
+class Input(BaseModel):
+    name: str = Field(min_length=3, max_length=10)
+    age: int = Field(ge=18, le=100)
+    email: str = Field(pattern=r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
+```
+
+These arguments can be used to stir the model in the right direction. The caveat is have a
+validation that is too strict can lead to invalid generations. In case of an invalid generation:
+
+- WorkflowAI retries the inference once by providing the model with the invalid output and the validation error
+- if the model still fails to generate a valid output, the run will fail with an `InvalidGenerationError`.
+  the partial output is available in the `partial_output` attribute of the `InvalidGenerationError`
+
+```python
+
+@agent()
+def my_agent(_: Input) -> :...
+```
+
+## Contributing
+
+See the [CONTRIBUTING.md](./CONTRIBUTING.md) file for more details.
