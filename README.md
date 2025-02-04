@@ -253,6 +253,29 @@ async def analyze_call_feedback(input: CallFeedbackInput) -> AsyncIterator[Run[C
     ...
 ```
 
+### Caching
+
+By default, the cache settings is `auto`, meaning that agent runs are cached when the temperature is 0
+(the default temperature value). Which means that, when running the same agent twice with the **exact** same input,
+the exact same output is returned and the underlying model is not called a second time.
+
+The cache usage string literal is defined in [cache_usage.py](./workflowai/core/domain/cache_usage.py) file. There are 3 possible values:
+
+- `auto`: (default) Use cached results only when temperature is 0
+- `always`: Always use cached results if available, regardless of model temperature
+- `never`: Never use cached results, always execute a new run
+
+The cache usage can be passed to the agent function as a keyword argument:
+
+```python
+@workflowai.agent(id="analyze-call-feedback")
+async def analyze_call_feedback(_: CallFeedbackInput) -> AsyncIterator[CallFeedbackOutput]: ...
+
+run = await analyze_call_feedback(CallFeedbackInput(...), use_cache="always")
+```
+
+<!-- TODO: add cache usage at agent level when available -->
+
 ### Replying to a run
 
 Some use cases require the ability to have a back and forth between the client and the LLM. For example:
@@ -275,7 +298,7 @@ async def say_hello(input: Input) -> Run[Output]:
     ...
 
 run = await say_hello(Input(name="John"))
-run = await run.reply(user_response="Now say hello to his brother James")
+run = await run.reply(user_message="Now say hello to his brother James")
 ```
 
 The output of a reply to a run has the same type as the original run, which makes it easy to iterate towards the

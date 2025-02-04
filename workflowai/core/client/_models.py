@@ -35,7 +35,7 @@ class RunRequest(BaseModel):
 
 
 class ReplyRequest(BaseModel):
-    user_response: Optional[str] = None
+    user_message: Optional[str] = None
     version: Union[str, int, dict[str, Any]]
     metadata: Optional[dict[str, Any]] = None
 

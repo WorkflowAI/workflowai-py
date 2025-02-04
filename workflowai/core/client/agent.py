@@ -117,7 +117,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
     async def _prepare_reply(
         self,
         run_id: str,
-        user_response: Optional[str],
+        user_message: Optional[str],
         tool_results: Optional[Iterable[ToolCallResult]],
         stream: bool,
         **kwargs: Unpack[RunParams[AgentOutput]],
@@ -127,7 +127,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
         version = self._sanitize_version(kwargs.get("version"))
 
         request = ReplyRequest(
-            user_response=user_response,
+            user_message=user_message,
             version=version,
             stream=stream,
             metadata=kwargs.get("metadata"),
@@ -345,12 +345,12 @@ class Agent(Generic[AgentInput, AgentOutput]):
     async def reply(
         self,
         run_id: str,
-        user_response: Optional[str] = None,
+        user_message: Optional[str] = None,
         tool_results: Optional[Iterable[ToolCallResult]] = None,
         current_iteration: int = 0,
         **kwargs: Unpack[RunParams[AgentOutput]],
     ):
-        prepared_run = await self._prepare_reply(run_id, user_response, tool_results, stream=False, **kwargs)
+        prepared_run = await self._prepare_reply(run_id, user_message, tool_results, stream=False, **kwargs)
         validator, new_kwargs = self._sanitize_validator(kwargs, intolerant_validator(self.output_cls))
 
         res = await self.api.post(prepared_run.route, prepared_run.request, returns=RunResponse, run=True)

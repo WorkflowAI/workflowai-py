@@ -1,5 +1,3 @@
-import asyncio
-
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 
 import workflowai
@@ -35,28 +33,13 @@ async def extract_name(_: NameExtractionInput) -> Run[NameExtractionOutput]:
     ...
 
 
-async def main():
-    # Example sentences to test
-    sentences = [
-        "My friend John Smith went to the store.",
-        "Dr. Maria Garcia-Rodriguez presented her research.",
-        "The report was written by James van der Beek last week.",
-    ]
+async def test_reply():
+    run = await extract_name(NameExtractionInput(sentence="My friend John Smith went to the store."))
 
-    for sentence in sentences:
-        print(f"\nProcessing: {sentence}")
+    assert run.output.first_name == "John"
+    assert run.output.last_name == "Smith"
 
-        # Initial extraction
-        run = await extract_name(NameExtractionInput(sentence=sentence))
+    run = await run.reply(user_message="Are you sure?")
 
-        print(f"Extracted: {run.output.first_name} {run.output.last_name}")
-
-        # Double check with a simple confirmation
-        run = await run.reply(user_message="Are you sure?")
-
-        print("\nAfter double-checking:")
-        print(f"Final extraction: {run.output.first_name} {run.output.last_name}")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    assert run.output.first_name == "John"
+    assert run.output.last_name == "Smith"
