@@ -147,13 +147,14 @@ transcript = '''
 [00:04:30] Customer: But I think the pricing for additional users is a bit steep compared to other solutions we looked at.
 '''
 
-# Analyze the feedback
-result = await analyze_call_feedback(
-    CallFeedbackInput(
-        transcript=transcript,
-        call_date=date(2024, 1, 15)
-    )
+# Create input
+feedback_input = CallFeedbackInput(
+    transcript=transcript,
+    call_date=date(2024, 1, 15)
 )
+
+# Analyze the feedback
+result = await analyze_call_feedback(feedback_input)
 
 # Print the analysis
 print("\nPositive Points:")
@@ -212,7 +213,7 @@ more flexible than changing the function parameters when running in production.
 
 ```python
 @workflowai.agent(deployment="production") # or simply @workflowai.agent()
-async def analyze_call_feedback(input: CallFeedbackInput) -> AsyncIterator[Run[CallFeedbackOutput]]:
+def analyze_call_feedback(input: CallFeedbackInput) -> AsyncIterator[Run[CallFeedbackOutput]]:
     ...
 ```
 
@@ -230,7 +231,7 @@ async def analyze_call_feedback(input: CallFeedbackInput) -> Run[CallFeedbackOut
     ...
 
 
-run = await say_hello(Input(name="John"))
+run = await analyze_call_feedback(feedback_input)
 print(run.output) # the output, as before
 print(run.model) # the model used for the run
 print(run.cost_usd) # the cost of the run in USD
@@ -241,16 +242,55 @@ print(run.duration_seconds) # the duration of the inference in seconds
 
 You can configure the agent function to stream by changing the type annotation to an AsyncIterator.
 
+#### Streaming the output only
+
+Use `AsyncIterator[Output]` to get the **output** as it is generated.
+
 ```python
+from collections.abc import AsyncIterator
+
 # Stream the output, the output is filled as it is generated
 @workflowai.agent()
-async def analyze_call_feedback(input: CallFeedbackInput) -> AsyncIterator[CallFeedbackOutput]:
+def analyze_call_feedback(input: CallFeedbackInput) -> AsyncIterator[CallFeedbackOutput]:
     ...
+
+async for chunk in analyze_call_feedback(feedback_input):
+    # Just get the output as it's generated
+    print(chunk.output)
+```
+
+> Note: no need to mark the agent as async here ! It is already asynchronous since it returns an AsyncIterator.
+> The type checkers some times get confused since they consider that an async function that returns an AsyncIterator is
+> async twice.
+> For example, a function with the signature `async def foo() -> AsyncIterator[int]` may be called
+> `async for c in await foo():...` in certain cases...
+
+
+#### Streaming the run object
+
+Use `AsyncIterator[Run[Output]]` to get the **run** object as it is generated, which allows you, for the **last chunk**, to access the cost and duration of the run.
+
+```python
+import workflowai
+from workflowai import Run
+from collections.abc import AsyncIterator
 
 # Stream the run object, the output is filled as it is generated
 @workflowai.agent()
-async def analyze_call_feedback(input: CallFeedbackInput) -> AsyncIterator[Run[CallFeedbackOutput]]:
+def analyze_call_feedback(input: CallFeedbackInput) -> AsyncIterator[Run[CallFeedbackOutput]]:
     ...
+
+last_chunk = None
+
+async for chunk in analyze_call_feedback(feedback_input):
+    # Show output as it's generated
+    print(chunk.output)
+    last_chunk = chunk
+
+if last_chunk:
+    # Cost and duration are only available on the last chunk
+    print(f"\nCost: ${last_chunk.cost_usd}")
+    print(f"Latency: {last_chunk.duration_seconds:.2f}s")
 ```
 
 ### Images
