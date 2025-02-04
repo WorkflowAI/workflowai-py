@@ -174,7 +174,9 @@ def say_hello(input: Input) -> AsyncIterator[Run[Output]]:
 
 ### Images
 
-Add images as input to an agent by using the `Image` class. The `content` should be a base64 encoded string.
+Add images as input to an agent by using the `Image` class. An image can either have:
+- a `content`, base64 encoded data
+- a `url`
 
 ```python
 from workflowai.fields import Image
