@@ -48,8 +48,18 @@ The evaluator-optimizer pattern employs an iterative feedback loop. An initial o
 
 For an implementation example, see [evaluator_optimizer.py](evaluator_optimizer.py).
 
+## 6. Chain of Agents (Long Context Processing)
+The Chain of Agents pattern is designed for processing long documents or complex tasks that exceed the context window of a single model. In this pattern, multiple worker agents process different chunks of the input sequentially, passing their findings through the chain, while a manager agent synthesizes the final output.
+
+**Example:**
+- Split a long document into manageable chunks
+- Worker agents process each chunk sequentially, building upon previous findings
+- A manager agent synthesizes all findings into a final, coherent response
+
+For an implementation example, see [chain_of_agents.py](chain_of_agents.py).
+
 ---
 
-These patterns were inspired by the workflow patterns described in the [Vercel AI SDK Documentation](https://sdk.vercel.ai/docs/foundations/agents#patterns-with-examples).
+These patterns were inspired by the workflow patterns described in the [Vercel AI SDK Documentation](https://sdk.vercel.ai/docs/foundations/agents#patterns-with-examples) and research from organizations like [Google Research](https://research.google/blog/chain-of-agents-large-language-models-collaborating-on-long-context-tasks/).
 
 This README should serve as a high-level guide to understanding and using the different patterns available in our workflows.
