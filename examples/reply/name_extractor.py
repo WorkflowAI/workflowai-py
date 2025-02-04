@@ -1,5 +1,6 @@
 import asyncio
 
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 
 import workflowai
@@ -59,4 +60,5 @@ async def main():
 
 
 if __name__ == "__main__":
+    load_dotenv(override=True)
     asyncio.run(main())
