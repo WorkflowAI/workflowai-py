@@ -15,82 +15,89 @@ Key benefits of this approach:
 - No training required, works with any LLM
 """
 
-import workflowai
-from workflowai import Model
-from pydantic import BaseModel, Field
 import asyncio
 from typing import List
+
+from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
+
+import workflowai
+from workflowai import Model
 
 
 class DocumentChunk(BaseModel):
     """A chunk of text from a long document."""
+
     content: str = Field(description="The content of this document chunk.")
 
 
 class WorkerInput(BaseModel):
     """Input for a worker agent processing a document chunk."""
+
     chunk: DocumentChunk = Field(description="The current chunk to process.")
     query: str = Field(description="The query or task to be answered.")
     previous_findings: str = Field(
         default="",
-        description="Accumulated findings from previous workers."
+        description="Accumulated findings from previous workers.",
     )
 
 
 class WorkerOutput(BaseModel):
     """Output from a worker agent containing findings and evidence."""
+
     findings: str = Field(
-        description="Key findings and information extracted from this chunk."
+        description="Key findings and information extracted from this chunk.",
     )
     evidence: List[str] = Field(
         default_factory=list,
-        description="Supporting evidence or quotes from the chunk."
+        description="Supporting evidence or quotes from the chunk.",
     )
     message_for_next: str = Field(
-        description="Message to pass to the next worker with relevant context."
+        description="Message to pass to the next worker with relevant context.",
     )
 
 
 class ManagerInput(BaseModel):
     """Input for the manager agent to generate final response."""
+
     query: str = Field(description="The original query to answer.")
     accumulated_findings: str = Field(
-        description="All findings accumulated through the worker chain."
+        description="All findings accumulated through the worker chain.",
     )
 
 
 class ManagerOutput(BaseModel):
     """Final output from the manager agent."""
+
     answer: str = Field(description="The final answer to the query.")
     reasoning: str = Field(description="Explanation of how the answer was derived.")
     supporting_evidence: List[str] = Field(
         default_factory=list,
-        description="Key evidence supporting the answer."
+        description="Key evidence supporting the answer.",
     )
 
 
-@workflowai.agent(id='document-worker', model=Model.GPT_4O_MINI_LATEST)
-async def worker_agent(input: WorkerInput) -> WorkerOutput:
+@workflowai.agent(id="document-worker", model=Model.GPT_4O_MINI_LATEST)
+async def worker_agent(_: WorkerInput) -> WorkerOutput:
     """
     Process your assigned document chunk to:
     1. Extract relevant information related to the query
     2. Build upon findings from previous workers
     3. Pass important context to the next worker
-    
+
     Be concise but thorough in your analysis.
     Focus on information that could be relevant to the query.
     """
     ...
 
 
-@workflowai.agent(id='document-manager', model=Model.CLAUDE_3_5_SONNET_LATEST)
-async def manager_agent(input: ManagerInput) -> ManagerOutput:
+@workflowai.agent(id="document-manager", model=Model.CLAUDE_3_5_SONNET_LATEST)
+async def manager_agent(_: ManagerInput) -> ManagerOutput:
     """
     Synthesize all findings from the worker agents to:
     1. Generate a comprehensive answer to the query
     2. Provide clear reasoning for your answer
     3. Include supporting evidence from the document
-    
+
     Ensure your answer is well-supported by the accumulated findings.
     """
     ...
@@ -99,7 +106,7 @@ async def manager_agent(input: ManagerInput) -> ManagerOutput:
 async def process_long_document(
     document: str,
     query: str,
-    chunk_size: int = 2000
+    chunk_size: int = 2000,
 ) -> ManagerOutput:
     """
     Process a long document using Chain of Agents pattern:
@@ -109,43 +116,40 @@ async def process_long_document(
     4. Have manager agent synthesize final answer
     """
     # Split document into chunks
-    chunks = [
-        document[i:i + chunk_size]
-        for i in range(0, len(document), chunk_size)
-    ]
-    
+    chunks = [document[i : i + chunk_size] for i in range(0, len(document), chunk_size)]
+
     # Convert to DocumentChunk objects
     doc_chunks = [DocumentChunk(content=chunk) for chunk in chunks]
-    
+
     # Initialize accumulator for findings
     accumulated_findings = ""
-    
+
     # Process chunks sequentially through worker chain
     for chunk in doc_chunks:
         worker_input = WorkerInput(
             chunk=chunk,
             query=query,
-            previous_findings=accumulated_findings
+            previous_findings=accumulated_findings,
         )
-        
+
         # Get worker's output
         worker_output = await worker_agent(worker_input)
-        
+
         # Accumulate findings
         if accumulated_findings:
             accumulated_findings += "\n\n"
         accumulated_findings += f"Findings:\n{worker_output.findings}"
-        
+
         if worker_output.evidence:
             accumulated_findings += "\nEvidence:\n- "
             accumulated_findings += "\n- ".join(worker_output.evidence)
-    
+
     # Have manager synthesize final answer
     manager_input = ManagerInput(
         query=query,
-        accumulated_findings=accumulated_findings
+        accumulated_findings=accumulated_findings,
     )
-    
+
     return await manager_agent(manager_input)
 
 
@@ -175,21 +179,21 @@ async def main():
     The global impact of the Industrial Revolution was profound and long-lasting. As industrialization spread from Britain to other countries, it created new patterns of international trade and competition. Colonial empires expanded as industrial nations sought raw materials and markets. The technological and economic gaps between industrialized and non-industrialized regions grew, shaping global relationships that persist to the present day.
 
     The Industrial Revolution's legacy continues to influence modern society. Many current environmental challenges, including climate change, can be traced to the industrial practices established during this period. Modern labor laws, education systems, and urban planning still reflect responses to Industrial Revolution conditions. Understanding this transformative period helps explain many aspects of contemporary life and the ongoing challenges we face.
-    """
-    
+    """  # noqa: E501
+
     query = "What were the major environmental impacts of the Industrial Revolution?"
-    
+
     result = await process_long_document(document, query)
-    
+
     print("\n=== Query ===")
     print(query)
-    
+
     print("\n=== Answer ===")
     print(result.answer)
-    
+
     print("\n=== Reasoning ===")
     print(result.reasoning)
-    
+
     if result.supporting_evidence:
         print("\n=== Supporting Evidence ===")
         for evidence in result.supporting_evidence:
@@ -197,4 +201,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())
