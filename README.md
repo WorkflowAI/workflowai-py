@@ -269,7 +269,7 @@ In WorkflowAI, this is done by replying to a run. A reply can contain:
 <!-- TODO: find a better example for reply -->
 
 ```python
-# Returning the full run object is required to use the reply feature
+# Important: returning the full run object is required to use the reply feature
 @workflowai.agent()
 async def say_hello(input: Input) -> Run[Output]:
     ...
