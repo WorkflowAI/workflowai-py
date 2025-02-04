@@ -1,10 +1,10 @@
 # WorkflowAI Python
 
-A library to use WorkflowAI with Python
+A library to use [WorkflowAI](https://workflowai.com) with Python.
 
 ## Context
 
-WorkflowAI is a platform for building agents.
+[WorkflowAI](https://workflowai.com) is a platform for designing, building, and deploying agents.
 
 ## Installation
 
@@ -79,21 +79,50 @@ An agent is in essence an async function with the added constraints that:
 > [Pydantic](https://docs.pydantic.dev/latest/) is a very popular and powerful library for data validation and
 > parsing. It allows us to extract the input and output schema in a simple way
 
-Below is an agent that says hello:
+Below is an agent that analyzes customer feedback from call transcripts:
 
 ```python
 import workflowai
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import List
+from datetime import date
 
-class Input(BaseModel):
-    name: str
+# Input model for the call feedback analysis
+class CallFeedbackInput(BaseModel):
+    """Input for analyzing a customer feedback call."""
+    transcript: str = Field(description="The full transcript of the customer feedback call.")
+    call_date: date = Field(description="The date when the call took place.")
 
-class Output(BaseModel):
-    greeting: str
+# Model representing a single feedback point with supporting evidence
+class FeedbackPoint(BaseModel):
+    """A specific feedback point with its supporting quote."""
+    point: str = Field(description="The main point or insight from the feedback.")
+    quote: str = Field(description="The exact quote from the transcript supporting this point.")
+    timestamp: str = Field(description="The timestamp or context of when this was mentioned in the call.")
 
-@workflowai.agent()
-async def say_hello(input: Input) -> Output:
-    """Say hello"""
+# Model representing the structured analysis of the customer feedback call
+class CallFeedbackOutput(BaseModel):
+    """Structured analysis of the customer feedback call."""
+    positive_points: List[FeedbackPoint] = Field(
+        default_factory=list,
+        description="List of positive feedback points, each with a supporting quote."
+    )
+    negative_points: List[FeedbackPoint] = Field(
+        default_factory=list,
+        description="List of negative feedback points, each with a supporting quote."
+    )
+
+@workflowai.agent(id="analyze-call-feedback", model=Model.GPT_4O_LATEST)
+async def analyze_call_feedback(input: CallFeedbackInput) -> CallFeedbackOutput:
+    """
+    Analyze a customer feedback call transcript to extract key insights:
+    1. Identify positive feedback points with supporting quotes
+    2. Identify negative feedback points with supporting quotes
+    3. Include timestamp/context for each point
+
+    Be specific and objective in the analysis. Use exact quotes from the transcript.
+    Maintain the customer's original wording in quotes.
+    """
     ...
 ```
 
@@ -102,7 +131,41 @@ run will be created. By default:
 
 - the docstring will be used as instructions for the agent
 - the default model (`workflowai.DEFAULT_MODEL`) is used to run the agent
-- the agent id will be a slugified version of the function name (i-e `say-hello`) in this case
+- the agent id will be a slugified version of the function name unless specified explicitly
+
+Example usage:
+
+```python
+# Example transcript
+transcript = '''
+[00:01:15] Customer: I've been using your software for about 3 months now, and I have to say the new dashboard feature is really impressive. It's saving me at least an hour each day on reporting.
+
+[00:02:30] Customer: However, I'm really frustrated with the export functionality. It crashed twice this week when I tried to export large reports, and I lost all my work.
+
+[00:03:45] Customer: On a positive note, your support team, especially Sarah, was very responsive when I reported the issue. She got back to me within minutes.
+
+[00:04:30] Customer: But I think the pricing for additional users is a bit steep compared to other solutions we looked at.
+'''
+
+# Analyze the feedback
+result = await analyze_call_feedback(
+    CallFeedbackInput(
+        transcript=transcript,
+        call_date=date(2024, 1, 15)
+    )
+)
+
+# Print the analysis
+print("\nPositive Points:")
+for point in result.positive_points:
+    print(f"\n• {point.point}")
+    print(f"  Quote [{point.timestamp}]: \"{point.quote}\"")
+
+print("\nNegative Points:")
+for point in result.negative_points:
+    print(f"\n• {point.point}")
+    print(f"  Quote [{point.timestamp}]: \"{point.quote}\"")
+```
 
 > **What is "..." ?**
 >
@@ -124,7 +187,7 @@ You can set the model explicitly in the agent decorator:
 from workflowai import Model
 
 @workflowai.agent(model=Model.GPT_4O_LATEST)
-def say_hello(input: Input) -> Output:
+async def analyze_call_feedback(input: CallFeedbackInput) -> CallFeedbackOutput:
     ...
 ```
 
@@ -149,7 +212,7 @@ more flexible than changing the function parameters when running in production.
 
 ```python
 @workflowai.agent(deployment="production") # or simply @workflowai.agent()
-def say_hello(input: Input) -> AsyncIterator[Run[Output]]:
+async def analyze_call_feedback(input: CallFeedbackInput) -> AsyncIterator[Run[CallFeedbackOutput]]:
     ...
 ```
 
@@ -163,7 +226,8 @@ the full run object.
 
 ```python
 @workflowai.agent()
-async def say_hello(input: Input) -> Run[Output]: ...
+async def analyze_call_feedback(input: CallFeedbackInput) -> Run[CallFeedbackOutput]:
+    ...
 
 
 run = await say_hello(Input(name="John"))
@@ -180,12 +244,12 @@ You can configure the agent function to stream by changing the type annotation t
 ```python
 # Stream the output, the output is filled as it is generated
 @workflowai.agent()
-def say_hello(input: Input) -> AsyncIterator[Output]:
+async def analyze_call_feedback(input: CallFeedbackInput) -> AsyncIterator[CallFeedbackOutput]:
     ...
 
 # Stream the run object, the output is filled as it is generated
 @workflowai.agent()
-def say_hello(input: Input) -> AsyncIterator[Run[Output]]:
+async def analyze_call_feedback(input: CallFeedbackInput) -> AsyncIterator[Run[CallFeedbackOutput]]:
     ...
 ```
 
@@ -241,7 +305,7 @@ To use a tool, simply add it's handles to the instructions (the function docstri
 
 ```python
 @workflowai.agent()
-def say_hello(input: Input) -> Output:
+async def analyze_call_feedback(input: CallFeedbackInput) -> CallFeedbackOutput:
     """
     You can use @search and @browser-text to retrieve information about the name.
     """
@@ -311,7 +375,12 @@ The `WorkflowAIError` is raised when the agent is called, so you can handle it l
 
 ```python
 try:
-    await say_hello(Input(name="John"))
+    await analyze_call_feedback(
+        CallFeedbackInput(
+            transcript="[00:01:15] Customer: The product is great!",
+            call_date=date(2024, 1, 15)
+        )
+    )
 except WorkflowAIError as e:
     print(e.code)
     print(e.message)
@@ -340,7 +409,7 @@ assert run.error is not None
 assert run.output is not None
 ```
 
-### Definining input and output types
+### Defining input and output types
 
 There are some important subtleties when defining input and output types.
 
@@ -350,17 +419,25 @@ Field description and examples are passed to the model and can help stir the out
 use case is to describe a format or style for a string field
 
 ```python
-# summary has no examples or description so the model will likely return a block of text
-class SummaryOutput(BaseModel):
-    summary: str
+# point has no examples or description so the model will be less guided
+class BasicFeedbackPoint(BaseModel):
+    point: str
 
-# passing the description will help the model return a summary formatted as bullet points
-class SummaryOutput(BaseModel):
-    summary: str = Field(description="A summary, formatted as bullet points")
+# passing the description helps guide the model's output format
+class DetailedFeedbackPoint(BaseModel):
+    point: str = Field(
+        description="A clear, specific point of feedback extracted from the transcript."
+    )
 
 # passing examples can help as well
-class SummaryOutput(BaseModel):
-    summary: str = Field(examples=["- Paris is a city in France\n- London is a city in England"])
+class FeedbackPoint(BaseModel):
+    point: str = Field(
+        description="A clear, specific point of feedback extracted from the transcript.",
+        examples=[
+            "Dashboard feature saves significant time on reporting",
+            "Export functionality is unstable with large reports"
+        ]
+    )
 ```
 
 Some notes:
@@ -378,35 +455,41 @@ Although the fact that a field is required is passed to the model, the generatio
 values.
 
 ```python
-class Input(BaseModel):
-    name: str
-
-class OutputStrict(BaseModel):
-    greeting: str
+class CallFeedbackOutputStrict(BaseModel):
+    positive_points: List[FeedbackPoint]
+    negative_points: List[FeedbackPoint]
 
 @workflowai.agent()
-async def say_hello_strict(_: Input) -> OutputStrict:
+async def analyze_call_feedback_strict(input: CallFeedbackInput) -> CallFeedbackOutputStrict:
     ...
 
 try:
-    run = await say_hello(Input(name="John"))
-    print(run.output.greeting) # "Hello, John!"
+    result = await analyze_call_feedback_strict(
+        CallFeedbackInput(
+            transcript="[00:01:15] Customer: The product is great!",
+            call_date=date(2024, 1, 15)
+        )
+    )
 except WorkflowAIError as e:
     print(e.code) # "invalid_generation" error code means that the generation did not match the schema
 
-class OutputTolerant(BaseModel):
-    greeting: str = ""
+class CallFeedbackOutputTolerant(BaseModel):
+    positive_points: List[FeedbackPoint] = Field(default_factory=list)
+    negative_points: List[FeedbackPoint] = Field(default_factory=list)
 
 @workflowai.agent()
-async def say_hello_tolerant(_: Input) -> OutputTolerant:
+async def analyze_call_feedback_tolerant(input: CallFeedbackInput) -> CallFeedbackOutputTolerant:
     ...
 
 # The invalid_generation is less likely
-run = await say_hello_tolerant(Input(name="John"))
-if not run.output.greeting:
-    print("No greeting was generated !")
-print(run.output.greeting) # "Hello, John!"
-
+result = await analyze_call_feedback_tolerant(
+    CallFeedbackInput(
+        transcript="[00:01:15] Customer: The product is great!",
+        call_date=date(2024, 1, 15)
+    )
+)
+if not result.positive_points and not result.negative_points:
+    print("No feedback points were generated!")
 ```
 
 > WorkflowAI automatically retries invalid generations once. If a model outputs an object that does not match the
@@ -417,35 +500,19 @@ Another reason to prefer optional fields in the output is for streaming. Partial
 absent will cause `AttributeError` when queried.
 
 ```python
-class Input(BaseModel):
-    name: str
-
-class OutputStrict(BaseModel):
-    greeting1: str
-    greeting2: str
-
 @workflowai.agent()
-def say_hello_strict(_: Input) -> AsyncIterator[Output]:
+async def analyze_call_feedback_stream(input: CallFeedbackInput) -> AsyncIterator[CallFeedbackOutput]:
     ...
 
-async for run in say_hello(Input(name="John")):
-    try:
-        print(run.output.greeting1)
-    except AttributeError:
-        # run.output.greeting1 has not been generated yet
-
-
-class OutputTolerant(BaseModel):
-    greeting1: str = ""
-    greeting2: str = ""
-
-@workflowai.agent()
-def say_hello_tolerant(_: Input) -> AsyncIterator[OutputTolerant]:
-    ...
-
-async for run in say_hello(Input(name="John")):
-    print(run.output.greeting1) # will be empty if the model has not generated it yet
-
+async for result in analyze_call_feedback_stream(
+    CallFeedbackInput(
+        transcript="[00:01:15] Customer: The product is great!",
+        call_date=date(2024, 1, 15)
+    )
+):
+    # With default values, we can safely check the points as they stream in
+    print(f"Positive points so far: {len(result.positive_points)}")
+    print(f"Negative points so far: {len(result.negative_points)}")
 ```
 
 #### Field properties
