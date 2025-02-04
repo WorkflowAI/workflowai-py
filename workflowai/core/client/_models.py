@@ -1,6 +1,6 @@
 from typing import Any, Literal, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 from typing_extensions import NotRequired, TypedDict
 
 from workflowai.core._common_types import OutputValidator
@@ -35,7 +35,7 @@ class RunRequest(BaseModel):
 
 
 class ReplyRequest(BaseModel):
-    user_response: Optional[str] = None
+    user_message: Optional[str] = None
     version: Union[str, int, dict[str, Any]]
     metadata: Optional[dict[str, Any]] = None
 
@@ -126,7 +126,12 @@ class RunResponse(BaseModel):
     tool_calls: Optional[list[ToolCall]] = None
     tool_call_requests: Optional[list[ToolCallRequest]] = None
 
-    def to_domain(self, task_id: str, task_schema_id: int, validator: OutputValidator[AgentOutput]) -> Run[AgentOutput]:
+    def to_domain(
+        self,
+        task_id: str,
+        task_schema_id: int,
+        validator: OutputValidator[AgentOutput],
+    ) -> Run[AgentOutput]:
         return Run(
             id=self.id,
             agent_id=task_id,

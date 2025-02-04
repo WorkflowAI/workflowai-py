@@ -7,6 +7,7 @@ from typing_extensions import Unpack
 
 from workflowai.core import _common_types
 from workflowai.core.client import _types
+from workflowai.core.domain.errors import BaseError
 from workflowai.core.domain.task import AgentOutput
 from workflowai.core.domain.tool_call import ToolCall, ToolCallRequest, ToolCallResult
 from workflowai.core.domain.version import Version
@@ -42,6 +43,11 @@ class Run(BaseModel, Generic[AgentOutput]):
     tool_calls: Optional[list[ToolCall]] = None
     tool_call_requests: Optional[list[ToolCallRequest]] = None
 
+    error: Optional[BaseError] = Field(
+        default=None,
+        description="An error that occurred during the run. Only provided if the run failed.",
+    )
+
     _agent: Optional["_AgentBase[AgentOutput]"] = None
 
     def __eq__(self, other: object) -> bool:
@@ -61,7 +67,7 @@ class Run(BaseModel, Generic[AgentOutput]):
 
     async def reply(
         self,
-        user_response: Optional[str] = None,
+        user_message: Optional[str] = None,
         tool_results: Optional[Iterable[ToolCallResult]] = None,
         **kwargs: Unpack["_common_types.RunParams[AgentOutput]"],
     ):
@@ -69,19 +75,25 @@ class Run(BaseModel, Generic[AgentOutput]):
             raise ValueError("Agent is not set")
         return await self._agent.reply(
             run_id=self.id,
-            user_response=user_response,
+            user_message=user_message,
             tool_results=tool_results,
             **kwargs,
         )
+
+    @property
+    def model(self):
+        if self.version is None:
+            return None
+        return self.version.properties.model
 
 
 class _AgentBase(Protocol, Generic[AgentOutput]):
     async def reply(
         self,
         run_id: str,
-        user_response: Optional[str] = None,
+        user_message: Optional[str] = None,
         tool_results: Optional[Iterable[ToolCallResult]] = None,
         **kwargs: Unpack["_types.RunParams[AgentOutput]"],
     ) -> "Run[AgentOutput]":
-        """Reply to a run. Either a user_response or tool_results must be provided."""
+        """Reply to a run. Either a user_message or tool_results must be provided."""
         ...
