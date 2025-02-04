@@ -65,6 +65,7 @@ unfixable = []
 "bin/*" = ["T201"]
 "*_test.py" = ["S101"]
 "conftest.py" = ["S101"]
+"examples/*" = ["INP001", "T201", "ERA001"]
 
 [tool.pyright]
 pythonVersion = "3.9"

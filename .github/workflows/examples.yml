@@ -1,0 +1,85 @@
+name: Examples
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    # Every night at midnight
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+env:
+  # TODO: change to .com when reply is released
+  WORKFLOWAI_API_URL: https://run.workflowai.dev
+
+jobs:
+  examples:
+    # TODO: we should run only in prod
+    environment: staging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Poetry
+        run: pipx install poetry==1.8.3
+
+      - name: Install dependencies
+        run: poetry install --all-extras
+
+      - name: Run all example scripts
+        run: |
+          # Find all Python files in examples directory
+          find examples -name "*.py" -type f | while read -r script; do
+            echo "Running example: $script"
+            poetry run python "$script"
+            if [ $? -ne 0 ]; then
+              echo "Error: Failed to run $script"
+              exit 1
+            fi
+          done
+        env:
+          WORKFLOWAI_API_KEY: ${{ secrets.WORKFLOWAI_TEST_API_KEY }}
+
+      - name: Send Slack Notification
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": ":warning: *Python Examples Failed!* \n <!channel>"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Job:* ${{ github.job }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Run Number:* ${{ github.run_number }}"
+                  }
+                ]
+              },
+              {
+                "type": "actions",
+                "elements": [
+                  {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Action Run"
+                    },
+                    "url": "${{ env.GITHUB_RUN_URL }}"
+                  }
+                ]
+              }
+            ]
+          }' $SLACK_WEBHOOK_URL

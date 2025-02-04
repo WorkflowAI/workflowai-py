@@ -286,6 +286,92 @@ if last_chunk:
     print(f"Latency: {last_chunk.duration_seconds:.2f}s")
 ```
 
+### Images
+
+Add images as input to an agent by using the `Image` class. An image can either have:
+
+- a `content`, base64 encoded data
+- a `url`
+
+```python
+from workflowai.fields import Image
+
+class ImageInput(BaseModel):
+    image: Image = Field(description="The image to analyze")
+
+# use base64 to include the image inline
+image = Image(content_type='image/jpeg', data='<base 64 encoded data>')
+
+# You can also use the `url` property to pass an image URL.
+image = Image(url="https://example.com/image.jpg")
+```
+
+An example of using image as input is available in [city_identifier.py](./examples/images/city_identifier.py).
+
+### Files (PDF, .txt, ...)
+
+Use the `File` class to pass files as input to an agent. Different LLMs support different file types.
+
+```python
+from workflowai.fields import File
+...
+
+class PDFQuestionInput(BaseModel):
+    pdf: File = Field(description="The PDF document to analyze")
+    question: str = Field(description="The question to answer about the PDF content")
+
+class PDFAnswerOutput(BaseModel):
+    answer: str = Field(description="The answer to the question based on the PDF content")
+    quotes: List[str] = Field(description="Relevant quotes from the PDF that support the answer")
+
+@workflowai.agent(id="pdf-answer", model=Model.CLAUDE_3_5_SONNET_LATEST)
+async def answer_pdf_question(input: PDFQuestionInput) -> PDFAnswerOutput:
+    """
+    Analyze the provided PDF document and answer the given question.
+    Provide a clear and concise answer based on the content found in the PDF.
+    """
+    ...
+
+pdf = File(content_type='application/pdf', data='<base 64 encoded data>')
+question = "What are the key findings in this report?"
+
+output = await answer_pdf_question(PDFQuestionInput(pdf=pdf, question=question))
+# Print the answer and supporting quotes
+print("Answer:", output.answer)
+print("Supporting quotes:", "\n -".join(("", *quotes))
+for quote in output.quotes:
+    print(f"- {quote}")
+```
+
+An example of using a PDF as input is available in [pdf_answer.py](./examples/pdf_answer.py).
+
+### Audio
+
+[todo]
+
+### Caching
+
+By default, the cache settings is `auto`, meaning that agent runs are cached when the temperature is 0
+(the default temperature value). Which means that, when running the same agent twice with the **exact** same input,
+the exact same output is returned and the underlying model is not called a second time.
+
+The cache usage string literal is defined in [cache_usage.py](./workflowai/core/domain/cache_usage.py) file. There are 3 possible values:
+
+- `auto`: (default) Use cached results only when temperature is 0
+- `always`: Always use cached results if available, regardless of model temperature
+- `never`: Never use cached results, always execute a new run
+
+The cache usage can be passed to the agent function as a keyword argument:
+
+```python
+@workflowai.agent(id="analyze-call-feedback")
+async def analyze_call_feedback(_: CallFeedbackInput) -> AsyncIterator[CallFeedbackOutput]: ...
+
+run = await analyze_call_feedback(CallFeedbackInput(...), use_cache="always")
+```
+
+<!-- TODO: add cache usage at agent level when available -->
+
 ### Replying to a run
 
 Some use cases require the ability to have a back and forth between the client and the LLM. For example:
@@ -302,13 +388,13 @@ In WorkflowAI, this is done by replying to a run. A reply can contain:
 <!-- TODO: find a better example for reply -->
 
 ```python
-# Returning the full run object is required to use the reply feature
+# Important: returning the full run object is required to use the reply feature
 @workflowai.agent()
 async def say_hello(input: Input) -> Run[Output]:
     ...
 
 run = await say_hello(Input(name="John"))
-run = await run.reply(user_response="Now say hello to his brother James")
+run = await run.reply(user_message="Now say hello to his brother James")
 ```
 
 The output of a reply to a run has the same type as the original run, which makes it easy to iterate towards the
@@ -572,6 +658,10 @@ validation that is too strict can lead to invalid generations. In case of an inv
 @agent()
 def my_agent(_: Input) -> :...
 ```
+
+## Workflows
+
+For advanced workflow patterns and examples, please refer to the [Workflows README](examples/workflows/README.md) for more details.
 
 ## Contributing
 
