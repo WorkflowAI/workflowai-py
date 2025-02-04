@@ -275,7 +275,7 @@ async def say_hello(input: Input) -> Run[Output]:
     ...
 
 run = await say_hello(Input(name="John"))
-run = await run.reply(user_response="Now say hello to his brother James")
+run = await run.reply(user_message="Now say hello to his brother James")
 ```
 
 The output of a reply to a run has the same type as the original run, which makes it easy to iterate towards the
