@@ -213,7 +213,7 @@ more flexible than changing the function parameters when running in production.
 
 ```python
 @workflowai.agent(deployment="production") # or simply @workflowai.agent()
-async def analyze_call_feedback(input: CallFeedbackInput) -> AsyncIterator[Run[CallFeedbackOutput]]:
+def analyze_call_feedback(input: CallFeedbackInput) -> AsyncIterator[Run[CallFeedbackOutput]]:
     ...
 ```
 
@@ -251,13 +251,20 @@ from collections.abc import AsyncIterator
 
 # Stream the output, the output is filled as it is generated
 @workflowai.agent()
-async def analyze_call_feedback(input: CallFeedbackInput) -> AsyncIterator[CallFeedbackOutput]:
+def analyze_call_feedback(input: CallFeedbackInput) -> AsyncIterator[CallFeedbackOutput]:
     ...
 
 async for chunk in analyze_call_feedback(feedback_input):
     # Just get the output as it's generated
     print(chunk.output)
 ```
+
+> Note: no need to mark the agent as async here ! It is already asynchronous since it returns an AsyncIterator.
+> The type checkers some times get confused since they consider that an async function that returns an AsyncIterator is
+> async twice.
+> For example, a function with the signature `async def foo() -> AsyncIterator[int]` may be called
+> `async for c in await foo():...` in certain cases...
+
 
 #### Streaming the run object
 
@@ -270,11 +277,11 @@ from collections.abc import AsyncIterator
 
 # Stream the run object, the output is filled as it is generated
 @workflowai.agent()
-async def analyze_call_feedback(input: CallFeedbackInput) -> AsyncIterator[Run[CallFeedbackOutput]]:
+def analyze_call_feedback(input: CallFeedbackInput) -> AsyncIterator[Run[CallFeedbackOutput]]:
     ...
 
 last_chunk = None
-    
+
 async for chunk in analyze_call_feedback(feedback_input):
     # Show output as it's generated
     print(chunk.output)

@@ -1,28 +1,32 @@
+import asyncio
+from collections.abc import AsyncIterator
+
+from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
+
 import workflowai
 from workflowai import Model, Run
-from pydantic import BaseModel, Field
-from collections.abc import AsyncIterator
-import asyncio
 
 
 class TranslationInput(BaseModel):
     """Input for text translation."""
+
     text: str = Field(description="The French text to translate.")
 
 
 class TranslationOutput(BaseModel):
     """Output containing the translated text."""
+
     translation: str = Field(
         default="",
-        description="The text translated into English."
+        description="The text translated into English.",
     )
 
 
-@workflowai.agent(id='french-translator', model=Model.CLAUDE_3_5_SONNET_LATEST)
-async def translate_to_english(input: TranslationInput) -> AsyncIterator[Run[TranslationOutput]]:
+@workflowai.agent(id="french-translator", model=Model.CLAUDE_3_5_SONNET_LATEST)
+def translate_to_english(_: TranslationInput) -> AsyncIterator[Run[TranslationOutput]]:
     """
     Translate French text into natural, fluent English.
-    
+
     Guidelines:
     - Maintain the original tone and style
     - Ensure accurate translation of idioms and expressions
@@ -37,15 +41,15 @@ async def main():
     french_text = """
     Cher journal,
 
-    Aujourd'hui, j'ai fait une magnifique randonnée dans les Alpes. 
+    Aujourd'hui, j'ai fait une magnifique randonnée dans les Alpes.
     Le temps était parfait, avec un ciel bleu éclatant et une légère brise.
     Les montagnes étaient encore couvertes de neige, créant un paysage à couper le souffle.
     Les sommets majestueux se dressaient devant moi comme des géants silencieux.
-    
+
     En chemin, j'ai rencontré des randonneurs sympathiques qui m'ont partagé leur pique-nique.
     Nous avons échangé des histoires et des conseils sur les meilleurs sentiers de la région.
-    
-    Cette expérience restera gravée dans ma mémoire. La nature a vraiment le pouvoir de nous 
+
+    Cette expérience restera gravée dans ma mémoire. La nature a vraiment le pouvoir de nous
     ressourcer et de nous faire oublier le stress du quotidien.
 
     À bientôt,
@@ -63,7 +67,7 @@ async def main():
     # This ensures we can see the streaming effect in the example
     # Otherwise, subsequent runs would return the cached result instantly,
     # making it hard to observe the incremental streaming behavior
-    async for chunk in translate_to_english(TranslationInput(text=french_text), use_cache='never'):
+    async for chunk in translate_to_english(TranslationInput(text=french_text), use_cache="never"):
         print(f"--- Translation Progress (Chunk {chunk_num}) ---")
         print(chunk.output.translation)
         print("-" * 50)
@@ -80,4 +84,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())
