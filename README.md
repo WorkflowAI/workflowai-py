@@ -223,7 +223,7 @@ question = "What are the key findings in this report?"
 output = await answer_pdf_question(PDFQuestionInput(pdf=pdf, question=question))
 # Print the answer and supporting quotes
 print("Answer:", output.answer)
-print("\nSupporting quotes:")
+print("Supporting quotes:", "\n -".join(("", *quotes))
 for quote in output.quotes:
     print(f"- {quote}")
 ```
