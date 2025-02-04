@@ -36,6 +36,20 @@ ProviderErrorCode = Literal[
     # The requested model does not support the requested generation mode
     # (e-g a model that does not support images generation was sent an image)
     "model_does_not_support_mode",
+    # Invalid file provided
+    "invalid_file",
+    # The maximum number of tool call iterations was reached
+    "max_tool_call_iteration",
+    # The current configuration does not support structured generation
+    "structured_generation_error",
+    # The content was moderated
+    "content_moderation",
+    # Task banned
+    "task_banned",
+    # The request timed out
+    "timeout",
+    # Agent run failed
+    "agent_run_failed",
 ]
 
 ErrorCode = Union[
@@ -70,7 +84,8 @@ class BaseError(BaseModel):
 
 class ErrorResponse(BaseModel):
     error: BaseError
-    task_run_id: Optional[str] = None
+    id: Optional[str] = None
+    task_output: Optional[dict[str, Any]] = None
 
 
 def _retry_after_to_delay_seconds(retry_after: Any) -> Optional[float]:
@@ -94,16 +109,24 @@ class WorkflowAIError(Exception):
         self,
         response: Optional[Response],
         error: BaseError,
-        task_run_id: Optional[str] = None,
+        run_id: Optional[str] = None,
         retry_after_delay_seconds: Optional[float] = None,
+        partial_output: Optional[dict[str, Any]] = None,
     ):
         self.error = error
-        self.task_run_id = task_run_id
+        self.run_id = run_id
         self.response = response
         self._retry_after_delay_seconds = retry_after_delay_seconds
+        self.partial_output = partial_output
 
     def __str__(self):
         return f"WorkflowAIError : [{self.error.code}] ({self.error.status_code}): [{self.error.message}]"
+
+    @classmethod
+    def error_cls(cls, code: str):
+        if code == "invalid_generation" or code == "failed_generation" or code == "agent_run_failed":
+            return InvalidGenerationError
+        return cls
 
     @classmethod
     def from_response(cls, response: Response):
@@ -114,15 +137,17 @@ class WorkflowAIError(Exception):
             details = r_error.get("details", {})
             error_code = r_error.get("code", "unknown_error")
             status_code = response.status_code
-            task_run_id = r_error.get("task_run_id", None)
+            run_id = response_json.get("id", None)
+            partial_output = response_json.get("task_output", None)
         except JSONDecodeError:
             error_message = "Unknown error"
             details = {"raw": response.content.decode()}
             error_code = "unknown_error"
             status_code = response.status_code
-            task_run_id = None
+            run_id = None
+            partial_output = None
 
-        return cls(
+        return cls.error_cls(error_code)(
             response=response,
             error=BaseError(
                 message=error_message,
@@ -130,7 +155,8 @@ class WorkflowAIError(Exception):
                 status_code=status_code,
                 code=error_code,
             ),
-            task_run_id=task_run_id,
+            run_id=run_id,
+            partial_output=partial_output,
         )
 
     @property
@@ -142,3 +168,6 @@ class WorkflowAIError(Exception):
             return _retry_after_to_delay_seconds(self.response.headers.get("Retry-After"))
 
         return None
+
+
+class InvalidGenerationError(WorkflowAIError): ...

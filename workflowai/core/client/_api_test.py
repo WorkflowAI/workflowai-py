@@ -21,7 +21,7 @@ class TestAPIClientExtractError:
                     "message": "Test error message",
                     "details": {"key": "value"},
                 },
-                "task_run_id": "test_task_123",
+                "id": "test_task_123",
             },
         )
 
@@ -29,7 +29,31 @@ class TestAPIClientExtractError:
         assert isinstance(error, WorkflowAIError)
         assert error.error.message == "Test error message"
         assert error.error.details == {"key": "value"}
-        assert error.task_run_id == "test_task_123"
+        assert error.run_id == "test_task_123"
+        assert error.response == response
+
+    def test_extract_partial_output(self):
+        client = APIClient(endpoint="test_endpoint", api_key="test_api_key")
+
+        # Test valid JSON error response
+        response = httpx.Response(
+            status_code=400,
+            json={
+                "error": {
+                    "message": "Test error message",
+                    "details": {"key": "value"},
+                },
+                "id": "test_task_123",
+                "task_output": {"key": "value"},
+            },
+        )
+
+        error = client._extract_error(response, response.content)  # pyright:ignore[reportPrivateUsage]
+        assert isinstance(error, WorkflowAIError)
+        assert error.error.message == "Test error message"
+        assert error.error.details == {"key": "value"}
+        assert error.run_id == "test_task_123"
+        assert error.partial_output == {"key": "value"}
         assert error.response == response
 
     def test_extract_error_invalid_json(self):

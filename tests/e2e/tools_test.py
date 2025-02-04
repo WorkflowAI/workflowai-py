@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 
 from workflowai import Run, agent
 from workflowai.core.domain.model import Model
-from workflowai.core.domain.tool import Tool
+from workflowai.core.domain.tool import ToolDefinition
 from workflowai.core.domain.tool_call import ToolCallResult
 from workflowai.core.domain.version_properties import VersionProperties
 
@@ -20,7 +20,7 @@ class AnswerQuestionOutput(BaseModel):
 
 
 async def test_manual_tool():
-    get_current_time_tool = Tool(
+    get_current_time_tool = ToolDefinition(
         name="get_current_time",
         description="Get the current time",
         input_schema={},

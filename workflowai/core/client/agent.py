@@ -28,10 +28,11 @@ from workflowai.core.domain.tool import Tool
 from workflowai.core.domain.tool_call import ToolCallRequest, ToolCallResult
 from workflowai.core.domain.version_properties import VersionProperties
 from workflowai.core.domain.version_reference import VersionReference
-from workflowai.core.utils._tools import tool_schema
 
 
 class Agent(Generic[AgentInput, AgentOutput]):
+    _DEFAULT_MAX_ITERATIONS = 10
+
     def __init__(
         self,
         agent_id: str,
@@ -51,9 +52,9 @@ class Agent(Generic[AgentInput, AgentOutput]):
         self._tools = self.build_tools(tools) if tools else None
 
     @classmethod
-    def build_tools(cls, tools: Iterable[Callable[..., Any]]) -> dict[str, tuple[Tool, Callable[..., Any]]]:
+    def build_tools(cls, tools: Iterable[Callable[..., Any]]):
         # TODO: we should be more tolerant with errors ?
-        return {tool.__name__: (tool_schema(tool), tool) for tool in tools}
+        return {tool.__name__: Tool.from_fn(tool) for tool in tools}
 
     @property
     def api(self) -> APIClient:
@@ -73,7 +74,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
         if not isinstance(version, VersionProperties):
             return version
 
-        dumped = version.model_dump(by_alias=True)
+        dumped = version.model_dump(by_alias=True, exclude_unset=True)
         if not dumped.get("model"):
             import workflowai
 
@@ -86,7 +87,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
                     "input_schema": tool.input_schema,
                     "output_schema": tool.output_schema,
                 }
-                for tool, _ in self._tools.values()
+                for tool in self._tools.values()
             ]
         return dumped
 
@@ -116,7 +117,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
     async def _prepare_reply(
         self,
         run_id: str,
-        user_response: Optional[str],
+        user_message: Optional[str],
         tool_results: Optional[Iterable[ToolCallResult]],
         stream: bool,
         **kwargs: Unpack[RunParams[AgentOutput]],
@@ -126,7 +127,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
         version = self._sanitize_version(kwargs.get("version"))
 
         request = ReplyRequest(
-            user_response=user_response,
+            user_message=user_message,
             version=version,
             stream=stream,
             metadata=kwargs.get("metadata"),
@@ -157,11 +158,9 @@ class Agent(Generic[AgentInput, AgentOutput]):
         return res.schema_id
 
     @classmethod
-    async def _safe_execute_tool(cls, tool_call_request: ToolCallRequest, tool_func: Callable[..., Any]):
+    async def _safe_execute_tool(cls, tool_call_request: ToolCallRequest, tool: Tool):
         try:
-            output: Any = tool_func(**tool_call_request.input)
-            if isinstance(output, Awaitable):
-                output = await output
+            output = await tool(tool_call_request.input)
             return ToolCallResult(
                 id=tool_call_request.id,
                 output=output,
@@ -182,13 +181,13 @@ class Agent(Generic[AgentInput, AgentOutput]):
         if not self._tools:
             return None
 
-        executions: list[tuple[ToolCallRequest, Callable[..., Any]]] = []
+        executions: list[tuple[ToolCallRequest, Tool]] = []
         for tool_call_request in tool_call_requests:
             if tool_call_request.name not in self._tools:
                 continue
 
-            _, tool_func = self._tools[tool_call_request.name]
-            executions.append((tool_call_request, tool_func))
+            tool = self._tools[tool_call_request.name]
+            executions.append((tool_call_request, tool))
 
         if not executions:
             return None
@@ -204,6 +203,16 @@ class Agent(Generic[AgentInput, AgentOutput]):
             **kwargs,
         )
 
+    def _build_run_no_tools(
+        self,
+        chunk: RunResponse,
+        schema_id: int,
+        validator: OutputValidator[AgentOutput],
+    ) -> Run[AgentOutput]:
+        run = chunk.to_domain(self.agent_id, schema_id, validator)
+        run._agent = self  # pyright: ignore [reportPrivateUsage]
+        return run
+
     async def _build_run(
         self,
         chunk: RunResponse,
@@ -212,10 +221,11 @@ class Agent(Generic[AgentInput, AgentOutput]):
         current_iteration: int,
         **kwargs: Unpack[BaseRunParams],
     ) -> Run[AgentOutput]:
-        run = chunk.to_domain(self.agent_id, schema_id, validator)
-        run._agent = self  # pyright: ignore [reportPrivateUsage]
+        run = self._build_run_no_tools(chunk, schema_id, validator)
 
         if run.tool_call_requests:
+            if current_iteration >= kwargs.get("max_iterations", self._DEFAULT_MAX_ITERATIONS):
+                raise WorkflowAIError(error=BaseError(message="max tool iterations reached"), response=None)
             with_reply = await self._execute_tools(
                 run_id=run.id,
                 tool_call_requests=run.tool_call_requests,
@@ -335,12 +345,12 @@ class Agent(Generic[AgentInput, AgentOutput]):
     async def reply(
         self,
         run_id: str,
-        user_response: Optional[str] = None,
+        user_message: Optional[str] = None,
         tool_results: Optional[Iterable[ToolCallResult]] = None,
         current_iteration: int = 0,
         **kwargs: Unpack[RunParams[AgentOutput]],
     ):
-        prepared_run = await self._prepare_reply(run_id, user_response, tool_results, stream=False, **kwargs)
+        prepared_run = await self._prepare_reply(run_id, user_message, tool_results, stream=False, **kwargs)
         validator, new_kwargs = self._sanitize_validator(kwargs, intolerant_validator(self.output_cls))
 
         res = await self.api.post(prepared_run.route, prepared_run.request, returns=RunResponse, run=True)
