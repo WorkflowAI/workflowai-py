@@ -11,6 +11,14 @@ from workflowai.core.utils._tools import _get_type_schema, tool_schema  # pyrigh
 
 
 class TestGetTypeSchema:
+    class _BasicEnum(str, Enum):
+        A = "a"
+        B = "b"
+
+    class _BasicModel(BaseModel):
+        a: int
+        b: str
+
     @pytest.mark.parametrize(
         ("param_type", "value"),
         [
@@ -22,6 +30,10 @@ class TestGetTypeSchema:
             (ZoneInfo, ZoneInfo("UTC")),
             (list[int], [1, 2, 3]),
             (dict[str, int], {"a": 1, "b": 2}),
+            (_BasicEnum, _BasicEnum.A),
+            (_BasicModel, _BasicModel(a=1, b="test")),
+            (list[_BasicModel], [_BasicModel(a=1, b="test"), _BasicModel(a=2, b="test2")]),
+            (tuple[int, str], (1, "test")),
         ],
     )
     def test_get_type_schema(self, param_type: Any, value: Any):
@@ -50,6 +62,7 @@ class TestToolSchema:
             age: int,
             height: float,
             is_active: bool,
+            date: datetime,
             mode: TestMode = TestMode.FAST,
         ) -> bool:
             """Sample function for testing"""
@@ -77,8 +90,12 @@ class TestToolSchema:
                     "type": "string",
                     "enum": ["fast", "slow"],
                 },
+                "date": {
+                    "type": "string",
+                    "format": "date-time",
+                },
             },
-            "required": ["name", "age", "height", "is_active"],  # 'mode' is not required
+            "required": ["name", "age", "height", "is_active", "date"],  # 'mode' is not required
         }
         assert output_schema.schema == {
             "type": "boolean",

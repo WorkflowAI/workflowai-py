@@ -1,10 +1,8 @@
 import contextlib
-import datetime
 import inspect
-from enum import Enum
-from typing import Any, Callable, NamedTuple, Optional, cast, get_type_hints
+from typing import Any, Callable, NamedTuple, Optional, get_type_hints
 
-from pydantic import BaseModel, TypeAdapter
+from pydantic import TypeAdapter
 
 from workflowai.core.utils._schema_generator import JsonSchemaGenerator
 
@@ -15,14 +13,6 @@ class SchemaDeserializer(NamedTuple):
     schema: dict[str, Any]
     serializer: Optional[Callable[[Any], Any]] = None
     deserializer: Optional[Callable[[Any], Any]] = None
-
-
-def _serialize_datetime(x: datetime.datetime) -> str:
-    return x.isoformat()
-
-
-def _deserialize_datetime(x: str) -> datetime.datetime:
-    return datetime.datetime.fromisoformat(x)
 
 
 def _get_type_schema(param_type: type):
@@ -47,31 +37,11 @@ def _get_type_schema(param_type: type):
     if param_type is bool:
         return SchemaDeserializer({"type": "boolean"})
 
-    if param_type is datetime.datetime:
-        return SchemaDeserializer(
-            {"type": "string", "format": "date-time"},
-            serializer=_serialize_datetime,
-            deserializer=_deserialize_datetime,
-        )
-
-    if inspect.isclass(param_type):
-        if issubclass(param_type, BaseModel):
-            return SchemaDeserializer(
-                schema=param_type.model_json_schema(by_alias=True, schema_generator=JsonSchemaGenerator),
-                serializer=lambda x: cast(BaseModel, x).model_dump(mode="json"),  # pyright: ignore [reportUnknownLambdaType]
-                deserializer=param_type.model_validate,
-            )
-
-        if issubclass(param_type, Enum):
-            if not issubclass(param_type, str):
-                raise ValueError(f"Non string enums are not supported: {param_type}")
-            return SchemaDeserializer({"type": "string", "enum": [e.value for e in param_type]})
-
     # Attempting to build a type adapter with pydantic
     with contextlib.suppress(Exception):
         adapter = TypeAdapter[Any](param_type)
         return SchemaDeserializer(
-            schema=adapter.json_schema(),
+            schema=adapter.json_schema(schema_generator=JsonSchemaGenerator),
             deserializer=adapter.validate_python,  # pyright: ignore [reportUnknownLambdaType]
             serializer=lambda x: adapter.dump_python(x, mode="json"),  # pyright: ignore [reportUnknownLambdaType]
         )
