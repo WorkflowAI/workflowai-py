@@ -45,3 +45,50 @@ class TestRunEquality:
         run2._agent = Mock()  # pyright: ignore [reportPrivateUsage]
         assert run1._agent != run2._agent, "sanity check"  # pyright: ignore [reportPrivateUsage]
         assert run1 == run2
+
+
+# Test that format_output correctly formats:
+# 1. The output as a JSON object
+# 2. The cost with $ prefix and correct precision
+# 3. The latency with 2 decimal places and 's' suffix
+def test_format_output() -> None:
+    run = Run[_TestOutput](
+        id="test-id",
+        agent_id="agent-1",
+        schema_id=1,
+        output=_TestOutput(message="hello"),
+        duration_seconds=1.23,
+        cost_usd=0.001,
+    )
+
+    expected = """\nOutput:
+==================================================
+{
+  "message": "hello"
+}
+==================================================
+Cost: $ 0.001
+Latency: 1.23s"""
+
+    assert run.format_output() == expected
+
+
+# Test that format_output works correctly when cost and latency are not provided:
+# 1. The output is still formatted as a JSON object
+# 2. No cost or latency lines are included in the output
+def test_format_output_no_cost_latency() -> None:
+    run = Run[_TestOutput](
+        id="test-id",
+        agent_id="agent-1",
+        schema_id=1,
+        output=_TestOutput(message="hello"),
+    )
+
+    expected = """\nOutput:
+==================================================
+{
+  "message": "hello"
+}
+=================================================="""
+
+    assert run.format_output() == expected
