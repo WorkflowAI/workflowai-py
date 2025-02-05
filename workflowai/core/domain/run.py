@@ -86,6 +86,44 @@ class Run(BaseModel, Generic[AgentOutput]):
             return None
         return self.version.properties.model
 
+    def format_output(self) -> str:
+        """Format the run output as a string.
+
+        Returns a formatted string containing:
+        1. The output as a nicely formatted JSON object
+        2. The cost with $ prefix (if available)
+        3. The latency with 2 decimal places and 's' suffix (if available)
+
+        Example:
+            Output:
+            ==================================================
+            {
+              "message": "hello"
+            }
+            ==================================================
+            Cost: $ 0.001
+            Latency: 1.23s
+        """
+        # Format the output string
+        output = [
+            "\nOutput:",
+            "=" * 50,
+            self.output.model_dump_json(indent=2),
+            "=" * 50,
+        ]
+
+        # Add run information if available
+        if self.cost_usd is not None:
+            output.append(f"Cost: $ {self.cost_usd}")
+        if self.duration_seconds is not None:
+            output.append(f"Latency: {self.duration_seconds:.2f}s")
+
+        return "\n".join(output)
+
+    def __str__(self) -> str:
+        """Return a string representation of the run."""
+        return self.format_output()
+
 
 class _AgentBase(Protocol, Generic[AgentOutput]):
     async def reply(

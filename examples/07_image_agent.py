@@ -1,3 +1,10 @@
+"""
+This example demonstrates how to use images with WorkflowAI agents. It shows how to:
+1. Pass image inputs to an agent
+2. Analyze city photos for identification
+3. Structure detailed visual analysis results
+"""
+
 import asyncio
 import os
 from typing import Optional
@@ -42,7 +49,7 @@ async def identify_city_from_image(_: ImageInput) -> Run[ImageOutput]:
     ...
 
 
-async def run_city_identifier():
+async def main():
     current_dir = os.path.dirname(os.path.abspath(__file__))
     image_path = os.path.join(current_dir, "assets", "new-york-city.jpg")
 
@@ -67,8 +74,7 @@ async def run_city_identifier():
     print(f"Cost: ${agent_run.cost_usd:.10f}")
     print(f"Latency: {agent_run.duration_seconds:.2f}s")
 
-    # using URL for Image
-    # TODO: replace with a Github URL
+    # Example using URL for Image
     image_url = "https://t4.ftcdn.net/jpg/02/96/15/35/360_F_296153501_B34baBHDkFXbl5RmzxpiOumF4LHGCvAE.jpg"
     image = Image(url=image_url)
     agent_run = await identify_city_from_image(
@@ -83,4 +89,4 @@ async def run_city_identifier():
 
 if __name__ == "__main__":
     load_dotenv(override=True)
-    asyncio.run(run_city_identifier())
+    asyncio.run(main())

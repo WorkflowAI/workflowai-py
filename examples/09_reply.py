@@ -1,3 +1,19 @@
+"""
+This example demonstrates how to use the reply() method to have a conversation with the agent/LLM.
+After getting an initial response, you can use reply() to ask follow-up questions or request
+confirmation. The agent/LLM maintains context from the previous interaction, allowing it to:
+
+1. Confirm its previous output
+2. Correct mistakes if needed
+3. Provide additional explanation
+4. Refine its response based on new information
+
+Example:
+    run = await my_agent(input)  # Initial response
+    run = await run.reply(user_message="Are you sure?")  # Ask for confirmation
+    ...
+"""
+
 import asyncio
 
 from dotenv import load_dotenv
@@ -52,7 +68,10 @@ async def main():
 
         print(f"Extracted: {run.output.first_name} {run.output.last_name}")
 
-        # Double check with a simple confirmation
+        # The reply() method allows you to continue the conversation with the LLM
+        # by sending a follow-up message. The LLM will maintain context from the
+        # previous interaction and can confirm or revise its previous output.
+        # Here we ask it to double check its extraction.
         run = await run.reply(user_message="Are you sure?")
 
         print("\nAfter double-checking:")
