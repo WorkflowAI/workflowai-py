@@ -104,14 +104,19 @@ async def main():
             "Please make sure you have the example audio file in the correct location.",
         )
 
+    # Example 1: Using a local file (base64 encoded)
     with open(audio_path, "rb") as f:
         audio_data = f.read()
 
-    # Create audio input (base64 encoded)
     audio = File(
         content_type="audio/mp3",
         data=base64.b64encode(audio_data).decode(),
     )
+
+    # Example 2: Using a URL instead of base64 (commented out)
+    # audio = File(
+    #     url="https://example.com/audio/call.mp3"
+    # )
 
     # Classify the audio
     run = await classify_audio(AudioInput(audio=audio))

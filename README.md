@@ -370,7 +370,11 @@ class AudioClassification(BaseModel):
 async def classify_audio(input: AudioInput) -> AudioClassification:
     ...
 
+# Example 1: Using base64 encoded data
 audio = File(content_type='audio/mp3', data='<base 64 encoded data>')
+
+# Example 2: Using a URL
+# audio = File(url='https://example.com/audio/call.mp3')
 
 run = await classify_audio(AudioInput(audio=audio))
 run.print_output()
