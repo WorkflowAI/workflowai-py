@@ -46,7 +46,7 @@ class CapitalOutput(BaseModel):
 async def get_capital_info(input: CityInput) -> Run[CapitalOutput]:
     """
     Find the capital city of the country where the input city is located.
-    
+
     Guidelines:
     1. First identify the country where the input city is located
     2. Then provide the capital city of that country
