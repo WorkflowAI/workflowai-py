@@ -95,17 +95,6 @@ async def test_call_feedback_analysis():
         assert point.quote
         assert point.timestamp
 
-    # Print the analysis for manual verification
-    print("\nPositive Points:")
-    for point in run.output.positive_points:
-        print(f"\n• {point.point}")
-        print(f'  Quote [{point.timestamp}]: "{point.quote}"')
-
-    print("\nNegative Points:")
-    for point in run.output.negative_points:
-        print(f"\n• {point.point}")
-        print(f'  Quote [{point.timestamp}]: "{point.quote}"')
-
 
 @workflowai.agent(id="analyze-call-feedback-stream")
 def analyze_call_feedback_stream(input: CallFeedbackInput) -> AsyncIterator[Run[CallFeedbackOutput]]:
