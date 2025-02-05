@@ -88,7 +88,7 @@ async def demonstrate_caching(transcript: str):
     for cache_option in cache_options:
         start_time = time.time()
 
-        result = await extract_soap_notes(
+        run = await extract_soap_notes(
             SOAPInput(transcript=transcript),
             use_cache=cache_option,
         )
@@ -99,7 +99,7 @@ async def demonstrate_caching(transcript: str):
         results.append({
             "option": cache_option,
             "duration": duration,
-            "cost": float(result.cost_usd or 0.0),  # Convert None to 0.0
+            "cost": float(run.cost_usd or 0.0),  # Convert None to 0.0
         })
 
     # Print comparison table
