@@ -1,4 +1,3 @@
-import json
 import uuid
 from collections.abc import Iterable
 from typing import Any, Generic, Optional, Protocol
@@ -105,14 +104,11 @@ class Run(BaseModel, Generic[AgentOutput]):
             Cost: $ 0.001
             Latency: 1.23s
         """
-        # Create a dictionary with the output data
-        output_data = self.output.model_dump()
-
         # Format the output string
         output = [
             "\nOutput:",
             "=" * 50,
-            json.dumps(output_data, indent=2),
+            self.output.model_dump_json(indent=2),
             "=" * 50,
         ]
 
@@ -124,9 +120,9 @@ class Run(BaseModel, Generic[AgentOutput]):
 
         return "\n".join(output)
 
-    def print_output(self) -> None:
-        """Print the output in a nicely formatted way."""
-        print(self.format_output())
+    def __str__(self) -> str:
+        """Return a string representation of the run."""
+        return self.format_output()
 
 
 class _AgentBase(Protocol, Generic[AgentOutput]):

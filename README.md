@@ -64,7 +64,7 @@ client = WorkflowAI(
 
 # Use the client to create and run agents
 @client.agent()
-def my_agent(task_input: Input) -> Output:
+def my_agent(agent_input: Input) -> Output:
     ...
 ```
 
@@ -377,7 +377,7 @@ audio = File(content_type='audio/mp3', data='<base 64 encoded data>')
 # audio = File(url='https://example.com/audio/call.mp3')
 
 run = await classify_audio(AudioInput(audio=audio))
-run.print_output()
+print(run)
 ```
 
 See an example of audio classification in [audio_classifier.py](./examples/04_audio_classifier.py).

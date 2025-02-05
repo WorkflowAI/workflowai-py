@@ -54,18 +54,21 @@ class SOAPNote(BaseModel):
     id="soap-extractor",
     model=Model.LLAMA_3_3_70B,
 )
-async def extract_soap_notes(input: SOAPInput) -> Run[SOAPNote]:
+async def extract_soap_notes(soap_input: SOAPInput) -> Run[SOAPNote]:
     """
     Extract SOAP notes from a medical consultation transcript.
 
     Guidelines:
-    1. Subjective: Extract patient-reported symptoms and history
-    2. Objective: Extract measurable findings and examination results
-    3. Assessment: Extract diagnoses and clinical impressions
-    4. Plan: Extract treatment plans and follow-up instructions
+    1. Analyze the transcript to identify key medical information
+    2. Organize information into SOAP format:
+       - Subjective: Patient's symptoms, complaints, and history
+       - Objective: Physical examination findings and test results
+       - Assessment: Diagnosis or clinical impression
+       - Plan: Treatment plan and next steps
 
-    Be precise and maintain medical terminology where used.
-    Organize findings into appropriate SOAP categories.
+    3. Be thorough but concise
+    4. Use medical terminology appropriately
+    5. Include all relevant information from the transcript
     """
     ...
 

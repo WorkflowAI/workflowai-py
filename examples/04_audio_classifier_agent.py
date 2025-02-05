@@ -67,7 +67,7 @@ class AudioClassification(BaseModel):
     id="audio-spam-detector",
     model=Model.GEMINI_1_5_FLASH_LATEST,
 )
-async def classify_audio(input: AudioInput) -> Run[AudioClassification]:
+async def classify_audio(audio_input: AudioInput) -> Run[AudioClassification]:
     """
     Analyze the audio recording to determine if it's a spam/robocall.
 
@@ -105,7 +105,7 @@ async def main():
         )
 
     # Example 1: Using a local file (base64 encoded)
-    with open(audio_path, "rb") as f:
+    with open(audio_path, "rb") as f:  # noqa: ASYNC230
         audio_data = f.read()
 
     audio = File(
@@ -122,7 +122,7 @@ async def main():
     run = await classify_audio(AudioInput(audio=audio))
 
     # Print results including cost and latency information
-    run.print_output()
+    print(run)
 
 
 if __name__ == "__main__":

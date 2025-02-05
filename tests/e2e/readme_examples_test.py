@@ -4,7 +4,6 @@ import base64
 from collections.abc import AsyncIterator
 from datetime import date
 from pathlib import Path
-from typing import List
 
 import pytest
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
@@ -32,18 +31,18 @@ class FeedbackPoint(BaseModel):
 # Model representing the structured analysis of the customer feedback call
 class CallFeedbackOutput(BaseModel):
     """Structured analysis of the customer feedback call."""
-    positive_points: List[FeedbackPoint] = Field(
+    positive_points: list[FeedbackPoint] = Field(
         default_factory=list,
         description="List of positive feedback points, each with a supporting quote.",
     )
-    negative_points: List[FeedbackPoint] = Field(
+    negative_points: list[FeedbackPoint] = Field(
         default_factory=list,
         description="List of negative feedback points, each with a supporting quote.",
     )
 
 
 @workflowai.agent(id="analyze-call-feedback", model=Model.GPT_4O_MINI_LATEST)
-async def analyze_call_feedback(input: CallFeedbackInput) -> Run[CallFeedbackOutput]:
+async def analyze_call_feedback(feedback_input: CallFeedbackInput) -> Run[CallFeedbackOutput]:
     """
     Analyze a customer feedback call transcript to extract key insights:
     1. Identify positive feedback points with supporting quotes
@@ -61,13 +60,17 @@ async def test_call_feedback_analysis():
     """Test the call feedback analysis example from the README."""
     # Example transcript from README
     transcript = """
-    [00:01:15] Customer: I've been using your software for about 3 months now, and I have to say the new dashboard feature is really impressive. It's saving me at least an hour each day on reporting.
+    [00:01:15] Customer: I've been using your software for about 3 months now, and I have to say\
+    the new dashboard feature is really impressive. It's saving me at least an hour each day on reporting.
 
-    [00:02:30] Customer: However, I'm really frustrated with the export functionality. It crashed twice this week when I tried to export large reports, and I lost all my work.
+    [00:02:30] Customer: However, I'm really frustrated with the export functionality. It crashed twice\
+    this week when I tried to export large reports, and I lost all my work.
 
-    [00:03:45] Customer: On a positive note, your support team, especially Sarah, was very responsive when I reported the issue. She got back to me within minutes.
+    [00:03:45] Customer: On a positive note, your support team, especially Sarah, was very responsive\
+    when I reported the issue. She got back to me within minutes.
 
-    [00:04:30] Customer: But I think the pricing for additional users is a bit steep compared to other solutions we looked at.
+    [00:04:30] Customer: But I think the pricing for additional users is a bit steep compared to other\
+    solutions we looked at.
     """
 
     # Create input
@@ -97,7 +100,7 @@ async def test_call_feedback_analysis():
 
 
 @workflowai.agent(id="analyze-call-feedback-stream")
-def analyze_call_feedback_stream(input: CallFeedbackInput) -> AsyncIterator[Run[CallFeedbackOutput]]:
+def analyze_call_feedback_stream(feedback_input: CallFeedbackInput) -> AsyncIterator[Run[CallFeedbackOutput]]:
     """Same as analyze_call_feedback but with streaming enabled."""
     ...
 
@@ -140,7 +143,7 @@ class AudioClassification(BaseModel):
 
 
 @workflowai.agent(id="audio-classifier", model=Model.GEMINI_1_5_FLASH_LATEST)
-async def classify_audio(input: AudioInput) -> Run[AudioClassification]:
+async def classify_audio(audio_input: AudioInput) -> Run[AudioClassification]:
     """
     Analyze the audio recording to determine if it's a spam/robocall.
     """
@@ -151,13 +154,15 @@ async def classify_audio(input: AudioInput) -> Run[AudioClassification]:
 async def test_audio_classification():
     """Test the audio classification example from the README."""
     # Load the example audio file
-    audio_path = Path("examples/audio/call.mp3")
+    audio_path = Path("examples/assets/call.mp3")
 
     # Skip test if audio file doesn't exist
     if not audio_path.exists():
         pytest.skip(f"Audio file not found at {audio_path}")
 
-    with open(audio_path, "rb") as f:
+    # Note: Using sync file read in test code is acceptable.
+    # We avoid adding aiofiles dependency just for this test case.
+    with open(audio_path, "rb") as f:  # noqa: ASYNC230
         audio_data = f.read()
 
     # Create audio input (base64 encoded)
@@ -177,6 +182,3 @@ async def test_audio_classification():
 
     # Verify we got a classification
     assert isinstance(run.output.is_spam, bool)
-
-    # Print results for manual verification
-    run.print_output()

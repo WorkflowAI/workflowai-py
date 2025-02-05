@@ -40,7 +40,7 @@ class UptimeOutput(BaseModel):
     id="uptime-checker",
     model=Model.GPT_4O_MINI_LATEST,
 )
-async def check_uptime(input: UptimeInput, use_cache: str = "never") -> Run[UptimeOutput]:
+async def check_uptime(uptime_input: UptimeInput, use_cache: str = "never") -> Run[UptimeOutput]:
     """
     Fetch and analyze uptime data from an API status page.
     Use @browser-text to get the page content.
@@ -59,19 +59,19 @@ async def check_uptime(input: UptimeInput, use_cache: str = "never") -> Run[Upti
 
 async def main():
     # Example: Check OpenAI API uptime
-    input = UptimeInput(
+    uptime_input = UptimeInput(
         status_page_url="https://status.openai.com",
         service_name="API",
     )
 
-    print(f"\nChecking uptime for {input.service_name} at {input.status_page_url}...")
+    print(f"\nChecking uptime for {uptime_input.service_name} at {uptime_input.status_page_url}...")
     print("-" * 50)
 
     # Get uptime data with caching disabled
-    run = await check_uptime(input, use_cache="never")
+    run = await check_uptime(uptime_input, use_cache="never")
 
-    # Print the results
-    run.print_output()
+    # Print the run
+    print(run)
 
 
 if __name__ == "__main__":
