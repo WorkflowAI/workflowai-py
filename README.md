@@ -154,16 +154,16 @@ feedback_input = CallFeedbackInput(
 )
 
 # Analyze the feedback
-result = await analyze_call_feedback(feedback_input)
+run = await analyze_call_feedback(feedback_input)
 
 # Print the analysis
 print("\nPositive Points:")
-for point in result.positive_points:
+for point in run.positive_points:
     print(f"\n• {point.point}")
     print(f"  Quote [{point.timestamp}]: \"{point.quote}\"")
 
 print("\nNegative Points:")
-for point in result.negative_points:
+for point in run.negative_points:
     print(f"\n• {point.point}")
     print(f"  Quote [{point.timestamp}]: \"{point.quote}\"")
 ```
@@ -590,7 +590,7 @@ async def analyze_call_feedback_strict(input: CallFeedbackInput) -> CallFeedback
     ...
 
 try:
-    result = await analyze_call_feedback_strict(
+    run = await analyze_call_feedback_strict(
         CallFeedbackInput(
             transcript="[00:01:15] Customer: The product is great!",
             call_date=date(2024, 1, 15)
@@ -608,13 +608,13 @@ async def analyze_call_feedback_tolerant(input: CallFeedbackInput) -> CallFeedba
     ...
 
 # The invalid_generation is less likely
-result = await analyze_call_feedback_tolerant(
+run = await analyze_call_feedback_tolerant(
     CallFeedbackInput(
         transcript="[00:01:15] Customer: The product is great!",
         call_date=date(2024, 1, 15)
     )
 )
-if not result.positive_points and not result.negative_points:
+if not run.positive_points and not run.negative_points:
     print("No feedback points were generated!")
 ```
 
@@ -630,15 +630,14 @@ absent will cause `AttributeError` when queried.
 async def analyze_call_feedback_stream(input: CallFeedbackInput) -> AsyncIterator[CallFeedbackOutput]:
     ...
 
-async for result in analyze_call_feedback_stream(
+async for run in analyze_call_feedback_stream(
     CallFeedbackInput(
         transcript="[00:01:15] Customer: The product is great!",
         call_date=date(2024, 1, 15)
     )
 ):
-    # With default values, we can safely check the points as they stream in
-    print(f"Positive points so far: {len(result.positive_points)}")
-    print(f"Negative points so far: {len(result.negative_points)}")
+    print(f"Positive points so far: {len(run.positive_points)}")
+    print(f"Negative points so far: {len(run.negative_points)}")
 ```
 
 #### Field properties
