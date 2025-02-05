@@ -354,7 +354,29 @@ An example of using a PDF as input is available in [pdf_answer.py](./examples/pd
 
 ### Audio
 
-[todo]
+Use the `File` class to pass audio files as input to an agent. Note that only some models support audio input.
+
+```python
+from workflowai.fields import File
+...
+
+class AudioInput(BaseModel):
+    audio: File = Field(description="The audio recording to analyze for spam/robocall detection")
+
+class AudioClassification(BaseModel):
+    is_spam: bool = Field(description="Whether the audio is classified as spam/robocall")
+
+@workflowai.agent(id="audio-classifier", model=Model.GEMINI_1_5_FLASH_LATEST)
+async def classify_audio(input: AudioInput) -> AudioClassification:
+    ...
+
+audio = File(content_type='audio/mp3', data='<base 64 encoded data>')
+
+run = await classify_audio(AudioInput(audio=audio))
+run.print_output()
+```
+
+See an example of audio classification in [audio_classifier.py](./examples/04_audio_classifier.py).
 
 ### Caching
 

@@ -1,7 +1,9 @@
 """Tests to verify that the code examples in the README.md work as expected."""
 
+import base64
 from collections.abc import AsyncIterator
 from datetime import date
+from pathlib import Path
 from typing import List
 
 import pytest
@@ -9,6 +11,7 @@ from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableT
 
 import workflowai
 from workflowai import Model, Run
+from workflowai.fields import File
 
 
 # Input model for the call feedback analysis
@@ -134,3 +137,57 @@ async def test_streaming_example():
     assert last_chunk is not None
     assert last_chunk.cost_usd is not None
     assert last_chunk.duration_seconds is not None
+
+
+# Models for the audio example from README
+class AudioInput(BaseModel):
+    """Input containing the audio file to analyze."""
+    audio: File = Field(description="The audio recording to analyze for spam/robocall detection")
+
+
+class AudioClassification(BaseModel):
+    """Output containing the spam classification results."""
+    is_spam: bool = Field(description="Whether the audio is classified as spam/robocall")
+
+
+@workflowai.agent(id="audio-classifier", model=Model.GEMINI_1_5_FLASH_LATEST)
+async def classify_audio(input: AudioInput) -> Run[AudioClassification]:
+    """
+    Analyze the audio recording to determine if it's a spam/robocall.
+    """
+    ...
+
+
+@pytest.mark.asyncio
+async def test_audio_classification():
+    """Test the audio classification example from the README."""
+    # Load the example audio file
+    audio_path = Path("examples/audio/call.mp3")
+
+    # Skip test if audio file doesn't exist
+    if not audio_path.exists():
+        pytest.skip(f"Audio file not found at {audio_path}")
+
+    with open(audio_path, "rb") as f:
+        audio_data = f.read()
+
+    # Create audio input (base64 encoded)
+    audio = File(
+        content_type="audio/mp3",
+        data=base64.b64encode(audio_data).decode(),
+    )
+
+    # Run the classification
+    run = await classify_audio(AudioInput(audio=audio))
+
+    # Verify the run object has expected attributes
+    assert run.output is not None
+    assert run.model is not None
+    assert run.cost_usd is not None
+    assert run.duration_seconds is not None
+
+    # Verify we got a classification
+    assert isinstance(run.output.is_spam, bool)
+
+    # Print results for manual verification
+    run.print_output()
