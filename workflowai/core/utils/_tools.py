@@ -1,8 +1,10 @@
+import contextlib
+import datetime
 import inspect
 from enum import Enum
 from typing import Any, Callable, NamedTuple, Optional, cast, get_type_hints
 
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter
 
 from workflowai.core.utils._schema_generator import JsonSchemaGenerator
 
@@ -15,6 +17,14 @@ class SchemaDeserializer(NamedTuple):
     deserializer: Optional[Callable[[Any], Any]] = None
 
 
+def _serialize_datetime(x: datetime.datetime) -> str:
+    return x.isoformat()
+
+
+def _deserialize_datetime(x: str) -> datetime.datetime:
+    return datetime.datetime.fromisoformat(x)
+
+
 def _get_type_schema(param_type: type):
     """Convert a Python type to its corresponding JSON schema type.
 
@@ -24,10 +34,6 @@ def _get_type_schema(param_type: type):
     Returns:
         A dictionary containing the JSON schema type definition
     """
-    if issubclass(param_type, Enum):
-        if not issubclass(param_type, str):
-            raise ValueError(f"Non string enums are not supported: {param_type}")
-        return SchemaDeserializer({"type": "string", "enum": [e.value for e in param_type]})
 
     if param_type is str:
         return SchemaDeserializer({"type": "string"})
@@ -41,11 +47,33 @@ def _get_type_schema(param_type: type):
     if param_type is bool:
         return SchemaDeserializer({"type": "boolean"})
 
-    if issubclass(param_type, BaseModel):
+    if param_type is datetime.datetime:
         return SchemaDeserializer(
-            schema=param_type.model_json_schema(by_alias=True, schema_generator=JsonSchemaGenerator),
-            serializer=lambda x: cast(BaseModel, x).model_dump(mode="json"),  # pyright: ignore [reportUnknownLambdaType]
-            deserializer=param_type.model_validate,
+            {"type": "string", "format": "date-time"},
+            serializer=_serialize_datetime,
+            deserializer=_deserialize_datetime,
+        )
+
+    if inspect.isclass(param_type):
+        if issubclass(param_type, BaseModel):
+            return SchemaDeserializer(
+                schema=param_type.model_json_schema(by_alias=True, schema_generator=JsonSchemaGenerator),
+                serializer=lambda x: cast(BaseModel, x).model_dump(mode="json"),  # pyright: ignore [reportUnknownLambdaType]
+                deserializer=param_type.model_validate,
+            )
+
+        if issubclass(param_type, Enum):
+            if not issubclass(param_type, str):
+                raise ValueError(f"Non string enums are not supported: {param_type}")
+            return SchemaDeserializer({"type": "string", "enum": [e.value for e in param_type]})
+
+    # Attempting to build a type adapter with pydantic
+    with contextlib.suppress(Exception):
+        adapter = TypeAdapter[Any](param_type)
+        return SchemaDeserializer(
+            schema=adapter.json_schema(),
+            deserializer=adapter.validate_python,  # pyright: ignore [reportUnknownLambdaType]
+            serializer=lambda x: adapter.dump_python(x, mode="json"),  # pyright: ignore [reportUnknownLambdaType]
         )
 
     raise ValueError(f"Unsupported type: {param_type}")
