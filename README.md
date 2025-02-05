@@ -64,7 +64,7 @@ client = WorkflowAI(
 
 # Use the client to create and run agents
 @client.agent()
-def my_agent(task_input: Input) -> Output:
+def my_agent(agent_input: Input) -> Output:
     ...
 ```
 
@@ -154,16 +154,16 @@ feedback_input = CallFeedbackInput(
 )
 
 # Analyze the feedback
-result = await analyze_call_feedback(feedback_input)
+run = await analyze_call_feedback(feedback_input)
 
 # Print the analysis
 print("\nPositive Points:")
-for point in result.positive_points:
+for point in run.positive_points:
     print(f"\n• {point.point}")
     print(f"  Quote [{point.timestamp}]: \"{point.quote}\"")
 
 print("\nNegative Points:")
-for point in result.negative_points:
+for point in run.negative_points:
     print(f"\n• {point.point}")
     print(f"  Quote [{point.timestamp}]: \"{point.quote}\"")
 ```
@@ -354,7 +354,33 @@ An example of using a PDF as input is available in [pdf_answer.py](./examples/pd
 
 ### Audio
 
-[todo]
+Use the `File` class to pass audio files as input to an agent. Note that only some models support audio input.
+
+```python
+from workflowai.fields import File
+...
+
+class AudioInput(BaseModel):
+    audio: File = Field(description="The audio recording to analyze for spam/robocall detection")
+
+class AudioClassification(BaseModel):
+    is_spam: bool = Field(description="Whether the audio is classified as spam/robocall")
+
+@workflowai.agent(id="audio-classifier", model=Model.GEMINI_1_5_FLASH_LATEST)
+async def classify_audio(input: AudioInput) -> AudioClassification:
+    ...
+
+# Example 1: Using base64 encoded data
+audio = File(content_type='audio/mp3', data='<base 64 encoded data>')
+
+# Example 2: Using a URL
+# audio = File(url='https://example.com/audio/call.mp3')
+
+run = await classify_audio(AudioInput(audio=audio))
+print(run)
+```
+
+See an example of audio classification in [audio_classifier.py](./examples/04_audio_classifier.py).
 
 ### Caching
 
@@ -590,7 +616,7 @@ async def analyze_call_feedback_strict(input: CallFeedbackInput) -> CallFeedback
     ...
 
 try:
-    result = await analyze_call_feedback_strict(
+    run = await analyze_call_feedback_strict(
         CallFeedbackInput(
             transcript="[00:01:15] Customer: The product is great!",
             call_date=date(2024, 1, 15)
@@ -608,13 +634,13 @@ async def analyze_call_feedback_tolerant(input: CallFeedbackInput) -> CallFeedba
     ...
 
 # The invalid_generation is less likely
-result = await analyze_call_feedback_tolerant(
+run = await analyze_call_feedback_tolerant(
     CallFeedbackInput(
         transcript="[00:01:15] Customer: The product is great!",
         call_date=date(2024, 1, 15)
     )
 )
-if not result.positive_points and not result.negative_points:
+if not run.positive_points and not run.negative_points:
     print("No feedback points were generated!")
 ```
 
@@ -630,15 +656,14 @@ absent will cause `AttributeError` when queried.
 async def analyze_call_feedback_stream(input: CallFeedbackInput) -> AsyncIterator[CallFeedbackOutput]:
     ...
 
-async for result in analyze_call_feedback_stream(
+async for run in analyze_call_feedback_stream(
     CallFeedbackInput(
         transcript="[00:01:15] Customer: The product is great!",
         call_date=date(2024, 1, 15)
     )
 ):
-    # With default values, we can safely check the points as they stream in
-    print(f"Positive points so far: {len(result.positive_points)}")
-    print(f"Negative points so far: {len(result.negative_points)}")
+    print(f"Positive points so far: {len(run.positive_points)}")
+    print(f"Negative points so far: {len(run.negative_points)}")
 ```
 
 #### Field properties

@@ -183,20 +183,20 @@ async def main():
 
     query = "What were the major environmental impacts of the Industrial Revolution?"
 
-    result = await process_long_document(document, query)
+    run = await process_long_document(document, query)
 
     print("\n=== Query ===")
     print(query)
 
     print("\n=== Answer ===")
-    print(result.answer)
+    print(run.answer)
 
     print("\n=== Reasoning ===")
-    print(result.reasoning)
+    print(run.reasoning)
 
-    if result.supporting_evidence:
+    if run.supporting_evidence:
         print("\n=== Supporting Evidence ===")
-        for evidence in result.supporting_evidence:
+        for evidence in run.supporting_evidence:
             print(f"- {evidence}")
 
 

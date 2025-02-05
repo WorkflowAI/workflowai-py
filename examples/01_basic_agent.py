@@ -43,7 +43,7 @@ class CapitalOutput(BaseModel):
     id="city-to-capital",
     model=Model.CLAUDE_3_5_SONNET_LATEST,
 )
-async def get_capital_info(input: CityInput) -> Run[CapitalOutput]:
+async def get_capital_info(city_input: CityInput) -> Run[CapitalOutput]:
     """
     Find the capital city of the country where the input city is located.
 
@@ -61,21 +61,14 @@ async def main():
     # Example 1: Basic usage with Paris
     print("\nExample 1: Basic usage with Paris")
     print("-" * 50)
-
-    result = await get_capital_info(CityInput(city="Paris"))
-    print(result.output)
-    print("-" * 50)
-    print(f"Cost: ${result.cost_usd}")
-    print(f"Latency: {result.duration_seconds:.2f}s")
+    run = await get_capital_info(CityInput(city="Paris"))
+    print(run)
 
     # Example 2: Using Tokyo
     print("\nExample 2: Using Tokyo")
     print("-" * 50)
-    result = await get_capital_info(CityInput(city="Tokyo"))
-    print(result.output)
-    print("-" * 50)
-    print(f"Cost: ${result.cost_usd}")
-    print(f"Latency: {result.duration_seconds:.2f}s")
+    run = await get_capital_info(CityInput(city="Tokyo"))
+    print(run)
 
 
 if __name__ == "__main__":
