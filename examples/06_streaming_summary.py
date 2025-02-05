@@ -1,3 +1,10 @@
+"""
+This example demonstrates how to use streaming with WorkflowAI agents. It shows how to:
+1. Stream outputs as they are generated
+2. Get real-time updates during processing
+3. Access run metadata like cost and duration
+"""
+
 import asyncio
 from collections.abc import AsyncIterator
 

@@ -8,8 +8,7 @@ Specifically, it shows how to:
 
 import asyncio
 import base64
-from pathlib import Path
-from typing import List
+import os
 
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 
@@ -55,7 +54,7 @@ class AudioClassification(BaseModel):
         ge=0.0,
         le=1.0,
     )
-    spam_indicators: List[SpamIndicator] = Field(
+    spam_indicators: list[SpamIndicator] = Field(
         default_factory=list,
         description="List of specific indicators that suggest this is spam",
     )
@@ -79,12 +78,12 @@ async def classify_audio(input: AudioInput) -> Run[AudioClassification]:
        - Automated/synthetic voices
        - Requests for personal/financial information
        - Impersonation of legitimate organizations
-    
+
     2. Consider both content and delivery:
        - What is being said (transcribe key parts)
        - How it's being said (tone, pacing, naturalness)
        - Background noise and call quality
-    
+
     3. Provide clear reasoning:
        - Cite specific examples from the audio
        - Explain confidence level
@@ -94,11 +93,12 @@ async def classify_audio(input: AudioInput) -> Run[AudioClassification]:
 
 
 async def main():
-    # Example: Load an audio file from the examples/audio directory
-    audio_path = Path("examples/audio/call.mp3")
+    # Example: Load an audio file from the assets directory
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    audio_path = os.path.join(current_dir, "assets", "call.mp3")
 
     # Verify the file exists
-    if not audio_path.exists():
+    if not os.path.exists(audio_path):
         raise FileNotFoundError(
             f"Audio file not found at {audio_path}. "
             "Please make sure you have the example audio file in the correct location.",
