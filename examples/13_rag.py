@@ -79,7 +79,7 @@ async def search_faq(query: str) -> List[SearchResult]:
 
 class Message(BaseModel):
     """Model representing a chat message."""
-    role: Role = Field()
+    role: Role
     content: str = Field(
         description="The content of the message",
     )
