@@ -25,17 +25,9 @@ class EmailInput(BaseModel):
     """Input model containing the email content to analyze."""
     subject: str = Field(
         description="The subject line of the email",
-        examples=[
-            "Team Meeting - Tuesday 3pm",
-            "Invitation: Product Review (Apr 15)",
-        ],
     )
     body: str = Field(
         description="The main content/body of the email",
-        examples=[
-            "Let's meet to discuss the Q2 roadmap. Tuesday at 3pm in Conference Room A.",
-            "Please join us for the monthly product review meeting on April 15th at 2pm PST.",
-        ],
     )
 
 
