@@ -70,9 +70,15 @@ class Message(BaseModel):
     )
 
 
+class AssistantMessage(Message):
+    """Model representing a message from the assistant."""
+    role: Role = Role.ASSISTANT
+    content: str = ""
+
+
 class ChatbotOutput(BaseModel):
     """Output model for the chatbot response."""
-    assistant_message: Message = Field(
+    assistant_message: AssistantMessage = Field(
         description="The chatbot's response message",
     )
 
@@ -85,10 +91,6 @@ class ChatInput(BaseModel):
     )
     user_message: str = Field(
         description="The current message from the user",
-        examples=[
-            "I'm looking for noise-cancelling headphones for travel",
-            "What's the best TV under $1000?",
-        ],
     )
 
 
