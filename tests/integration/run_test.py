@@ -112,27 +112,23 @@ async def test_auto_register(test_client: IntTestClient):
         "input_schema": {
             "properties": {
                 "city": {
-                    "title": "City",
                     "type": "string",
                 },
             },
             "required": [
                 "city",
             ],
-            "title": "CityToCapitalTaskInput",
             "type": "object",
         },
         "output_schema": {
             "properties": {
                 "capital": {
-                    "title": "Capital",
                     "type": "string",
                 },
             },
             "required": [
                 "capital",
             ],
-            "title": "CityToCapitalTaskOutput",
             "type": "object",
         },
     }

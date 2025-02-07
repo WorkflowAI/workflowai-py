@@ -28,6 +28,7 @@ from workflowai.core.domain.tool import Tool
 from workflowai.core.domain.tool_call import ToolCallRequest, ToolCallResult
 from workflowai.core.domain.version_properties import VersionProperties
 from workflowai.core.domain.version_reference import VersionReference
+from workflowai.core.utils._schema_generator import JsonSchemaGenerator
 
 
 class Agent(Generic[AgentInput, AgentOutput]):
@@ -99,6 +100,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
         version = self._sanitize_version(kwargs.get("version"))
 
         request = RunRequest(
+            id=kwargs.get("id"),
             task_input=task_input.model_dump(by_alias=True),
             version=version,
             stream=stream,
@@ -149,8 +151,14 @@ class Agent(Generic[AgentInput, AgentOutput]):
             "/v1/_/agents",
             CreateAgentRequest(
                 id=self.agent_id,
-                input_schema=self.input_cls.model_json_schema(),
-                output_schema=self.output_cls.model_json_schema(),
+                input_schema=self.input_cls.model_json_schema(
+                    mode="serialization",
+                    schema_generator=JsonSchemaGenerator,
+                ),
+                output_schema=self.output_cls.model_json_schema(
+                    mode="validation",
+                    schema_generator=JsonSchemaGenerator,
+                ),
             ),
             returns=CreateAgentResponse,
         )

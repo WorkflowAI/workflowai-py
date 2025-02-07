@@ -1,4 +1,5 @@
 from typing import (
+    Annotated,
     Any,
     Generic,
     Optional,
@@ -33,4 +34,9 @@ class BaseRunParams(TypedDict):
 
 
 class RunParams(BaseRunParams, Generic[AgentOutput]):
+    id: Annotated[
+        NotRequired[str],
+        "A user defined ID for the run. The ID must be a UUID7, ordered by creation time."
+        "If not provided, a UUID7 will be assigned by the server",
+    ]
     validator: NotRequired[OutputValidator["AgentOutput"]]
