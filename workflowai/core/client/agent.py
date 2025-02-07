@@ -1,11 +1,12 @@
 import asyncio
+from asyncio.log import logger
 from collections.abc import Awaitable, Callable, Iterable
 from typing import Any, Generic, NamedTuple, Optional, Union, cast
 
 from pydantic import BaseModel
 from typing_extensions import Unpack
 
-from workflowai.core._common_types import BaseRunParams, OutputValidator
+from workflowai.core._common_types import BaseRunParams, OutputValidator, VersionRunParams
 from workflowai.core.client._api import APIClient
 from workflowai.core.client._models import (
     CreateAgentRequest,
@@ -69,17 +70,32 @@ class Agent(Generic[AgentInput, AgentOutput]):
         wait_for_exception: Callable[[WorkflowAIError], Awaitable[None]]
         schema_id: int
 
-    def _sanitize_version(self, version: Optional[VersionReference]) -> Union[str, int, dict[str, Any]]:
+    def _sanitize_version(self, params: VersionRunParams) -> Union[str, int, dict[str, Any]]:
+        version = params.get("version")
+        model = params.get("model")
+        instructions = params.get("instructions")
+        temperature = params.get("temperature")
+
+        has_property_overrides = bool(model or instructions or temperature)
+
         if not version:
-            version = self.version
+            # If versions is not specified, we fill with the default agent version only if
+            # there are no additional properties
+            version = self.version if not has_property_overrides else VersionProperties()
+
         if not isinstance(version, VersionProperties):
+            if has_property_overrides or self._tools:
+                logger.warning("Property overrides are ignored when version is not a VersionProperties")
             return version
 
         dumped = version.model_dump(by_alias=True, exclude_unset=True)
+
         if not dumped.get("model"):
+            # We always provide a default model since it is required by the API
             import workflowai
 
             dumped["model"] = workflowai.DEFAULT_MODEL
+
         if self._tools:
             dumped["enabled_tools"] = [
                 {
@@ -90,6 +106,13 @@ class Agent(Generic[AgentInput, AgentOutput]):
                 }
                 for tool in self._tools.values()
             ]
+        # Finally we apply the property overrides
+        if model:
+            dumped["model"] = model
+        if instructions:
+            dumped["instructions"] = instructions
+        if temperature:
+            dumped["temperature"] = temperature
         return dumped
 
     async def _prepare_run(self, task_input: AgentInput, stream: bool, **kwargs: Unpack[RunParams[AgentOutput]]):
@@ -97,7 +120,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
         if not schema_id:
             schema_id = await self.register()
 
-        version = self._sanitize_version(kwargs.get("version"))
+        version = self._sanitize_version(kwargs)
 
         request = RunRequest(
             id=kwargs.get("id"),
@@ -126,7 +149,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
     ):
         if not self.schema_id:
             raise ValueError("schema_id is required")
-        version = self._sanitize_version(kwargs.get("version"))
+        version = self._sanitize_version(kwargs)
 
         request = ReplyRequest(
             user_message=user_message,

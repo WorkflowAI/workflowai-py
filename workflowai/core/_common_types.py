@@ -22,8 +22,14 @@ class OutputValidator(Protocol, Generic[AgentOutputCov]):
     def __call__(self, data: dict[str, Any], has_tool_call_requests: bool) -> AgentOutputCov: ...
 
 
-class BaseRunParams(TypedDict):
+class VersionRunParams(TypedDict):
+    model: NotRequired[Optional[str]]
     version: NotRequired[Optional["VersionReference"]]
+    instructions: NotRequired[Optional[str]]
+    temperature: NotRequired[Optional[float]]
+
+
+class BaseRunParams(VersionRunParams):
     use_cache: NotRequired["CacheUsage"]
     metadata: NotRequired[Optional[dict[str, Any]]]
     labels: NotRequired[Optional[set[str]]]

@@ -19,6 +19,7 @@ from workflowai.core.client.client import (
 )
 from workflowai.core.domain.errors import WorkflowAIError
 from workflowai.core.domain.run import Run
+from workflowai.core.domain.version_properties import VersionProperties
 
 
 @pytest.fixture
@@ -341,3 +342,28 @@ class TestRun:
             "aliased_ser_alias": "2",
             "aliased_val": "3",
         }
+
+
+class TestSanitizeVersion:
+    def test_string_version(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        assert agent._sanitize_version({"version": "production"}) == "production"  # pyright: ignore [reportPrivateUsage]
+
+    def test_default_version(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        assert agent._sanitize_version({}) == "production"  # pyright: ignore [reportPrivateUsage]
+
+    def test_version_properties(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        assert agent._sanitize_version({"version": VersionProperties(temperature=0.7)}) == {  # pyright: ignore [reportPrivateUsage]
+            "temperature": 0.7,
+            "model": "gemini-1.5-pro-latest",
+        }
+
+    def test_version_properties_with_model(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        # When the default version is used and we pass the model, the model has priority
+        assert agent.version == "production", "sanity"
+        assert agent._sanitize_version({"model": "gemini-1.5-pro-latest"}) == {  # pyright: ignore [reportPrivateUsage]
+            "model": "gemini-1.5-pro-latest",
+        }
+
+    def test_version_with_models_and_version(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        # If version is explcitly provided then it takes priority and we log a warning
+        assert agent._sanitize_version({"version": "staging", "model": "gemini-1.5-pro-latest"}) == "staging"  # pyright: ignore [reportPrivateUsage]
