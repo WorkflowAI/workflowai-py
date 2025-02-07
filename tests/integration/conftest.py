@@ -1,5 +1,6 @@
 import json
-from typing import Any, Optional
+from collections.abc import Callable
+from typing import Any, Optional, Union
 from unittest.mock import patch
 
 import pytest
@@ -76,6 +77,30 @@ class IntTestClient:
             url=f"https://run.workflowai.dev/v1/_/agents/{task_id}/schemas/1/run",
             stream=IteratorStream(streams),
         )
+
+    def check_register(
+        self,
+        task_id: str = "city-to-capital",
+        input_schema: Optional[Union[dict[str, Any], Callable[[dict[str, Any]], None]]] = None,
+        output_schema: Optional[Union[dict[str, Any], Callable[[dict[str, Any]], None]]] = None,
+    ):
+        request = self.httpx_mock.get_request(url=self.REGISTER_URL)
+        assert request is not None
+        assert request.headers["Authorization"] == "Bearer test"
+        assert request.headers["Content-Type"] == "application/json"
+        assert request.headers["x-workflowai-source"] == "sdk"
+        assert request.headers["x-workflowai-language"] == "python"
+
+        body = json.loads(request.content)
+        assert body["id"] == task_id
+        if callable(input_schema):
+            input_schema(body["input_schema"])
+        else:
+            assert body["input_schema"] == input_schema or {"city": {"type": "string"}}
+        if callable(output_schema):
+            output_schema(body["output_schema"])
+        else:
+            assert body["output_schema"] == output_schema or {"capital": {"type": "string"}}
 
     def check_request(
         self,

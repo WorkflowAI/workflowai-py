@@ -335,3 +335,16 @@ async def test_input_payload(test_client: IntTestClient):
         task_input=expected_task_input,
         version=expected_version,
     )
+
+    def _check_input_schema(x: dict[str, Any]):
+        # Checking the alias
+        assert x["$defs"]["AgentSchemaJson"]["properties"]["task_name"] == {
+            "type": "string",
+            "description": "The name of the agent in Title Case",
+        }
+
+    test_client.check_register(
+        task_id="chattaskschemageneration",
+        input_schema=_check_input_schema,
+        output_schema=lambda _: None,
+    )
