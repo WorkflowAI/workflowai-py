@@ -1,4 +1,3 @@
-import uuid
 from collections.abc import Iterable
 from typing import Any, Generic, Optional, Protocol
 
@@ -21,10 +20,7 @@ class Run(BaseModel, Generic[AgentOutput]):
     been evaluated
     """
 
-    id: str = Field(
-        default_factory=lambda: str(uuid.uuid4()),
-        description="The unique identifier of the run. This is a UUIDv7.",
-    )
+    id: str
     agent_id: str
     schema_id: int
     output: AgentOutput

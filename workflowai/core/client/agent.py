@@ -100,6 +100,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
         version = self._sanitize_version(kwargs.get("version"))
 
         request = RunRequest(
+            id=kwargs.get("id"),
             task_input=task_input.model_dump(by_alias=True),
             version=version,
             stream=stream,

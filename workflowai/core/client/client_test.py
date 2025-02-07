@@ -39,6 +39,7 @@ class TestAgentDecorator:
         async def fn(task_input: HelloTaskInput) -> HelloTaskOutput: ...
 
         mock_run_fn.return_value = Run(
+            id="1",
             output=HelloTaskOutput(message="hello"),
             agent_id="123",
             schema_id=1,
