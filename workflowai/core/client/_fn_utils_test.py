@@ -13,6 +13,7 @@ from workflowai.core.client._fn_utils import (
     _RunnableStreamAgent,  # pyright: ignore [reportPrivateUsage]
     _RunnableStreamOutputOnlyAgent,  # pyright: ignore [reportPrivateUsage]
     agent_wrapper,
+    clean_docstring,
     extract_fn_spec,
     get_generic_args,
     is_async_iterator,
@@ -113,3 +114,58 @@ class TestAgentWrapper:
         assert len(chunks) == 1
         assert isinstance(chunks[0], HelloTaskOutput)
         assert chunks[0] == HelloTaskOutput(message="Hello, World!")
+
+
+def test_clean_docstring():
+    # Test empty docstring
+    assert clean_docstring("") == ""
+    assert clean_docstring(None) == ""
+
+    # Test single line docstring
+    assert clean_docstring("Hello world") == "Hello world"
+    assert clean_docstring("  Hello world  ") == "Hello world"
+
+    # Test docstring with empty lines at start/end
+    assert clean_docstring("""
+
+        Hello world
+
+        """) == "Hello world"
+
+    # Test multi-line docstring with indentation
+    assert clean_docstring("""
+        First line
+        Second line
+            Indented line
+        Last line
+        """) == "First line\nSecond line\n    Indented line\nLast line"
+
+    # Test docstring with empty lines in between
+    assert clean_docstring("""
+        First line
+
+        Second line
+
+        Third line
+        """) == "First line\n\nSecond line\n\nThird line"
+
+    # Test real-world example
+    expected = (
+        "Find the capital city of the country where the input city is located.\n\n"
+        "Guidelines:\n"
+        "1. First identify the country where the input city is located\n"
+        "2. Then provide the capital city of that country\n"
+        "3. Include an interesting historical or cultural fact about the capital\n"
+        "4. Be accurate and precise with geographical information\n"
+        "5. If the input city is itself the capital, still provide the information"
+    )
+    assert clean_docstring("""
+        Find the capital city of the country where the input city is located.
+
+        Guidelines:
+        1. First identify the country where the input city is located
+        2. Then provide the capital city of that country
+        3. Include an interesting historical or cultural fact about the capital
+        4. Be accurate and precise with geographical information
+        5. If the input city is itself the capital, still provide the information
+        """) == expected

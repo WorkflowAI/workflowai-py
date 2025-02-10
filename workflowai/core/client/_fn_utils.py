@@ -147,6 +147,28 @@ class _RunnableStreamOutputOnlyAgent(Agent[AgentInput, AgentOutput], Generic[Age
             yield chunk.output
 
 
+def clean_docstring(docstring: Optional[str]) -> str:
+    """Clean a docstring by removing empty lines at start/end and normalizing indentation."""
+    if not docstring:
+        return ""
+
+    # Split into lines and remove empty lines at start/end
+    lines = [line.rstrip() for line in docstring.split("\n")]
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    while lines and not lines[-1].strip():
+        lines.pop()
+
+    if not lines:
+        return ""
+
+    # Find and remove common indentation
+    indent = min(len(line) - len(line.lstrip()) for line in lines if line.strip())
+    lines = [line[indent:] if line.strip() else "" for line in lines]
+
+    return "\n".join(lines)
+
+
 def wrap_run_template(
     client: Callable[[], APIClient],
     agent_id: str,
@@ -165,7 +187,7 @@ def wrap_run_template(
 
     if not version and (fn.__doc__ or model):
         version = VersionProperties(
-            instructions=fn.__doc__,
+            instructions=clean_docstring(fn.__doc__),
             model=model,
         )
 
