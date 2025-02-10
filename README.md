@@ -182,8 +182,9 @@ for point in run.negative_points:
 
 WorkflowAI supports a long list of models. The source of truth for models we support is on [workflowai.com](https://workflowai.com). The [Model enum](./workflowai/core/domain/model.py) is a good indication of what models are supported at the time of the sdk release, although it may be missing some models since new ones are added all the time.
 
-You can set the model explicitly in the agent decorator:
+You can specify the model in two ways:
 
+1. In the agent decorator:
 ```python
 from workflowai import Model
 
@@ -191,6 +192,18 @@ from workflowai import Model
 async def analyze_call_feedback(input: CallFeedbackInput) -> CallFeedbackOutput:
     ...
 ```
+
+2. As a function parameter when calling the agent:
+```python
+@workflowai.agent(id="analyze-call-feedback")
+async def analyze_call_feedback(input: CallFeedbackInput, *, model: Model) -> CallFeedbackOutput:
+    ...
+
+# Call with specific model
+result = await analyze_call_feedback(input_data, model=Model.GPT_4O_LATEST)
+```
+
+This flexibility allows you to either fix the model in the agent definition or dynamically choose different models at runtime.
 
 > Models do not become invalid on WorkflowAI. When a model is retired, it will be replaced dynamically by
 > a newer version of the same model with the same or a lower price so calling the api with
