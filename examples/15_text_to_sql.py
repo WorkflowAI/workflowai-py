@@ -3,7 +3,7 @@ This example demonstrates how to convert natural language questions to SQL queri
 It uses a sample e-commerce database schema and shows how to generate safe and efficient SQL queries.
 
 Like example 14 (templated instructions), this example shows how to use variables in the agent's
-instructions. The template variables ({{ schema }} and {{ question }}) are automatically populated
+instructions. The template variables ({{ db_schema }} and {{ question }}) are automatically populated
 from the input model's fields, allowing the instructions to adapt based on the input.
 
 The example includes:
@@ -24,7 +24,7 @@ from workflowai import Model, Run
 class SQLGenerationInput(BaseModel):
     """Input model for the SQL generation agent."""
 
-    schema: str = Field(
+    db_schema: str = Field(
         description="The complete SQL schema with CREATE TABLE statements",
     )
     question: str = Field(
@@ -66,7 +66,7 @@ async def generate_sql(review_input: SQLGenerationInput) -> Run[SQLGenerationOut
     6. Include column names in GROUP BY rather than positions
 
     Schema:
-    {{ schema }}
+    {{ db_schema }}
 
     Question to convert to SQL:
     {{ question }}
@@ -124,7 +124,7 @@ async def main():
     print("-" * 50)
     run = await generate_sql(
         SQLGenerationInput(
-            schema=schema,
+            db_schema=schema,
             question="Show me all products that cost more than $100, ordered by price descending",
         ),
     )
@@ -135,7 +135,7 @@ async def main():
     print("-" * 50)
     run = await generate_sql(
         SQLGenerationInput(
-            schema=schema,
+            db_schema=schema,
             question=(
                 "List all customers with their total number of orders and total spend, "
                 "only showing customers who have made at least 2 orders"
@@ -149,7 +149,7 @@ async def main():
     print("-" * 50)
     run = await generate_sql(
         SQLGenerationInput(
-            schema=schema,
+            db_schema=schema,
             question=(
                 "What are the top 3 product categories by revenue in the last 30 days, "
                 "including the number of unique customers who bought from each category?"
