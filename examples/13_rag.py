@@ -93,7 +93,7 @@ class AssistantMessage(Message):
 
 class ChatbotOutput(BaseModel):
     """Output model for the chatbot response."""
-    assistant_message: AssistantMessage = Field(
+    assistant_message: AssistantMessage = Field(default_factory=AssistantMessage,
         description="The chatbot's response message",
     )
 
