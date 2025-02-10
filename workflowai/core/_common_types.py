@@ -1,4 +1,5 @@
 from typing import (
+    Annotated,
     Any,
     Generic,
     Optional,
@@ -21,8 +22,14 @@ class OutputValidator(Protocol, Generic[AgentOutputCov]):
     def __call__(self, data: dict[str, Any], has_tool_call_requests: bool) -> AgentOutputCov: ...
 
 
-class BaseRunParams(TypedDict):
+class VersionRunParams(TypedDict):
+    model: NotRequired[Optional[str]]
     version: NotRequired[Optional["VersionReference"]]
+    instructions: NotRequired[Optional[str]]
+    temperature: NotRequired[Optional[float]]
+
+
+class BaseRunParams(VersionRunParams):
     use_cache: NotRequired["CacheUsage"]
     metadata: NotRequired[Optional[dict[str, Any]]]
     labels: NotRequired[Optional[set[str]]]
@@ -33,4 +40,9 @@ class BaseRunParams(TypedDict):
 
 
 class RunParams(BaseRunParams, Generic[AgentOutput]):
+    id: Annotated[
+        NotRequired[str],
+        "A user defined ID for the run. The ID must be a UUID7, ordered by creation time."
+        "If not provided, a UUID7 will be assigned by the server",
+    ]
     validator: NotRequired[OutputValidator["AgentOutput"]]
