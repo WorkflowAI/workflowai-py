@@ -24,6 +24,9 @@ class MultiModelInput(BaseModel):
     question: str = Field(
         description="The question to ask all models",
     )
+    model_name: str = Field(
+        description="Name of the model providing the response",
+    )
 
 
 class ModelResponse(BaseModel):
@@ -39,9 +42,6 @@ class CombinerInput(BaseModel):
 
 class CombinedOutput(BaseModel):
     """Final output combining responses from all models."""
-    individual_responses: List[ModelResponse] = Field(
-        description="List of responses from each individual model",
-    )
     combined_answer: str = Field(
         description="Synthesized answer combining insights from all models",
     )
@@ -51,36 +51,16 @@ class CombinedOutput(BaseModel):
 
 
 @workflowai.agent(
-    id="gpt4o-mini-agent",
-    model=Model.GPT_4O_MINI_LATEST,
+    id="question-answerer",
 )
-async def get_gpt4_response(query: MultiModelInput) -> Run[ModelResponse]:
-    """Get response from GPT-4O Mini model."""
-    ...
-
-
-@workflowai.agent(
-    id="gemini-agent",
-    model=Model.GEMINI_2_0_FLASH_LATEST,
-)
-async def get_gemini_response(query: MultiModelInput) -> Run[ModelResponse]:
-    """Get response from Gemini 2.0 Flash model."""
-    ...
-
-
-@workflowai.agent(
-    id="llama-agent",
-    model=Model.LLAMA_3_3_70B,
-)
-async def get_llama_response(query: MultiModelInput) -> Run[ModelResponse]:
-    """Get response from Llama 3.3 70B model."""
+async def get_model_response(query: MultiModelInput, *, model: Model) -> Run[ModelResponse]:
+    """Get response from the specified model."""
     ...
 
 
 @workflowai.agent(
     id="response-combiner",
     model=Model.O3_MINI_2025_01_31_MEDIUM_REASONING_EFFORT,
-
 )
 async def combine_responses(responses_input: CombinerInput) -> Run[CombinedOutput]:
     """
@@ -109,18 +89,25 @@ async def main():
     question = "What is dark matter and why is it important for our understanding of the universe?"
 
     # Get responses from all models
-    gpt4_run = await get_gpt4_response(MultiModelInput(question=question))
-    gemini_run = await get_gemini_response(MultiModelInput(question=question))
-    llama_run = await get_llama_response(MultiModelInput(question=question))
+    models = [
+        (Model.GPT_4O_MINI_LATEST, "GPT-4O Mini"),
+        (Model.GEMINI_2_0_FLASH_LATEST, "Gemini 2.0 Flash"),
+        (Model.LLAMA_3_3_70B, "Llama 3.3 70B"),
+    ]
+
+    responses = []
+    for model, model_name in models:
+        run = await get_model_response(
+            MultiModelInput(
+                question=question,
+                model_name=model_name,
+            ),
+            model=model,
+        )
+        responses.append(run.output)
 
     # Combine responses
-    combined = await combine_responses(CombinerInput(
-        responses=[
-            gpt4_run.output,
-            gemini_run.output,
-            llama_run.output,
-        ],
-    ))
+    combined = await combine_responses(CombinerInput(responses=responses))
     print(combined)
 
 
