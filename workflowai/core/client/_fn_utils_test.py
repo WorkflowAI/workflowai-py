@@ -1,4 +1,4 @@
-from typing import AsyncIterator
+from typing import AsyncIterator, Union
 from unittest.mock import Mock
 
 import pytest
@@ -116,50 +116,43 @@ class TestAgentWrapper:
         assert chunks[0] == HelloTaskOutput(message="Hello, World!")
 
 
-def test_clean_docstring():
-    # Test empty docstring
-    assert clean_docstring("") == ""
-    assert clean_docstring(None) == ""
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        # Empty docstrings
+        ("", ""),
+        (None, ""),
 
-    # Test single line docstring
-    assert clean_docstring("Hello world") == "Hello world"
-    assert clean_docstring("  Hello world  ") == "Hello world"
+        # Single line docstrings
+        ("Hello world", "Hello world"),
+        ("  Hello world  ", "Hello world"),
 
-    # Test docstring with empty lines at start/end
-    assert clean_docstring("""
+        # Docstring with empty lines at start/end
+        ("""
 
         Hello world
 
-        """) == "Hello world"
+        """, "Hello world"),
 
-    # Test multi-line docstring with indentation
-    assert clean_docstring("""
+        # Multi-line docstring with indentation
+        ("""
         First line
         Second line
             Indented line
         Last line
-        """) == "First line\nSecond line\n    Indented line\nLast line"
+        """, "First line\nSecond line\n    Indented line\nLast line"),
 
-    # Test docstring with empty lines in between
-    assert clean_docstring("""
+        # Docstring with empty lines in between
+        ("""
         First line
 
         Second line
 
         Third line
-        """) == "First line\n\nSecond line\n\nThird line"
+        """, "First line\n\nSecond line\n\nThird line"),
 
-    # Test real-world example
-    expected = (
-        "Find the capital city of the country where the input city is located.\n\n"
-        "Guidelines:\n"
-        "1. First identify the country where the input city is located\n"
-        "2. Then provide the capital city of that country\n"
-        "3. Include an interesting historical or cultural fact about the capital\n"
-        "4. Be accurate and precise with geographical information\n"
-        "5. If the input city is itself the capital, still provide the information"
-    )
-    assert clean_docstring("""
+        # Real-world example
+        ("""
         Find the capital city of the country where the input city is located.
 
         Guidelines:
@@ -168,4 +161,15 @@ def test_clean_docstring():
         3. Include an interesting historical or cultural fact about the capital
         4. Be accurate and precise with geographical information
         5. If the input city is itself the capital, still provide the information
-        """) == expected
+        """,
+        "Find the capital city of the country where the input city is located.\n\n"
+        "Guidelines:\n"
+        "1. First identify the country where the input city is located\n"
+        "2. Then provide the capital city of that country\n"
+        "3. Include an interesting historical or cultural fact about the capital\n"
+        "4. Be accurate and precise with geographical information\n"
+        "5. If the input city is itself the capital, still provide the information"),
+    ],
+)
+def test_clean_docstring(value: Union[str, None], expected: str):
+    assert clean_docstring(value) == expected
