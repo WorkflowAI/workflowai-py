@@ -3,6 +3,7 @@ import json
 
 import httpx
 import pytest
+from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 from pytest_httpx import HTTPXMock, IteratorStream
 
 from tests.models.hello_task import (
@@ -18,6 +19,7 @@ from workflowai.core.client.client import (
 )
 from workflowai.core.domain.errors import WorkflowAIError
 from workflowai.core.domain.run import Run
+from workflowai.core.domain.version_properties import VersionProperties
 
 
 @pytest.fixture
@@ -256,3 +258,112 @@ class TestRun:
         assert reqs[0].url == "http://localhost:8000/v1/_/agents"
         assert reqs[1].url == "http://localhost:8000/v1/_/agents/123/schemas/2/run"
         assert reqs[2].url == "http://localhost:8000/v1/_/agents/123/schemas/2/run"
+
+        register_body = json.loads(reqs[0].content)
+        assert register_body["input_schema"] == {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+            },
+            "required": ["name"],
+        }
+        assert register_body["output_schema"] == {
+            "type": "object",
+            "properties": {
+                "message": {"type": "string"},
+            },
+            "required": ["message"],
+        }
+
+    async def test_with_alias(self, httpx_mock: HTTPXMock, api_client: APIClient):
+        class AliasInput(BaseModel):
+            name: str = Field(alias="name_alias")
+            aliased_ser: str = Field(serialization_alias="aliased_ser_alias")
+            aliased_val: str = Field(validation_alias="aliased_val_alias")
+
+        class AliasOutput(BaseModel):
+            message: str = Field(alias="message_alias")
+            aliased_ser: str = Field(serialization_alias="aliased_ser_alias")
+            aliased_val: str = Field(validation_alias="aliased_val_alias")
+
+        agent = Agent(agent_id="123", input_cls=AliasInput, output_cls=AliasOutput, api=api_client)
+
+        httpx_mock.add_response(url="http://localhost:8000/v1/_/agents", json={"id": "123", "schema_id": 2})
+
+        httpx_mock.add_response(
+            url="http://localhost:8000/v1/_/agents/123/schemas/2/run",
+            json={
+                "id": "1",
+                # task output should be compatible with the output schema below
+                "task_output": {
+                    "message_alias": "1",
+                    "aliased_ser": "2",
+                    "aliased_val_alias": "3",
+                },
+            },
+        )
+
+        out2 = await agent.run(
+            # Using model validate instead of constructing directly, since pyright does not
+            # Understand asymmetric aliases
+            AliasInput.model_validate({"name_alias": "1", "aliased_ser": "2", "aliased_val_alias": "3"}),
+        )
+        assert out2.output.message == "1"
+        assert out2.output.aliased_ser == "2"
+        assert out2.output.aliased_val == "3"
+
+        register_req = httpx_mock.get_request(url="http://localhost:8000/v1/_/agents")
+        assert register_req
+        register_body = json.loads(register_req.content)
+        assert register_body["input_schema"] == {
+            "type": "object",
+            "properties": {
+                "name_alias": {"type": "string"},
+                "aliased_ser_alias": {"type": "string"},
+                "aliased_val": {"type": "string"},
+            },
+            "required": ["name_alias", "aliased_ser_alias", "aliased_val"],
+        }
+        assert register_body["output_schema"] == {
+            "type": "object",
+            "properties": {
+                "message_alias": {"type": "string"},
+                "aliased_ser": {"type": "string"},
+                "aliased_val_alias": {"type": "string"},
+            },
+            "required": ["message_alias", "aliased_ser", "aliased_val_alias"],
+        }
+
+        run_req = httpx_mock.get_request(url="http://localhost:8000/v1/_/agents/123/schemas/2/run")
+        assert run_req
+        # Task input should be compatible with the input schema
+        assert json.loads(run_req.content)["task_input"] == {
+            "name_alias": "1",
+            "aliased_ser_alias": "2",
+            "aliased_val": "3",
+        }
+
+
+class TestSanitizeVersion:
+    def test_string_version(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        assert agent._sanitize_version({"version": "production"}) == "production"  # pyright: ignore [reportPrivateUsage]
+
+    def test_default_version(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        assert agent._sanitize_version({}) == "production"  # pyright: ignore [reportPrivateUsage]
+
+    def test_version_properties(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        assert agent._sanitize_version({"version": VersionProperties(temperature=0.7)}) == {  # pyright: ignore [reportPrivateUsage]
+            "temperature": 0.7,
+            "model": "gemini-1.5-pro-latest",
+        }
+
+    def test_version_properties_with_model(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        # When the default version is used and we pass the model, the model has priority
+        assert agent.version == "production", "sanity"
+        assert agent._sanitize_version({"model": "gemini-1.5-pro-latest"}) == {  # pyright: ignore [reportPrivateUsage]
+            "model": "gemini-1.5-pro-latest",
+        }
+
+    def test_version_with_models_and_version(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        # If version is explcitly provided then it takes priority and we log a warning
+        assert agent._sanitize_version({"version": "staging", "model": "gemini-1.5-pro-latest"}) == "staging"  # pyright: ignore [reportPrivateUsage]

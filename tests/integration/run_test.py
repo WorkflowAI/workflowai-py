@@ -52,6 +52,21 @@ async def test_run_task_run_version(test_client: IntTestClient) -> None:
     test_client.check_request(version="staging")
 
 
+async def test_run_task_run_with_model(test_client: IntTestClient) -> None:
+    @workflowai.agent(schema_id=1, version="staging")
+    async def city_to_capital(task_input: CityToCapitalTaskInput) -> Run[CityToCapitalTaskOutput]: ...
+
+    test_client.mock_response()
+
+    task_input = CityToCapitalTaskInput(city="Hello")
+    with_run = await city_to_capital(task_input, model="gpt-4o-latest")
+
+    assert with_run.id == "123"
+    assert with_run.output.capital == "Tokyo"
+
+    test_client.check_request(version={"model": "gpt-4o-latest"})
+
+
 async def test_stream_task_run(test_client: IntTestClient) -> None:
     @workflowai.agent(schema_id=1)
     def city_to_capital(task_input: CityToCapitalTaskInput) -> AsyncIterator[CityToCapitalTaskOutput]: ...
@@ -112,27 +127,23 @@ async def test_auto_register(test_client: IntTestClient):
         "input_schema": {
             "properties": {
                 "city": {
-                    "title": "City",
                     "type": "string",
                 },
             },
             "required": [
                 "city",
             ],
-            "title": "CityToCapitalTaskInput",
             "type": "object",
         },
         "output_schema": {
             "properties": {
                 "capital": {
-                    "title": "Capital",
                     "type": "string",
                 },
             },
             "required": [
                 "capital",
             ],
-            "title": "CityToCapitalTaskOutput",
             "type": "object",
         },
     }
