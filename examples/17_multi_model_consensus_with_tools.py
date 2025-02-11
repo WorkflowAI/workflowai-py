@@ -4,13 +4,18 @@ the response-combiner. While example 16 uses a fixed set of models defined in th
 function, this version lets the response-combiner itself decide which models are most
 appropriate for the question.
 
-By providing the ask_model function as a tool, the response-combiner can:
+This example demonstrates agent delegation, where one agent (the response-combiner) can
+dynamically invoke another agent (get_model_response) via tools. By providing the ask_model
+function as a tool, the response-combiner can:
+
 1. Choose which models to query based on the nature and complexity of the question
 2. Adapt its strategy based on initial responses (e.g. asking specialized models for clarification)
 3. Use its own reasoning to determine when it has enough perspectives to synthesize an answer
 
-This approach leverages the LLM's ability to reason about which models would be most helpful
-for different types of questions.
+This hierarchical approach allows the response-combiner agent to orchestrate multiple model
+queries by delegating to the get_model_response agent through tool calls. The response-combiner
+acts as a "manager" agent that can strategically coordinate with "worker" agents to gather
+the insights needed.
 """
 
 import asyncio
@@ -32,7 +37,10 @@ class AskModelOutput(BaseModel):
     """Output from asking a question to a model."""
     response: str = Field(description="The model's response to the question")
 
-
+# This function acts as a tool that allows one agent to delegate to another agent.
+# The response-combiner agent can use this tool to dynamically query different models
+# through the get_model_response agent. This creates a hierarchy where the
+# response-combiner orchestrates multiple model queries by delegating to get_model_response.
 async def ask_model(query_input: AskModelInput) -> AskModelOutput:
     """Ask a specific model a question and get its response."""
     run = await get_model_response(
