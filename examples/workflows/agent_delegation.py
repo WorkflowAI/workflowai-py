@@ -82,27 +82,26 @@ class OrchestratorOutput(BaseModel):
 
 
 @workflowai.agent(id="worker")
-async def worker_agent(input: WorkerInput, *, model: Model) -> Run[WorkerOutput]:
+async def worker_agent(agent_input: WorkerInput, *, model: Model) -> Run[WorkerOutput]:
     """
     A specialized worker agent that handles specific tasks.
-    
+
     Make sure to:
     1. Focus on the specific task assigned
-    2. Use the provided context if available
-    3. Be clear about confidence level
-    4. Explain any assumptions made
+    2. Provide detailed reasoning for your approach
+    3. Include confidence level in your response
     """
     ...
 
 
-async def delegate_task(input: DelegateInput) -> DelegateOutput:
+async def delegate_task(agent_input: DelegateInput) -> DelegateOutput:
     """Delegate a task to a worker agent with a specific model."""
     run = await worker_agent(
         WorkerInput(
-            task=input.task,
-            context=input.context,
+            task=agent_input.task,
+            context=agent_input.context,
         ),
-        model=input.model,
+        model=agent_input.model,
     )
     return DelegateOutput(
         response=run.output.response,
@@ -115,7 +114,7 @@ async def delegate_task(input: DelegateInput) -> DelegateOutput:
     model=Model.GPT_4O_LATEST,
     tools=[delegate_task],
 )
-async def orchestrator_agent(input: OrchestratorInput) -> Run[OrchestratorOutput]:
+async def orchestrator_agent(agent_input: OrchestratorInput) -> Run[OrchestratorOutput]:
     """
     You are an expert orchestrator that breaks down complex objectives into smaller tasks
     and delegates them to specialized agents. You can use the delegate_task tool to assign
