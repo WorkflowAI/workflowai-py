@@ -105,11 +105,11 @@ class FeedbackPoint(BaseModel):
 # Model representing the structured analysis of the customer feedback call
 class CallFeedbackOutput(BaseModel):
     """Structured analysis of the customer feedback call."""
-    positive_points: List[FeedbackPoint] = Field(
+    positive_points: list[FeedbackPoint] = Field(
         default_factory=list,
         description="List of positive feedback points, each with a supporting quote."
     )
-    negative_points: List[FeedbackPoint] = Field(
+    negative_points: list[FeedbackPoint] = Field(
         default_factory=list,
         description="List of negative feedback points, each with a supporting quote."
     )
@@ -267,7 +267,6 @@ async for chunk in analyze_call_feedback(feedback_input):
 > For example, a function with the signature `async def foo() -> AsyncIterator[int]` may be called
 > `async for c in await foo():...` in certain cases...
 
-
 #### Streaming the run object
 
 Use `AsyncIterator[Run[Output]]` to get the **run** object as it is generated, which allows you, for the **last chunk**, to access the cost and duration of the run.
@@ -331,7 +330,7 @@ class PDFQuestionInput(BaseModel):
 
 class PDFAnswerOutput(BaseModel):
     answer: str = Field(description="The answer to the question based on the PDF content")
-    quotes: List[str] = Field(description="Relevant quotes from the PDF that support the answer")
+    quotes: list[str] = Field(description="Relevant quotes from the PDF that support the answer")
 
 @workflowai.agent(id="pdf-answer", model=Model.CLAUDE_3_5_SONNET_LATEST)
 async def answer_pdf_question(input: PDFQuestionInput) -> PDFAnswerOutput:
@@ -610,8 +609,8 @@ values.
 
 ```python
 class CallFeedbackOutputStrict(BaseModel):
-    positive_points: List[FeedbackPoint]
-    negative_points: List[FeedbackPoint]
+    positive_points: list[FeedbackPoint]
+    negative_points: list[FeedbackPoint]
 
 @workflowai.agent()
 async def analyze_call_feedback_strict(input: CallFeedbackInput) -> CallFeedbackOutputStrict:
@@ -628,8 +627,8 @@ except WorkflowAIError as e:
     print(e.code) # "invalid_generation" error code means that the generation did not match the schema
 
 class CallFeedbackOutputTolerant(BaseModel):
-    positive_points: List[FeedbackPoint] = Field(default_factory=list)
-    negative_points: List[FeedbackPoint] = Field(default_factory=list)
+    positive_points: list[FeedbackPoint] = Field(default_factory=list)
+    negative_points: list[FeedbackPoint] = Field(default_factory=list)
 
 @workflowai.agent()
 async def analyze_call_feedback_tolerant(input: CallFeedbackInput) -> CallFeedbackOutputTolerant:

@@ -1,14 +1,11 @@
 import functools
 import inspect
-from collections.abc import Callable, Iterable
+from collections.abc import AsyncIterator, Callable, Iterable, Sequence
 from typing import (
     Any,
-    AsyncIterator,
     Generic,
     NamedTuple,
     Optional,
-    Sequence,
-    Type,
     Union,
     get_args,
     get_origin,
@@ -42,7 +39,7 @@ def get_generic_args(t: type[BaseModel]) -> Union[Sequence[type], None]:
     return t.__pydantic_generic_metadata__.get("args")
 
 
-def check_return_type(return_type_hint: Type[Any]) -> tuple[bool, Type[BaseModel]]:
+def check_return_type(return_type_hint: type[Any]) -> tuple[bool, type[BaseModel]]:
     if issubclass(return_type_hint, Run):
         args = get_generic_args(return_type_hint)  # pyright: ignore [reportUnknownArgumentType]
         if not args:
@@ -59,8 +56,8 @@ def check_return_type(return_type_hint: Type[Any]) -> tuple[bool, Type[BaseModel
 class RunFunctionSpec(NamedTuple):
     stream: bool
     output_only: bool
-    input_cls: Type[BaseModel]
-    output_cls: Type[BaseModel]
+    input_cls: type[BaseModel]
+    output_cls: type[BaseModel]
 
 
 def is_async_iterator(t: type[Any]) -> bool:

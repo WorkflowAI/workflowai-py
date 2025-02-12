@@ -1,6 +1,6 @@
 import asyncio
 from enum import Enum
-from typing import List, TypedDict
+from typing import TypedDict
 
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 
@@ -37,7 +37,7 @@ class ImplementationPlanInput(BaseModel):
 class ImplementationPlanOutput(BaseModel):
     """Output containing the implementation plan."""
 
-    files: List[FileChange] = Field(description="List of files to be changed.")
+    files: list[FileChange] = Field(description="List of files to be changed.")
     estimated_complexity: ComplexityLevel = Field(description="Estimated complexity of the implementation.")
 
 
@@ -86,7 +86,7 @@ class ImplementationChange(TypedDict):
 
 class FeatureImplementationResult(TypedDict):
     plan: ImplementationPlanOutput
-    changes: List[ImplementationChange]
+    changes: list[ImplementationChange]
 
 
 async def implement_feature(feature_request: str) -> FeatureImplementationResult:
@@ -117,7 +117,7 @@ async def implement_feature(feature_request: str) -> FeatureImplementationResult
     )
 
     # Combine results
-    changes: List[ImplementationChange] = [
+    changes: list[ImplementationChange] = [
         {
             "file": implementation_plan.files[i],
             "implementation": change,
