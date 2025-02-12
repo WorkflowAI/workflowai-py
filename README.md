@@ -44,7 +44,7 @@ You can override the shared client by calling the init function.
 import workflowai
 
 workflowai.init(
-    url=..., # defaults to WORKFLOWAI_API_URL env var or https://api.workflowai.com
+    url=..., # defaults to WORKFLOWAI_API_URL env var or https://run.workflowai.com (our [globally distributed, highly available endpoint](https://docs.workflowai.com/workflowai-cloud/reliability))
     api_key=..., # defaults to WORKFLOWAI_API_KEY env var
 )
 ```
