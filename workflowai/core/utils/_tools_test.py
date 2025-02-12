@@ -2,10 +2,10 @@ import json
 from datetime import datetime
 from enum import Enum
 from typing import Annotated, Any
+from zoneinfo import ZoneInfo
 
 import pytest
 from pydantic import BaseModel
-from zoneinfo import ZoneInfo
 
 from workflowai.core.utils._tools import _get_type_schema, tool_schema  # pyright: ignore [reportPrivateUsage]
 

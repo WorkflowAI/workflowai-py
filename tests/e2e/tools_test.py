@@ -1,8 +1,8 @@
 from datetime import datetime
 from typing import Annotated
+from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel
-from zoneinfo import ZoneInfo
 
 from workflowai import Run, agent
 from workflowai.core.domain.model import Model

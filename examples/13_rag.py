@@ -12,7 +12,7 @@ function to demonstrate the pattern.
 
 import asyncio
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -22,12 +22,14 @@ from workflowai import Model, Run
 
 class Role(str, Enum):
     """Enum representing possible message roles."""
+
     USER = "user"
     ASSISTANT = "assistant"
 
 
 class SearchResult(BaseModel):
     """Model representing a search result from the knowledge base."""
+
     content: str = Field(
         description="The content of the search result",
     )
@@ -38,7 +40,7 @@ class SearchResult(BaseModel):
 
 # Simulated knowledge base search tool
 # ruff: noqa: ARG001
-async def search_faq(query: str) -> List[SearchResult]:
+async def search_faq(query: str) -> list[SearchResult]:
     """
     Search the knowledge base for relevant information.
 
@@ -79,6 +81,7 @@ async def search_faq(query: str) -> List[SearchResult]:
 
 class Message(BaseModel):
     """Model representing a chat message."""
+
     role: Role
     content: str = Field(
         description="The content of the message",
@@ -87,20 +90,24 @@ class Message(BaseModel):
 
 class AssistantMessage(Message):
     """Model representing a message from the assistant."""
+
     role: Role = Role.ASSISTANT
     content: str = ""
 
 
 class ChatbotOutput(BaseModel):
     """Output model for the chatbot response."""
-    assistant_message: AssistantMessage = Field(default_factory=AssistantMessage,
+
+    assistant_message: AssistantMessage = Field(
+        default_factory=AssistantMessage,
         description="The chatbot's response message",
     )
 
 
 class ChatInput(BaseModel):
     """Input model containing the user's message and conversation history."""
-    conversation_history: Optional[List[Message]] = Field(
+
+    conversation_history: Optional[list[Message]] = Field(
         default=None,
         description="Previous messages in the conversation, if any",
     )

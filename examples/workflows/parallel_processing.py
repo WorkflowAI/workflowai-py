@@ -1,6 +1,6 @@
 import asyncio
 from enum import Enum
-from typing import List, TypedDict
+from typing import TypedDict
 
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 
@@ -23,9 +23,9 @@ class SecurityReviewInput(BaseModel):
 class SecurityReviewOutput(BaseModel):
     """Output from security code review."""
 
-    vulnerabilities: List[str] = Field(description="List of identified security vulnerabilities.")
+    vulnerabilities: list[str] = Field(description="List of identified security vulnerabilities.")
     risk_level: RiskLevel = Field(description="Overall security risk level.")
-    suggestions: List[str] = Field(description="Security improvement suggestions.")
+    suggestions: list[str] = Field(description="Security improvement suggestions.")
 
 
 # Uses Claude 3.5 Sonnet for its strong security analysis capabilities
@@ -47,9 +47,9 @@ class PerformanceReviewInput(BaseModel):
 class PerformanceReviewOutput(BaseModel):
     """Output from performance code review."""
 
-    issues: List[str] = Field(description="List of identified performance issues.")
+    issues: list[str] = Field(description="List of identified performance issues.")
     impact: RiskLevel = Field(description="Impact level of performance issues.")
-    optimizations: List[str] = Field(description="Performance optimization suggestions.")
+    optimizations: list[str] = Field(description="Performance optimization suggestions.")
 
 
 # Uses O1 Mini for its expertise in performance optimization
@@ -71,9 +71,9 @@ class MaintainabilityReviewInput(BaseModel):
 class MaintainabilityReviewOutput(BaseModel):
     """Output from maintainability code review."""
 
-    concerns: List[str] = Field(description="List of maintainability concerns.")
+    concerns: list[str] = Field(description="List of maintainability concerns.")
     quality_score: int = Field(description="Code quality score (1-10).", ge=1, le=10)
-    recommendations: List[str] = Field(description="Maintainability improvement recommendations.")
+    recommendations: list[str] = Field(description="Maintainability improvement recommendations.")
 
 
 # Uses Claude 3.5 Sonnet for its strong code quality and readability analysis

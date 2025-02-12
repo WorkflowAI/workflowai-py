@@ -1,5 +1,6 @@
+from collections.abc import AsyncIterator
 from enum import Enum
-from typing import AsyncIterator, Optional
+from typing import Optional
 
 import pytest
 from pydantic import BaseModel
