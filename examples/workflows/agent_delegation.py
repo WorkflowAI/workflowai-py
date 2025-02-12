@@ -67,7 +67,7 @@ class OrchestratorInput(BaseModel):
     objective: str = Field(description="The high-level objective to achieve")
     requirements: List[str] = Field(
         description="List of specific requirements or constraints",
-        min_items=1,
+        default_factory=list,
     )
 
 
@@ -81,8 +81,7 @@ class OrchestratorOutput(BaseModel):
     )
 
 
-@workflowai.agent(id="worker")
-async def worker_agent(agent_input: WorkerInput, *, model: Model) -> Run[WorkerOutput]:
+async def worker_agent(agent_input: WorkerInput) -> Run[WorkerOutput]:
     """
     A specialized worker agent that handles specific tasks.
 
@@ -96,12 +95,13 @@ async def worker_agent(agent_input: WorkerInput, *, model: Model) -> Run[WorkerO
 
 async def delegate_task(agent_input: DelegateInput) -> DelegateOutput:
     """Delegate a task to a worker agent with a specific model."""
-    run = await worker_agent(
+    # Create a new worker agent with the specified model
+    worker = workflowai.agent(id="worker", model=agent_input.model)(worker_agent)
+    run = await worker(
         WorkerInput(
             task=agent_input.task,
             context=agent_input.context,
         ),
-        model=agent_input.model,
     )
     return DelegateOutput(
         response=run.output.response,
