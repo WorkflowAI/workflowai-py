@@ -110,7 +110,7 @@ class Run(BaseModel, Generic[AgentOutput]):
 
         # Add run information if available
         if self.cost_usd is not None:
-            output.append(f"Cost: $ {self.cost_usd}")
+            output.append(f"Cost: $ {self.cost_usd:.5f}")
         if self.duration_seconds is not None:
             output.append(f"Latency: {self.duration_seconds:.2f}s")
 
