@@ -57,7 +57,7 @@ class TestRun:
     async def test_success(self, httpx_mock: HTTPXMock, agent: Agent[HelloTaskInput, HelloTaskOutput]):
         httpx_mock.add_response(json=fixtures_json("task_run.json"))
 
-        task_run = await agent.run(task_input=HelloTaskInput(name="Alice"))
+        task_run = await agent.run(HelloTaskInput(name="Alice"))
 
         assert task_run.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
         assert task_run.agent_id == "123"
@@ -85,7 +85,7 @@ class TestRun:
             ),
         )
 
-        chunks = [chunk async for chunk in agent.stream(task_input=HelloTaskInput(name="Alice"))]
+        chunks = [chunk async for chunk in agent.stream(HelloTaskInput(name="Alice"))]
 
         outputs = [chunk.output for chunk in chunks]
         assert outputs == [
@@ -119,7 +119,7 @@ class TestRun:
             ),
         )
 
-        chunks = [chunk async for chunk in agent_not_optional.stream(task_input=HelloTaskInput(name="Alice"))]
+        chunks = [chunk async for chunk in agent_not_optional.stream(HelloTaskInput(name="Alice"))]
 
         messages = [chunk.output.message for chunk in chunks]
         assert messages == ["", "hel", "hello", "hello"]
@@ -142,7 +142,7 @@ class TestRun:
         httpx_mock.add_response(json=fixtures_json("task_run.json"))
 
         await agent.run(
-            task_input=HelloTaskInput(name="Alice"),
+            HelloTaskInput(name="Alice"),
             version="dev",
         )
 
@@ -160,7 +160,7 @@ class TestRun:
     async def test_success_with_headers(self, httpx_mock: HTTPXMock, agent: Agent[HelloTaskInput, HelloTaskOutput]):
         httpx_mock.add_response(json=fixtures_json("task_run.json"))
 
-        task_run = await agent.run(task_input=HelloTaskInput(name="Alice"))
+        task_run = await agent.run(HelloTaskInput(name="Alice"))
 
         assert task_run.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
 
@@ -198,7 +198,7 @@ class TestRun:
             json=fixtures_json("task_run.json"),
         )
 
-        task_run = await agent.run(task_input=HelloTaskInput(name="Alice"), max_retry_count=5)
+        task_run = await agent.run(HelloTaskInput(name="Alice"), max_retry_count=5)
 
         assert task_run.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
 
@@ -214,7 +214,7 @@ class TestRun:
         httpx_mock.add_exception(httpx.ConnectError("arg"))
         httpx_mock.add_response(json=fixtures_json("task_run.json"))
 
-        task_run = await agent.run(task_input=HelloTaskInput(name="Alice"), max_retry_count=5)
+        task_run = await agent.run(HelloTaskInput(name="Alice"), max_retry_count=5)
         assert task_run.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
 
     async def test_max_retries(self, httpx_mock: HTTPXMock, agent: Agent[HelloTaskInput, HelloTaskOutput]):
@@ -222,7 +222,7 @@ class TestRun:
         httpx_mock.add_exception(httpx.ConnectError("arg"), is_reusable=True)
 
         with pytest.raises(WorkflowAIError):
-            await agent.run(task_input=HelloTaskInput(name="Alice"), max_retry_count=5)
+            await agent.run(HelloTaskInput(name="Alice"), max_retry_count=5)
 
         reqs = httpx_mock.get_requests()
         assert len(reqs) == 5
@@ -241,7 +241,7 @@ class TestRun:
             json=run_response,
         )
 
-        out = await agent_no_schema.run(task_input=HelloTaskInput(name="Alice"))
+        out = await agent_no_schema.run(HelloTaskInput(name="Alice"))
         assert out.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
 
         run_response["id"] = "8f635b73-f403-47ee-bff9-18320616c6cc"
@@ -250,7 +250,7 @@ class TestRun:
             url="http://localhost:8000/v1/_/agents/123/schemas/2/run",
             json=run_response,
         )
-        out2 = await agent_no_schema.run(task_input=HelloTaskInput(name="Alice"))
+        out2 = await agent_no_schema.run(HelloTaskInput(name="Alice"))
         assert out2.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
 
         reqs = httpx_mock.get_requests()
