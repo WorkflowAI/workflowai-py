@@ -67,7 +67,29 @@ def test_format_output() -> None:
   "message": "hello"
 }
 ==================================================
-Cost: $ 0.001
+Cost: $ 0.00100
+Latency: 1.23s"""
+
+    assert run.format_output() == expected
+
+
+def test_format_output_very_low_cost() -> None:
+    run = Run[_TestOutput](
+        id="test-id",
+        agent_id="agent-1",
+        schema_id=1,
+        output=_TestOutput(message="hello"),
+        duration_seconds=1.23,
+        cost_usd=4.97625e-05,
+    )
+
+    expected = """\nOutput:
+==================================================
+{
+  "message": "hello"
+}
+==================================================
+Cost: $ 0.00005
 Latency: 1.23s"""
 
     assert run.format_output() == expected
