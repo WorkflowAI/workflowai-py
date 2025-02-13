@@ -52,7 +52,7 @@ async def test_run_task(
     ],
 ):
     task_input = ExtractProductReviewSentimentTaskInput(review_text="This product is amazing!")
-    run = await extract_product_review_sentiment_agent.run(task_input=task_input, use_cache="never")
+    run = await extract_product_review_sentiment_agent.run(task_input, use_cache="never")
     assert run.output.sentiment == Sentiment.POSITIVE
 
 
@@ -67,7 +67,7 @@ async def test_stream_task(
     )
 
     streamed = extract_product_review_sentiment_agent.stream(
-        task_input=task_input,
+        task_input,
         use_cache="never",
     )
     chunks = [chunk async for chunk in streamed]
