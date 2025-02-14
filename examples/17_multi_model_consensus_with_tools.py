@@ -85,7 +85,7 @@ class CombinedOutput(BaseModel):
 @workflowai.agent(
     id="question-answerer",
 )
-async def get_model_response(query: MultiModelInput, *, model: Model) -> Run[ModelResponse]:
+async def get_model_response(query: MultiModelInput) -> Run[ModelResponse]:
     """
     Make sure to:
     1. Provide a clear and detailed response
