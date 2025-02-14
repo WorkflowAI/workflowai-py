@@ -31,7 +31,7 @@ class TestAgentDecorator:
         async def fn(task_input: HelloTaskInput) -> HelloTaskOutput: ...
 
         assert fn.__name__ == "fn"
-        assert fn.__doc__ is None
+        assert fn.__doc__ is not None
         assert callable(fn)
 
     async def test_run_output_only(self, workflowai: WorkflowAI, mock_run_fn: Mock):

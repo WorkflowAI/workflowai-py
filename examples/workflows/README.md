@@ -58,6 +58,27 @@ The Chain of Agents pattern is designed for processing long documents or complex
 
 For an implementation example, see [chain_of_agents.py](chain_of_agents.py).
 
+## 7. Agent Delegation
+The Agent Delegation pattern enables dynamic and flexible workflows where one agent can invoke other agents through tools. This pattern is particularly useful when you want an agent to dynamically choose which specialized agents to use based on the task at hand, rather than having a fixed sequence or structure.
+
+**Key Features:**
+- Dynamic model selection based on task requirements
+- Flexible workflow that adapts based on initial responses
+- Ability to track which agents were used and why
+- Built-in confidence scoring for quality control
+
+**Example:**
+- An orchestrator agent receives a complex task (e.g., system architecture design)
+- It breaks down the task into smaller components
+- For each component, it:
+  - Chooses the most appropriate model (e.g., GPT-4 for reasoning, Claude for analysis)
+  - Delegates the work through a tool
+  - Evaluates the response and confidence level
+  - Requests additional work if needed
+- Finally, it synthesizes all responses into a coherent solution
+
+For an implementation example, see [agent_delegation.py](agent_delegation.py).
+
 ---
 
 These patterns were inspired by the workflow patterns described in the [Vercel AI SDK Documentation](https://sdk.vercel.ai/docs/foundations/agents#patterns-with-examples) and research from organizations like [Google Research](https://research.google/blog/chain-of-agents-large-language-models-collaborating-on-long-context-tasks/).

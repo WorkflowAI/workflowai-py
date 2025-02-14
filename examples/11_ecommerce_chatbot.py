@@ -18,12 +18,14 @@ from workflowai import Model, Run
 
 class Role(str, Enum):
     """Enum representing possible message roles."""
+
     USER = "user"
     ASSISTANT = "assistant"
 
 
 class Product(BaseModel):
     """Model representing a product recommendation."""
+
     name: str = Field(
         description="Name of the product",
         examples=["Wireless Noise-Cancelling Headphones", "4K Smart TV"],
@@ -56,6 +58,7 @@ class Product(BaseModel):
 
 class Message(BaseModel):
     """Model representing a chat message."""
+
     role: Role = Field()
     content: str = Field(
         description="The content of the message",
@@ -72,12 +75,14 @@ class Message(BaseModel):
 
 class AssistantMessage(Message):
     """Model representing a message from the assistant."""
+
     role: Role = Role.ASSISTANT
     content: str = ""
 
 
 class ChatbotOutput(BaseModel):
     """Output model for the chatbot response."""
+
     assistant_message: AssistantMessage = Field(
         description="The chatbot's response message",
     )
@@ -85,6 +90,7 @@ class ChatbotOutput(BaseModel):
 
 class ChatInput(BaseModel):
     """Input model containing the user's message and conversation history."""
+
     conversation_history: Optional[list[Message]] = Field(
         default=None,
         description="Previous messages in the conversation, if any",

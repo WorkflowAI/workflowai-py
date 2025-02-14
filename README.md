@@ -234,6 +234,27 @@ def analyze_call_feedback(input: CallFeedbackInput) -> AsyncIterator[Run[CallFee
     ...
 ```
 
+#### The Agent class
+
+Any agent function (aka a function decorated with `@workflowai.agent()`) is in fact an instance
+of the `Agent` class. Which means that any defined agent can access the underlying agent functions, mainly
+`run`, `stream` and `reply`. The `__call__` method of the agent is overriden for convenience to match the original
+function signature.
+
+```python
+# Any agent definition would also work
+@workflowai.agent()
+def analyze_call_feedback(input: CallFeedbackInput) -> CallFeedbackOutput:
+    ...
+
+# It is possible to call the run function directly to get a run object if needed
+run = await agent.run(CallFeedbackInput(...))
+# Or the stream function to get a stream of run objects (see below)
+chunks = [chunk async for chunk in agent.stream(CallFeedbackInput(...))
+# Or reply to manually to a given run id (see reply below)
+run = await agent.reply(run_id="...", user_message="...", tool_results=...)
+```
+
 ### The Run object
 
 Although having an agent only return the run output covers most use cases, some use cases require having more
@@ -452,6 +473,9 @@ construction of a final output.
 > To allow run iterations, it is very important to have outputs that are tolerant to missing fields, aka that
 > have default values for most of their fields. Otherwise the agent will throw a WorkflowAIError on missing fields
 > and the run chain will be broken.
+
+> Under the hood, `run.reply` calls the `say_hello.reply` method as described in the
+> [Agent class](#the-agent-class) section.
 
 ### Tools
 
