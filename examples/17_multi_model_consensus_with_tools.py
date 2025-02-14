@@ -19,7 +19,6 @@ the insights needed.
 """
 
 import asyncio
-from typing import List
 
 from pydantic import BaseModel, Field
 
@@ -29,13 +28,16 @@ from workflowai import Model, Run
 
 class AskModelInput(BaseModel):
     """Input for asking a question to a specific model."""
+
     question: str = Field(description="The question to ask")
     model: Model = Field(description="The model to ask the question to")
 
 
 class AskModelOutput(BaseModel):
     """Output from asking a question to a model."""
+
     response: str = Field(description="The model's response to the question")
+
 
 # This function acts as a tool that allows one agent to delegate to another agent.
 # The response-combiner agent can use this tool to dynamically query different models
@@ -54,6 +56,7 @@ async def ask_model(query_input: AskModelInput) -> AskModelOutput:
 
 class MultiModelInput(BaseModel):
     """Input model containing the question to ask all models."""
+
     question: str = Field(
         description="The question to ask all models",
     )
@@ -61,23 +64,26 @@ class MultiModelInput(BaseModel):
 
 class ModelResponse(BaseModel):
     """Response from an individual model."""
+
     response: str = Field(description="The model's response to the question")
 
 
 class CombinerInput(BaseModel):
     """Input for the response combiner."""
+
     original_question: str = Field(description="The question to ask multiple models")
 
 
 class CombinedOutput(BaseModel):
     """Final output combining responses from all models."""
+
     combined_answer: str = Field(
         description="Synthesized answer combining insights from all models",
     )
     explanation: str = Field(
         description="Explanation of how the responses were combined and why",
     )
-    models_used: List[str] = Field(
+    models_used: list[str] = Field(
         description="List of models whose responses were combined",
     )
 

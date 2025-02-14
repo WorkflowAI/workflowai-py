@@ -16,7 +16,6 @@ Key benefits of this approach:
 """
 
 import asyncio
-from typing import List
 
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 
@@ -47,7 +46,7 @@ class WorkerOutput(BaseModel):
     findings: str = Field(
         description="Key findings and information extracted from this chunk.",
     )
-    evidence: List[str] = Field(
+    evidence: list[str] = Field(
         default_factory=list,
         description="Supporting evidence or quotes from the chunk.",
     )
@@ -70,7 +69,7 @@ class ManagerOutput(BaseModel):
 
     answer: str = Field(description="The final answer to the query.")
     reasoning: str = Field(description="Explanation of how the answer was derived.")
-    supporting_evidence: List[str] = Field(
+    supporting_evidence: list[str] = Field(
         default_factory=list,
         description="Key evidence supporting the answer.",
     )

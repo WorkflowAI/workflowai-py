@@ -11,7 +11,6 @@ Then uses O3 Mini (with medium reasoning effort) to analyze and combine their re
 """
 
 import asyncio
-from typing import List
 
 from pydantic import BaseModel, Field
 
@@ -21,6 +20,7 @@ from workflowai import Model, Run
 
 class MultiModelInput(BaseModel):
     """Input model containing the question to ask all models."""
+
     question: str = Field(
         description="The question to ask all models",
     )
@@ -31,17 +31,20 @@ class MultiModelInput(BaseModel):
 
 class ModelResponse(BaseModel):
     """Response from an individual model."""
+
     model_name: str = Field(description="Name of the model that provided this response")
     response: str = Field(description="The model's response to the question")
 
 
 class CombinerInput(BaseModel):
     """Input for the response combiner."""
-    responses: List[ModelResponse] = Field(description="List of responses to combine")
+
+    responses: list[ModelResponse] = Field(description="List of responses to combine")
 
 
 class CombinedOutput(BaseModel):
     """Final output combining responses from all models."""
+
     combined_answer: str = Field(
         description="Synthesized answer combining insights from all models",
     )

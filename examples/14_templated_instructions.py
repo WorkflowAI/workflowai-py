@@ -19,7 +19,6 @@ It showcases:
 """
 
 import asyncio
-from typing import List
 
 from pydantic import BaseModel, Field
 
@@ -29,6 +28,7 @@ from workflowai import Model, Run
 
 class CodeReviewInput(BaseModel):
     """Input model for the code review agent."""
+
     language: str = Field(
         description="The programming language of the code to review",
         examples=["python", "javascript", "typescript"],
@@ -44,7 +44,7 @@ class CodeReviewInput(BaseModel):
         description="Whether this is a production code review",
         default=False,
     )
-    required_checks: List[str] = Field(
+    required_checks: list[str] = Field(
         description="List of specific checks to perform",
         default=["code style", "performance", "maintainability"],
     )
@@ -57,17 +57,18 @@ class CodeReviewInput(BaseModel):
 
 class CodeReviewOutput(BaseModel):
     """Output model containing the code review results."""
+
     overall_assessment: str = Field(
         description="Overall assessment of the code quality",
     )
-    style_violations: List[str] = Field(
+    style_violations: list[str] = Field(
         description="List of style guide violations",
     )
-    security_issues: List[str] = Field(
+    security_issues: list[str] = Field(
         description="List of security concerns",
         default_factory=list,
     )
-    suggested_improvements: List[str] = Field(
+    suggested_improvements: list[str] = Field(
         description="List of suggested improvements",
     )
 

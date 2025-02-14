@@ -1,4 +1,5 @@
-from typing import AsyncIterator, Union
+from collections.abc import AsyncIterator
+from typing import Union
 from unittest.mock import Mock
 
 import pytest

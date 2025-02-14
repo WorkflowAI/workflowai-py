@@ -13,7 +13,6 @@ The example includes:
 """
 
 import asyncio
-from typing import List
 
 from pydantic import BaseModel, Field
 
@@ -41,7 +40,7 @@ class SQLGenerationOutput(BaseModel):
     explanation: str = Field(
         description="Explanation of what the query does and why certain choices were made",
     )
-    tables_used: List[str] = Field(
+    tables_used: list[str] = Field(
         description="List of tables referenced in the query",
     )
 

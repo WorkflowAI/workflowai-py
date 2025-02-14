@@ -8,7 +8,7 @@ This example demonstrates how to create an e-commerce chatbot that:
 
 import asyncio
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -64,7 +64,7 @@ class Message(BaseModel):
             "Based on your requirements, here are some great headphone options...",
         ],
     )
-    recommended_products: Optional[List[Product]] = Field(
+    recommended_products: Optional[list[Product]] = Field(
         default=None,
         description="Product recommendations included with this message, if any",
     )
@@ -85,7 +85,7 @@ class ChatbotOutput(BaseModel):
 
 class ChatInput(BaseModel):
     """Input model containing the user's message and conversation history."""
-    conversation_history: Optional[List[Message]] = Field(
+    conversation_history: Optional[list[Message]] = Field(
         default=None,
         description="Previous messages in the conversation, if any",
     )
