@@ -15,7 +15,7 @@ The example shows how to:
 """
 
 import asyncio
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -25,6 +25,7 @@ from workflowai import Model
 
 class DelegateInput(BaseModel):
     """Input for delegating a task to a specialized agent."""
+
     task: str = Field(description="The task to delegate")
     model: Model = Field(description="The model to use for this task")
     context: Optional[str] = Field(
@@ -35,6 +36,7 @@ class DelegateInput(BaseModel):
 
 class DelegateOutput(BaseModel):
     """Output from a delegated task."""
+
     response: str = Field(description="The agent's response to the task")
     confidence: float = Field(
         description="Confidence score between 0 and 1",
@@ -45,6 +47,7 @@ class DelegateOutput(BaseModel):
 
 class WorkerInput(BaseModel):
     """Input for the worker agent."""
+
     task: str = Field(description="The task to perform")
     context: Optional[str] = Field(
         default=None,
@@ -54,6 +57,7 @@ class WorkerInput(BaseModel):
 
 class WorkerOutput(BaseModel):
     """Output from the worker agent."""
+
     response: str = Field(description="The response to the task")
     confidence: float = Field(
         description="Confidence score between 0 and 1",
@@ -64,8 +68,9 @@ class WorkerOutput(BaseModel):
 
 class OrchestratorInput(BaseModel):
     """Input for the orchestrator agent."""
+
     objective: str = Field(description="The high-level objective to achieve")
-    requirements: List[str] = Field(
+    requirements: list[str] = Field(
         description="List of specific requirements or constraints",
         default_factory=list,
     )
@@ -73,12 +78,14 @@ class OrchestratorInput(BaseModel):
 
 class OrchestratorOutput(BaseModel):
     """Final output from the orchestrator."""
+
     solution: str = Field(description="The final solution that meets the objective")
     explanation: str = Field(description="Explanation of how the solution was derived")
-    agents_used: List[str] = Field(
+    agents_used: list[str] = Field(
         description="List of agents/models used in the process",
         default_factory=list,
     )
+
 
 @workflowai.agent()
 async def worker_agent(agent_input: WorkerInput) -> WorkerOutput:
