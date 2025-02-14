@@ -196,7 +196,7 @@ async def analyze_call_feedback(input: CallFeedbackInput) -> CallFeedbackOutput:
 2. As a function parameter when calling the agent:
 ```python
 @workflowai.agent(id="analyze-call-feedback")
-async def analyze_call_feedback(input: CallFeedbackInput, *, model: Model) -> CallFeedbackOutput:
+async def analyze_call_feedback(input: CallFeedbackInput) -> CallFeedbackOutput:
     ...
 
 # Call with specific model
