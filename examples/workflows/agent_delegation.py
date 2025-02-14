@@ -20,7 +20,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 import workflowai
-from workflowai import Model, Run
+from workflowai import Model
 
 
 class DelegateInput(BaseModel):
@@ -80,8 +80,8 @@ class OrchestratorOutput(BaseModel):
         default_factory=list,
     )
 
-
-async def worker_agent(agent_input: WorkerInput) -> Run[WorkerOutput]:
+@workflowai.agent()
+async def worker_agent(agent_input: WorkerInput) -> WorkerOutput:
     """
     A specialized worker agent that handles specific tasks.
 
@@ -95,13 +95,13 @@ async def worker_agent(agent_input: WorkerInput) -> Run[WorkerOutput]:
 
 async def delegate_task(agent_input: DelegateInput) -> DelegateOutput:
     """Delegate a task to a worker agent with a specific model."""
-    # Create a new worker agent with the specified model
-    worker = workflowai.agent(id="worker", model=agent_input.model)(worker_agent)
-    run = await worker(
+    # Run the worker agent with the specified model
+    run = await worker_agent.run(
         WorkerInput(
             task=agent_input.task,
             context=agent_input.context,
         ),
+        model=agent_input.model,
     )
     return DelegateOutput(
         response=run.output.response,
@@ -114,7 +114,7 @@ async def delegate_task(agent_input: DelegateInput) -> DelegateOutput:
     model=Model.GPT_4O_LATEST,
     tools=[delegate_task],
 )
-async def orchestrator_agent(agent_input: OrchestratorInput) -> Run[OrchestratorOutput]:
+async def orchestrator_agent(agent_input: OrchestratorInput) -> OrchestratorOutput:
     """
     You are an expert orchestrator that breaks down complex objectives into smaller tasks
     and delegates them to specialized agents. You can use the delegate_task tool to assign
@@ -146,7 +146,7 @@ async def main():
     print("\nExample: Software Architecture Design")
     print("-" * 50)
 
-    result = await orchestrator_agent(
+    result = await orchestrator_agent.run(
         OrchestratorInput(
             objective="Design a scalable microservices architecture for an e-commerce platform",
             requirements=[
