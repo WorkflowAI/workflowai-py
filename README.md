@@ -335,7 +335,7 @@ image = Image(content_type='image/jpeg', data='<base 64 encoded data>')
 image = Image(url="https://example.com/image.jpg")
 ```
 
-An example of using image as input is available in [city_identifier.py](./examples/images/city_identifier.py).
+An example of using image as input is available in [07_image_agent.py](./examples/07_image_agent.py).
 
 ### Files (PDF, .txt, ...)
 

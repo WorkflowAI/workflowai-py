@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 
 import workflowai
-from workflowai import Run, WorkflowAIError
+from workflowai import WorkflowAIError
 from workflowai.core.domain.model import Model
 from workflowai.fields import Image
 
@@ -31,8 +31,8 @@ class ImageOutput(BaseModel):
     )
 
 
-@workflowai.agent(id="city-identifier", model=Model.GEMINI_1_5_FLASH_LATEST)
-async def identify_city_from_image(_: ImageInput) -> Run[ImageOutput]:
+@workflowai.agent(id="city-identifier", model=Model.GEMINI_2_0_FLASH_LATEST)
+async def identify_city_from_image(image_input: ImageInput) -> ImageOutput:
     """
     Analyze the provided image and identify the city and country shown in it.
     If the image shows a recognizable landmark or cityscape, identify the city and country.
@@ -62,9 +62,8 @@ async def main():
 
     image = Image(content_type="image/jpeg", data=content)
     try:
-        agent_run = await identify_city_from_image(
+        agent_run = await identify_city_from_image.run(
             ImageInput(image=image),
-            use_cache="auto",
         )
     except WorkflowAIError as e:
         print(f"Failed to run task. Code: {e.error.code}. Message: {e.error.message}")
@@ -77,9 +76,8 @@ async def main():
     # Example using URL for Image
     image_url = "https://t4.ftcdn.net/jpg/02/96/15/35/360_F_296153501_B34baBHDkFXbl5RmzxpiOumF4LHGCvAE.jpg"
     image = Image(url=image_url)
-    agent_run = await identify_city_from_image(
+    agent_run = await identify_city_from_image.run(
         ImageInput(image=image),
-        use_cache="auto",
     )
 
     print("\n--------\nAgent output:\n", agent_run.output, "\n--------\n")
