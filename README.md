@@ -1,5 +1,7 @@
 # WorkflowAI Python
 
+[![PyPI version](https://img.shields.io/pypi/v/workflowai.svg)](https://pypi.org/project/workflowai/)
+
 A library to use [WorkflowAI](https://workflowai.com) with Python.
 
 ## Context
@@ -103,11 +105,11 @@ class FeedbackPoint(BaseModel):
 # Model representing the structured analysis of the customer feedback call
 class CallFeedbackOutput(BaseModel):
     """Structured analysis of the customer feedback call."""
-    positive_points: List[FeedbackPoint] = Field(
+    positive_points: list[FeedbackPoint] = Field(
         default_factory=list,
         description="List of positive feedback points, each with a supporting quote."
     )
-    negative_points: List[FeedbackPoint] = Field(
+    negative_points: list[FeedbackPoint] = Field(
         default_factory=list,
         description="List of negative feedback points, each with a supporting quote."
     )
@@ -274,6 +276,27 @@ def analyze_call_feedback(input: CallFeedbackInput) -> AsyncIterator[Run[CallFee
     ...
 ```
 
+#### The Agent class
+
+Any agent function (aka a function decorated with `@workflowai.agent()`) is in fact an instance
+of the `Agent` class. Which means that any defined agent can access the underlying agent functions, mainly
+`run`, `stream` and `reply`. The `__call__` method of the agent is overriden for convenience to match the original
+function signature.
+
+```python
+# Any agent definition would also work
+@workflowai.agent()
+def analyze_call_feedback(input: CallFeedbackInput) -> CallFeedbackOutput:
+    ...
+
+# It is possible to call the run function directly to get a run object if needed
+run = await agent.run(CallFeedbackInput(...))
+# Or the stream function to get a stream of run objects (see below)
+chunks = [chunk async for chunk in agent.stream(CallFeedbackInput(...))
+# Or reply to manually to a given run id (see reply below)
+run = await agent.reply(run_id="...", user_message="...", tool_results=...)
+```
+
 ### The Run object
 
 Although having an agent only return the run output covers most use cases, some use cases require having more
@@ -321,7 +344,6 @@ async for chunk in analyze_call_feedback(feedback_input):
 > async twice.
 > For example, a function with the signature `async def foo() -> AsyncIterator[int]` may be called
 > `async for c in await foo():...` in certain cases...
-
 
 #### Streaming the run object
 
@@ -386,7 +408,7 @@ class PDFQuestionInput(BaseModel):
 
 class PDFAnswerOutput(BaseModel):
     answer: str = Field(description="The answer to the question based on the PDF content")
-    quotes: List[str] = Field(description="Relevant quotes from the PDF that support the answer")
+    quotes: list[str] = Field(description="Relevant quotes from the PDF that support the answer")
 
 @workflowai.agent(id="pdf-answer", model=Model.CLAUDE_3_5_SONNET_LATEST)
 async def answer_pdf_question(input: PDFQuestionInput) -> PDFAnswerOutput:
@@ -493,6 +515,9 @@ construction of a final output.
 > To allow run iterations, it is very important to have outputs that are tolerant to missing fields, aka that
 > have default values for most of their fields. Otherwise the agent will throw a WorkflowAIError on missing fields
 > and the run chain will be broken.
+
+> Under the hood, `run.reply` calls the `say_hello.reply` method as described in the
+> [Agent class](#the-agent-class) section.
 
 ### Tools
 
@@ -665,8 +690,8 @@ values.
 
 ```python
 class CallFeedbackOutputStrict(BaseModel):
-    positive_points: List[FeedbackPoint]
-    negative_points: List[FeedbackPoint]
+    positive_points: list[FeedbackPoint]
+    negative_points: list[FeedbackPoint]
 
 @workflowai.agent()
 async def analyze_call_feedback_strict(input: CallFeedbackInput) -> CallFeedbackOutputStrict:
@@ -683,8 +708,8 @@ except WorkflowAIError as e:
     print(e.code) # "invalid_generation" error code means that the generation did not match the schema
 
 class CallFeedbackOutputTolerant(BaseModel):
-    positive_points: List[FeedbackPoint] = Field(default_factory=list)
-    negative_points: List[FeedbackPoint] = Field(default_factory=list)
+    positive_points: list[FeedbackPoint] = Field(default_factory=list)
+    negative_points: list[FeedbackPoint] = Field(default_factory=list)
 
 @workflowai.agent()
 async def analyze_call_feedback_tolerant(input: CallFeedbackInput) -> CallFeedbackOutputTolerant:

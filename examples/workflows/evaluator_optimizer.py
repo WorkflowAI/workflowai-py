@@ -1,5 +1,5 @@
 import asyncio
-from typing import List, TypedDict
+from typing import TypedDict
 
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 
@@ -45,8 +45,8 @@ class TranslationEvaluationOutput(BaseModel):
     preserves_tone: bool = Field(description="Whether the translation preserves the original tone.")
     preserves_nuance: bool = Field(description="Whether the translation preserves subtle nuances.")
     culturally_accurate: bool = Field(description="Whether the translation is culturally appropriate.")
-    specific_issues: List[str] = Field(description="List of specific issues identified.")
-    improvement_suggestions: List[str] = Field(description="List of suggested improvements.")
+    specific_issues: list[str] = Field(description="List of specific issues identified.")
+    improvement_suggestions: list[str] = Field(description="List of suggested improvements.")
 
 
 # Uses O1 for its strong analytical and evaluation capabilities
@@ -65,8 +65,8 @@ class TranslationImprovementInput(BaseModel):
     original_text: str = Field(description="The original text.")
     current_translation: str = Field(description="The current translation.")
     target_language: str = Field(description="The target language.")
-    specific_issues: List[str] = Field(description="Issues to address.")
-    improvement_suggestions: List[str] = Field(description="Suggestions for improvement.")
+    specific_issues: list[str] = Field(description="Issues to address.")
+    improvement_suggestions: list[str] = Field(description="Suggestions for improvement.")
 
 
 class TranslationImprovementOutput(BaseModel):

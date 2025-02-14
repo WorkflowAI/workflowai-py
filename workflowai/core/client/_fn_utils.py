@@ -1,15 +1,12 @@
-import functools
 import inspect
-from collections.abc import Callable, Iterable
+from collections.abc import AsyncIterator, Callable, Iterable, Sequence
 from typing import (
     Any,
-    AsyncIterator,
     Generic,
     NamedTuple,
     Optional,
-    Sequence,
-    Type,
     Union,
+    cast,
     get_args,
     get_origin,
     get_type_hints,
@@ -42,7 +39,7 @@ def get_generic_args(t: type[BaseModel]) -> Union[Sequence[type], None]:
     return t.__pydantic_generic_metadata__.get("args")
 
 
-def check_return_type(return_type_hint: Type[Any]) -> tuple[bool, Type[BaseModel]]:
+def check_return_type(return_type_hint: type[Any]) -> tuple[bool, type[BaseModel]]:
     if issubclass(return_type_hint, Run):
         args = get_generic_args(return_type_hint)  # pyright: ignore [reportUnknownArgumentType]
         if not args:
@@ -59,8 +56,8 @@ def check_return_type(return_type_hint: Type[Any]) -> tuple[bool, Type[BaseModel
 class RunFunctionSpec(NamedTuple):
     stream: bool
     output_only: bool
-    input_cls: Type[BaseModel]
-    output_cls: Type[BaseModel]
+    input_cls: type[BaseModel]
+    output_cls: type[BaseModel]
 
 
 def is_async_iterator(t: type[Any]) -> bool:
@@ -107,7 +104,41 @@ def extract_fn_spec(fn: RunTemplate[AgentInput, AgentOutput]) -> RunFunctionSpec
 
 class _RunnableAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOutput]):
     async def __call__(self, input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):  # noqa: A002
-        """An agent that returns a run object. Handles recoverable errors when possible"""
+        """Run the agent and return the full run object. Handles recoverable errors when possible
+
+        Args:
+            _ (AgentInput): The input to the task.
+            id (Optional[str]): A user defined ID for the run. The ID must be a UUID7, ordered by
+                creation time. If not provided, a UUID7 will be assigned by the server.
+            model (Optional[str]): The model to use for this run. Overrides the version's model if
+                provided.
+            version (Optional[VersionReference]): The version of the task to run. If not provided,
+                the version defined in the task is used.
+            instructions (Optional[str]): Custom instructions for this run. Overrides the version's
+                instructions if provided.
+            temperature (Optional[float]): The temperature to use for this run. Overrides the
+                version's temperature if provided.
+            use_cache (CacheUsage, optional): How to use the cache. Defaults to "auto".
+                "auto" (default): if a previous run exists with the same version and input, and if
+                    the temperature is 0, the cached output is returned
+                "always": the cached output is returned when available, regardless
+                    of the temperature value
+                "never": the cache is never used
+            labels (Optional[set[str]], optional): Labels are deprecated, please use metadata instead.
+            metadata (Optional[dict[str, Any]], optional): A dictionary of metadata to attach to the
+                run.
+            max_retry_delay (Optional[float], optional): The maximum delay between retries in
+                milliseconds. Defaults to 60000.
+            max_retry_count (Optional[float], optional): The maximum number of retry attempts.
+                Defaults to 1.
+            max_tool_iterations (Optional[int], optional): Maximum number of tool iteration cycles.
+                Defaults to 10.
+            validator (Optional[OutputValidator[AgentOutput]], optional): Custom validator for the
+                output.
+
+        Returns:
+            Run[AgentOutput]: The task run object.
+        """
         try:
             return await self.run(input, **kwargs)
         except InvalidGenerationError as e:
@@ -133,16 +164,125 @@ class _RunnableAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOu
 
 class _RunnableOutputOnlyAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOutput]):
     async def __call__(self, input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):  # noqa: A002
+        """Run the agent
+
+        This variant returns only the output, without the run metadata.
+
+        Args:
+            _ (AgentInput): The input to the task.
+            id (Optional[str]): A user defined ID for the run. The ID must be a UUID7, ordered by
+                creation time. If not provided, a UUID7 will be assigned by the server.
+            model (Optional[str]): The model to use for this run. Overrides the version's model if
+                provided.
+            version (Optional[VersionReference]): The version of the task to run. If not provided,
+                the version defined in the task is used.
+            instructions (Optional[str]): Custom instructions for this run. Overrides the version's
+                instructions if provided.
+            temperature (Optional[float]): The temperature to use for this run. Overrides the
+                version's temperature if provided.
+            use_cache (CacheUsage, optional): How to use the cache. Defaults to "auto".
+                "auto" (default): if a previous run exists with the same version and input, and if
+                    the temperature is 0, the cached output is returned
+                "always": the cached output is returned when available, regardless
+                    of the temperature value
+                "never": the cache is never used
+            labels (Optional[set[str]], optional): Labels are deprecated, please use metadata instead.
+            metadata (Optional[dict[str, Any]], optional): A dictionary of metadata to attach to the
+                run.
+            max_retry_delay (Optional[float], optional): The maximum delay between retries in
+                milliseconds. Defaults to 60000.
+            max_retry_count (Optional[float], optional): The maximum number of retry attempts.
+                Defaults to 1.
+            max_tool_iterations (Optional[int], optional): Maximum number of tool iteration cycles.
+                Defaults to 10.
+            validator (Optional[OutputValidator[AgentOutput]], optional): Custom validator for the
+                output.
+
+        Returns:
+            AgentOutput: The output of the task.
+        """
         return (await self.run(input, **kwargs)).output
 
 
 class _RunnableStreamAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOutput]):
     def __call__(self, input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):  # noqa: A002
+        """Stream the output of the agent
+
+        Args:
+            _ (AgentInput): The input to the task.
+            id (Optional[str]): A user defined ID for the run. The ID must be a UUID7, ordered by
+                creation time. If not provided, a UUID7 will be assigned by the server.
+            model (Optional[str]): The model to use for this run. Overrides the version's model if
+                provided.
+            version (Optional[VersionReference]): The version of the task to run. If not provided,
+                the version defined in the task is used.
+            instructions (Optional[str]): Custom instructions for this run. Overrides the version's
+                instructions if provided.
+            temperature (Optional[float]): The temperature to use for this run. Overrides the
+                version's temperature if provided.
+            use_cache (CacheUsage, optional): How to use the cache. Defaults to "auto".
+                "auto" (default): if a previous run exists with the same version and input, and if
+                    the temperature is 0, the cached output is returned
+                "always": the cached output is returned when available, regardless
+                    of the temperature value
+                "never": the cache is never used
+            labels (Optional[set[str]], optional): Labels are deprecated, please use metadata instead.
+            metadata (Optional[dict[str, Any]], optional): A dictionary of metadata to attach to the
+                run.
+            max_retry_delay (Optional[float], optional): The maximum delay between retries in
+                milliseconds. Defaults to 60000.
+            max_retry_count (Optional[float], optional): The maximum number of retry attempts.
+                Defaults to 1.
+            max_tool_iterations (Optional[int], optional): Maximum number of tool iteration cycles.
+                Defaults to 10.
+            validator (Optional[OutputValidator[AgentOutput]], optional): Custom validator for the
+                output.
+
+        Returns:
+            AsyncIterator[Run[AgentOutput]]: An async iterator yielding task run objects.
+        """
         return self.stream(input, **kwargs)
 
 
 class _RunnableStreamOutputOnlyAgent(Agent[AgentInput, AgentOutput], Generic[AgentInput, AgentOutput]):
     async def __call__(self, input: AgentInput, **kwargs: Unpack[RunParams[AgentOutput]]):  # noqa: A002
+        """Stream the output of the agent
+
+        This variant yields only the output, without the run metadata.
+
+        Args:
+            _ (AgentInput): The input to the task.
+            id (Optional[str]): A user defined ID for the run. The ID must be a UUID7, ordered by
+                creation time. If not provided, a UUID7 will be assigned by the server.
+            model (Optional[str]): The model to use for this run. Overrides the version's model if
+                provided.
+            version (Optional[VersionReference]): The version of the task to run. If not provided,
+                the version defined in the task is used.
+            instructions (Optional[str]): Custom instructions for this run. Overrides the version's
+                instructions if provided.
+            temperature (Optional[float]): The temperature to use for this run. Overrides the
+                version's temperature if provided.
+            use_cache (CacheUsage, optional): How to use the cache. Defaults to "auto".
+                "auto" (default): if a previous run exists with the same version and input, and if
+                    the temperature is 0, the cached output is returned
+                "always": the cached output is returned when available, regardless
+                    of the temperature value
+                "never": the cache is never used
+            labels (Optional[set[str]], optional): Labels are deprecated, please use metadata instead.
+            metadata (Optional[dict[str, Any]], optional): A dictionary of metadata to attach to the
+                run.
+            max_retry_delay (Optional[float], optional): The maximum delay between retries in
+                milliseconds. Defaults to 60000.
+            max_retry_count (Optional[float], optional): The maximum number of retry attempts.
+                Defaults to 1.
+            max_tool_iterations (Optional[int], optional): Maximum number of tool iteration cycles.
+                Defaults to 10.
+            validator (Optional[OutputValidator[AgentOutput]], optional): Custom validator for the
+                output.
+
+        Returns:
+            AsyncIterator[AgentOutput]: An async iterator yielding task outputs.
+        """
         async for chunk in self.stream(input, **kwargs):
             yield chunk.output
 
@@ -218,9 +358,22 @@ def agent_wrapper(
     model: Optional[ModelOrStr] = None,
     tools: Optional[Iterable[Callable[..., Any]]] = None,
 ) -> AgentDecorator:
-    def wrap(fn: RunTemplate[AgentInput, AgentOutput]) -> FinalRunTemplate[AgentInput, AgentOutput]:
+    def wrap(fn: RunTemplate[AgentInput, AgentOutput]):
         tid = agent_id or agent_id_from_fn_name(fn)
-        return functools.wraps(fn)(wrap_run_template(client, tid, schema_id, version, model, fn, tools))  # pyright: ignore [reportReturnType]
+        # TODO[types]: Not sure why a cast is needed here
+        agent = cast(
+            FinalRunTemplate[AgentInput, AgentOutput],
+            wrap_run_template(client, tid, schema_id, version, model, fn, tools),
+        )
 
-    # pyright is unhappy with generics
+        agent.__doc__ = """A class representing an AI agent that can process inputs and generate outputs.
+
+    The Agent class provides functionality to run AI-powered tasks with support for streaming,
+    tool execution, and version management.
+"""
+        agent.__name__ = fn.__name__
+
+        return agent  # pyright: ignore [reportReturnType]
+
+    # TODO[types]: pyright is unhappy with generics
     return wrap  # pyright: ignore [reportReturnType]
