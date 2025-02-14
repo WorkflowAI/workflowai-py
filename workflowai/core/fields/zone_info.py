@@ -1,9 +1,9 @@
 from typing import Annotated, Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import GetCoreSchemaHandler, GetJsonSchemaHandler
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 def _serialize(instance: ZoneInfo) -> str:

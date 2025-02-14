@@ -8,7 +8,7 @@ This example demonstrates how to create an e-commerce chatbot that:
 
 import asyncio
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -18,12 +18,14 @@ from workflowai import Model, Run
 
 class Role(str, Enum):
     """Enum representing possible message roles."""
+
     USER = "user"
     ASSISTANT = "assistant"
 
 
 class Product(BaseModel):
     """Model representing a product recommendation."""
+
     name: str = Field(
         description="Name of the product",
         examples=["Wireless Noise-Cancelling Headphones", "4K Smart TV"],
@@ -56,6 +58,7 @@ class Product(BaseModel):
 
 class Message(BaseModel):
     """Model representing a chat message."""
+
     role: Role = Field()
     content: str = Field(
         description="The content of the message",
@@ -64,7 +67,7 @@ class Message(BaseModel):
             "Based on your requirements, here are some great headphone options...",
         ],
     )
-    recommended_products: Optional[List[Product]] = Field(
+    recommended_products: Optional[list[Product]] = Field(
         default=None,
         description="Product recommendations included with this message, if any",
     )
@@ -72,12 +75,14 @@ class Message(BaseModel):
 
 class AssistantMessage(Message):
     """Model representing a message from the assistant."""
+
     role: Role = Role.ASSISTANT
     content: str = ""
 
 
 class ChatbotOutput(BaseModel):
     """Output model for the chatbot response."""
+
     assistant_message: AssistantMessage = Field(
         description="The chatbot's response message",
     )
@@ -85,7 +90,8 @@ class ChatbotOutput(BaseModel):
 
 class ChatInput(BaseModel):
     """Input model containing the user's message and conversation history."""
-    conversation_history: Optional[List[Message]] = Field(
+
+    conversation_history: Optional[list[Message]] = Field(
         default=None,
         description="Previous messages in the conversation, if any",
     )

@@ -130,7 +130,7 @@ class InputArrayFieldConfig(BaseFieldConfig):
 
 
 class OutputGenericFieldConfig(BaseFieldConfig):
-    type: OutputSchemaFieldType = Field(default=None, description="The type of the field")
+    type: Optional[OutputSchemaFieldType] = Field(default=None, description="The type of the field")
 
 
 class OutputObjectFieldConfig(BaseFieldConfig):
