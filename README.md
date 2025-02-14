@@ -207,15 +207,15 @@ class CodeReviewInput(BaseModel):
     language: str = Field(description="Programming language of the code")
     style_guide: str = Field(description="Style guide to follow")
     is_production: bool = Field(description="Whether this is a production review")
-    focus_areas: List[str] = Field(description="Areas to focus on during review", default_factory=list)
+    focus_areas: list[str] = Field(description="Areas to focus on during review", default_factory=list)
 
 class CodeReviewOutput(BaseModel):
     """Output from a code review."""
-    issues: List[str] = Field(
+    issues: list[str] = Field(
         default_factory=list,
         description="List of identified issues or suggestions for improvement"
     )
-    compliments: List[str] = Field(
+    compliments: list[str] = Field(
         default_factory=list,
         description="List of positive aspects and good practices found in the code"
     )
@@ -246,6 +246,7 @@ async def review_code(review_input: CodeReviewInput) -> CodeReviewOutput:
 ```
 
 The template uses [Jinja2](https://jinja.palletsprojects.com/) syntax and supports common templating features including:
+
 - Variable substitution: `{{ variable }}`
 - Conditionals: `{% if condition %}...{% endif %}`
 - Loops: `{% for item in items %}...{% endfor %}`
