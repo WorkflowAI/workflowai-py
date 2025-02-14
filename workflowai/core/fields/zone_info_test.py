@@ -1,5 +1,6 @@
-from pydantic import BaseModel
 from zoneinfo import ZoneInfo
+
+from pydantic import BaseModel
 
 from .zone_info import TimezoneInfo
 

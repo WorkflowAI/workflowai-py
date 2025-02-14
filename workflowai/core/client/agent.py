@@ -33,6 +33,51 @@ from workflowai.core.utils._schema_generator import JsonSchemaGenerator
 
 
 class Agent(Generic[AgentInput, AgentOutput]):
+    """A class representing an AI agent that can process inputs and generate outputs.
+
+    The Agent class provides functionality to run AI-powered tasks with support for streaming,
+    tool execution, and version management. This class is not intended to be used directly,
+    instead use the `agent` decorator to create an agent.
+
+    Args:
+        agent_id (str): Unique identifier for the agent.
+        input_cls (type[AgentInput]): The Pydantic model class defining the expected input structure.
+        output_cls (type[AgentOutput]): The Pydantic model class defining the expected output structure.
+        api (Union[APIClient, Callable[[], APIClient]]): The API client instance or factory function.
+        schema_id (Optional[int], optional): The schema ID for the agent. Defaults to None.
+        version (Optional[VersionReference], optional): The version reference for the agent.
+            If not provided, uses the global default version. Defaults to None.
+        tools (Optional[Iterable[Callable[..., Any]]], optional): Collection of tool functions
+            that the agent can use. Defaults to None.
+
+    Attributes:
+        agent_id (str): The agent's unique identifier.
+        schema_id (Optional[int]): The schema ID associated with the agent.
+        input_cls (type[AgentInput]): The input model class.
+        output_cls (type[AgentOutput]): The output model class.
+        version (VersionReference): The version reference for the agent.
+
+    Example:
+        ```python
+        from pydantic import BaseModel
+
+        class MyInput(BaseModel):
+            query: str
+
+        class MyOutput(BaseModel):
+            response: str
+
+        agent = Agent(
+            agent_id="my-agent",
+            input_cls=MyInput,
+            output_cls=MyOutput,
+            api=api_client
+        )
+
+        result = await agent.run(MyInput(query="Hello"))
+        ```
+    """
+
     _DEFAULT_MAX_ITERATIONS = 10
 
     def __init__(
@@ -115,7 +160,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
             dumped["temperature"] = temperature
         return dumped
 
-    async def _prepare_run(self, task_input: AgentInput, stream: bool, **kwargs: Unpack[RunParams[AgentOutput]]):
+    async def _prepare_run(self, agent_input: AgentInput, stream: bool, **kwargs: Unpack[RunParams[AgentOutput]]):
         schema_id = self.schema_id
         if not schema_id:
             schema_id = await self.register()
@@ -124,7 +169,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
 
         request = RunRequest(
             id=kwargs.get("id"),
-            task_input=task_input.model_dump(by_alias=True),
+            task_input=agent_input.model_dump(by_alias=True),
             version=version,
             stream=stream,
             use_cache=kwargs.get("use_cache"),
@@ -169,7 +214,10 @@ class Agent(Generic[AgentInput, AgentOutput]):
         return self._PreparedRun(request, route, should_retry, wait_for_exception, self.schema_id)
 
     async def register(self):
-        """Registers the agent and returns the schema id"""
+        """
+        Registers the agent and returns the schema id. This function is called
+        when the agent is first used and the result is cached in the agent's definition.
+        """
         res = await self.api.post(
             "/v1/_/agents",
             CreateAgentRequest(
@@ -272,34 +320,40 @@ class Agent(Generic[AgentInput, AgentOutput]):
 
     async def run(
         self,
-        task_input: AgentInput,
+        agent_input: AgentInput,
         **kwargs: Unpack[RunParams[AgentOutput]],
     ) -> Run[AgentOutput]:
         """Run the agent
 
         Args:
-            task_input (AgentInput): the input to the task
-            version (Optional[TaskVersionReference], optional): the version of the task to run. If not provided,
-                the version defined in the task is used. Defaults to None.
-            use_cache (CacheUsage, optional): how to use the cache. Defaults to "auto".
+            agent_input (AgentInput): The input to the task.
+            id (Optional[str]): A user defined ID for the run. The ID must be a UUID7, ordered by creation time.
+                If not provided, a UUID7 will be assigned by the server.
+            model (Optional[str]): The model to use for this run. Overrides the version's model if provided.
+            version (Optional[VersionReference]): The version of the task to run. If not provided,
+                the version defined in the task is used.
+            instructions (Optional[str]): Custom instructions for this run. Overrides the version's instructions if
+                provided.
+            temperature (Optional[float]): The temperature to use for this run. Overrides the version's temperature if
+                provided.
+            use_cache (CacheUsage, optional): How to use the cache. Defaults to "auto".
                 "auto" (default): if a previous run exists with the same version and input, and if
                     the temperature is 0, the cached output is returned
                 "always": the cached output is returned when available, regardless
                     of the temperature value
                 "never": the cache is never used
-            labels (Optional[set[str]], optional): a set of labels to attach to the run.
-                Labels are indexed and searchable. Defaults to None.
-            metadata (Optional[dict[str, Any]], optional): a dictionary of metadata to attach to the run.
-                Defaults to None.
-            retry_delay (int, optional): The initial delay between retries in milliseconds. Defaults to 5000.
-            max_retry_delay (int, optional): The maximum delay between retries in milliseconds. Defaults to 60000.
-            max_retry_count (int, optional): The maximum number of retry attempts. Defaults to 1.
+            labels (Optional[set[str]], optional): Labels are deprecated, please use metadata instead.
+            metadata (Optional[dict[str, Any]], optional): A dictionary of metadata to attach to the run.
+            max_retry_delay (Optional[float], optional): The maximum delay between retries in milliseconds.
+                Defaults to 60000.
+            max_retry_count (Optional[float], optional): The maximum number of retry attempts. Defaults to 1.
+            max_tool_iterations (Optional[int], optional): Maximum number of tool iteration cycles. Defaults to 10.
+            validator (Optional[OutputValidator[AgentOutput]], optional): Custom validator for the output.
 
         Returns:
-            Union[TaskRun[AgentInput, AgentOutput], AsyncIterator[AgentOutput]]: the task run object
-                or an async iterator of output objects
+            Run[AgentOutput]: The task run object.
         """
-        prepared_run = await self._prepare_run(task_input, stream=False, **kwargs)
+        prepared_run = await self._prepare_run(agent_input, stream=False, **kwargs)
         validator, new_kwargs = self._sanitize_validator(kwargs, intolerant_validator(self.output_cls))
 
         last_error = None
@@ -323,34 +377,40 @@ class Agent(Generic[AgentInput, AgentOutput]):
 
     async def stream(
         self,
-        task_input: AgentInput,
+        agent_input: AgentInput,
         **kwargs: Unpack[RunParams[AgentOutput]],
     ):
         """Stream the output of the agent
 
         Args:
-            task_input (AgentInput): the input to the task
-            version (Optional[TaskVersionReference], optional): the version of the task to run. If not provided,
-                the version defined in the task is used. Defaults to None.
-            use_cache (CacheUsage, optional): how to use the cache. Defaults to "auto".
+            agent_input (AgentInput): The input to the task.
+            id (Optional[str]): A user defined ID for the run. The ID must be a UUID7, ordered by creation time.
+                If not provided, a UUID7 will be assigned by the server.
+            model (Optional[str]): The model to use for this run. Overrides the version's model if provided.
+            version (Optional[VersionReference]): The version of the task to run. If not provided,
+                the version defined in the task is used.
+            instructions (Optional[str]): Custom instructions for this run.
+                Overrides the version's instructions if provided.
+            temperature (Optional[float]): The temperature to use for this run.
+                Overrides the version's temperature if provided.
+            use_cache (CacheUsage, optional): How to use the cache. Defaults to "auto".
                 "auto" (default): if a previous run exists with the same version and input, and if
                     the temperature is 0, the cached output is returned
                 "always": the cached output is returned when available, regardless
                     of the temperature value
                 "never": the cache is never used
-            labels (Optional[set[str]], optional): a set of labels to attach to the run.
-                Labels are indexed and searchable. Defaults to None.
-            metadata (Optional[dict[str, Any]], optional): a dictionary of metadata to attach to the run.
-                Defaults to None.
-            retry_delay (int, optional): The initial delay between retries in milliseconds. Defaults to 5000.
-            max_retry_delay (int, optional): The maximum delay between retries in milliseconds. Defaults to 60000.
-            max_retry_count (int, optional): The maximum number of retry attempts. Defaults to 1.
+            labels (Optional[set[str]], optional): Labels are deprecated, please use metadata instead.
+            metadata (Optional[dict[str, Any]], optional): A dictionary of metadata to attach to the run.
+            max_retry_delay (Optional[float], optional): The maximum delay between retries in milliseconds.
+                Defaults to 60000.
+            max_retry_count (Optional[float], optional): The maximum number of retry attempts. Defaults to 1.
+            max_tool_iterations (Optional[int], optional): Maximum number of tool iteration cycles. Defaults to 10.
+            validator (Optional[OutputValidator[AgentOutput]], optional): Custom validator for the output.
 
         Returns:
-            Union[TaskRun[AgentInput, AgentOutput], AsyncIterator[AgentOutput]]: the task run object
-                or an async iterator of output objects
+            AsyncIterator[Run[AgentOutput]]: An async iterator yielding task run objects.
         """
-        prepared_run = await self._prepare_run(task_input, stream=True, **kwargs)
+        prepared_run = await self._prepare_run(agent_input, stream=True, **kwargs)
         validator, new_kwargs = self._sanitize_validator(kwargs, tolerant_validator(self.output_cls))
 
         while prepared_run.should_retry():
@@ -381,6 +441,18 @@ class Agent(Generic[AgentInput, AgentOutput]):
         current_iteration: int = 0,
         **kwargs: Unpack[RunParams[AgentOutput]],
     ):
+        """Reply to a run to provide additional information or context.
+
+        Args:
+            run_id (str): The id of the run to reply to.
+            user_message (Optional[str]): The message to reply with.
+            tool_results (Optional[Iterable[ToolCallResult]]): The results of the tool calls.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            Run[AgentOutput]: The task run object.
+        """
+
         prepared_run = await self._prepare_reply(run_id, user_message, tool_results, stream=False, **kwargs)
         validator, new_kwargs = self._sanitize_validator(kwargs, intolerant_validator(self.output_cls))
 

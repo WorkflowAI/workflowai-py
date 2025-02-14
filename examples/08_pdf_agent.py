@@ -1,6 +1,5 @@
 import asyncio
 import os
-from typing import List
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
@@ -18,7 +17,7 @@ class PDFQuestionInput(BaseModel):
 
 class PDFAnswerOutput(BaseModel):
     answer: str = Field(description="The answer to the question based on the PDF content")
-    quotes: List[str] = Field(description="Relevant quotes from the PDF that support the answer")
+    quotes: list[str] = Field(description="Relevant quotes from the PDF that support the answer")
 
 
 @workflowai.agent(id="pdf-answer", model=Model.CLAUDE_3_5_SONNET_LATEST)

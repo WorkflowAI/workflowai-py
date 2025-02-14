@@ -1,4 +1,5 @@
-from typing import AsyncIterator, Union
+from collections.abc import AsyncIterator
+from typing import Union
 from unittest.mock import Mock
 
 import pytest
@@ -115,6 +116,29 @@ class TestAgentWrapper:
         assert isinstance(chunks[0], HelloTaskOutput)
         assert chunks[0] == HelloTaskOutput(message="Hello, World!")
 
+    async def test_agent_functions_and_doc(self, mock_api_client: Mock):
+        wrapped = agent_wrapper(lambda: mock_api_client, schema_id=1, agent_id="hello")(self.fn_run_output_only)
+        assert wrapped.__doc__
+
+        mock_api_client.post.return_value = RunResponse(id="1", task_output={"message": "Hello, World!"})
+        output = await wrapped(HelloTaskInput(name="World"))
+        assert isinstance(output, HelloTaskOutput)
+
+        mock_api_client.post.return_value = RunResponse(id="1", task_output={"message": "Hello, World!"})
+        run = await wrapped.run(HelloTaskInput(name="World"), model="gpt-4o")
+        assert isinstance(run, Run)
+
+        mock_api_client.stream.return_value = mock_aiter(RunResponse(id="1", task_output={"message": "Hello, World!"}))
+        chunks = [c async for c in wrapped.stream(HelloTaskInput(name="World"))]
+        assert len(chunks) == 1
+        assert isinstance(chunks[0], Run)
+
+        assert wrapped.run.__doc__
+        assert wrapped.stream.__doc__
+        assert wrapped.reply.__doc__
+        assert wrapped.register.__doc__
+        assert wrapped.__call__.__doc__
+
 
 @pytest.mark.parametrize(
     ("value", "expected"),
@@ -122,37 +146,42 @@ class TestAgentWrapper:
         # Empty docstrings
         ("", ""),
         (None, ""),
-
         # Single line docstrings
         ("Hello world", "Hello world"),
         ("  Hello world  ", "Hello world"),
-
         # Docstring with empty lines at start/end
-        ("""
+        (
+            """
 
         Hello world
 
-        """, "Hello world"),
-
+        """,
+            "Hello world",
+        ),
         # Multi-line docstring with indentation
-        ("""
+        (
+            """
         First line
         Second line
             Indented line
         Last line
-        """, "First line\nSecond line\n    Indented line\nLast line"),
-
+        """,
+            "First line\nSecond line\n    Indented line\nLast line",
+        ),
         # Docstring with empty lines in between
-        ("""
+        (
+            """
         First line
 
         Second line
 
         Third line
-        """, "First line\n\nSecond line\n\nThird line"),
-
+        """,
+            "First line\n\nSecond line\n\nThird line",
+        ),
         # Real-world example
-        ("""
+        (
+            """
         Find the capital city of the country where the input city is located.
 
         Guidelines:
@@ -162,13 +191,14 @@ class TestAgentWrapper:
         4. Be accurate and precise with geographical information
         5. If the input city is itself the capital, still provide the information
         """,
-        "Find the capital city of the country where the input city is located.\n\n"
-        "Guidelines:\n"
-        "1. First identify the country where the input city is located\n"
-        "2. Then provide the capital city of that country\n"
-        "3. Include an interesting historical or cultural fact about the capital\n"
-        "4. Be accurate and precise with geographical information\n"
-        "5. If the input city is itself the capital, still provide the information"),
+            "Find the capital city of the country where the input city is located.\n\n"
+            "Guidelines:\n"
+            "1. First identify the country where the input city is located\n"
+            "2. Then provide the capital city of that country\n"
+            "3. Include an interesting historical or cultural fact about the capital\n"
+            "4. Be accurate and precise with geographical information\n"
+            "5. If the input city is itself the capital, still provide the information",
+        ),
     ],
 )
 def test_clean_docstring(value: Union[str, None], expected: str):

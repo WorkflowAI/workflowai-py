@@ -1,6 +1,7 @@
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator, Literal, Optional, TypeVar, Union, overload
+from typing import Any, Literal, Optional, TypeVar, Union, overload
 
 import httpx
 from pydantic import BaseModel, TypeAdapter, ValidationError
