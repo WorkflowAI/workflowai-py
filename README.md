@@ -1,5 +1,7 @@
 # WorkflowAI Python
 
+[![PyPI version](https://img.shields.io/pypi/v/workflowai.svg)](https://pypi.org/project/workflowai/)
+
 A library to use [WorkflowAI](https://workflowai.com) with Python.
 
 ## Context

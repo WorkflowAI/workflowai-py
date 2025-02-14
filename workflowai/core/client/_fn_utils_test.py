@@ -1,4 +1,4 @@
-from typing import AsyncIterator
+from typing import AsyncIterator, Union
 from unittest.mock import Mock
 
 import pytest
@@ -13,6 +13,7 @@ from workflowai.core.client._fn_utils import (
     _RunnableStreamAgent,  # pyright: ignore [reportPrivateUsage]
     _RunnableStreamOutputOnlyAgent,  # pyright: ignore [reportPrivateUsage]
     agent_wrapper,
+    clean_docstring,
     extract_fn_spec,
     get_generic_args,
     is_async_iterator,
@@ -113,3 +114,62 @@ class TestAgentWrapper:
         assert len(chunks) == 1
         assert isinstance(chunks[0], HelloTaskOutput)
         assert chunks[0] == HelloTaskOutput(message="Hello, World!")
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        # Empty docstrings
+        ("", ""),
+        (None, ""),
+
+        # Single line docstrings
+        ("Hello world", "Hello world"),
+        ("  Hello world  ", "Hello world"),
+
+        # Docstring with empty lines at start/end
+        ("""
+
+        Hello world
+
+        """, "Hello world"),
+
+        # Multi-line docstring with indentation
+        ("""
+        First line
+        Second line
+            Indented line
+        Last line
+        """, "First line\nSecond line\n    Indented line\nLast line"),
+
+        # Docstring with empty lines in between
+        ("""
+        First line
+
+        Second line
+
+        Third line
+        """, "First line\n\nSecond line\n\nThird line"),
+
+        # Real-world example
+        ("""
+        Find the capital city of the country where the input city is located.
+
+        Guidelines:
+        1. First identify the country where the input city is located
+        2. Then provide the capital city of that country
+        3. Include an interesting historical or cultural fact about the capital
+        4. Be accurate and precise with geographical information
+        5. If the input city is itself the capital, still provide the information
+        """,
+        "Find the capital city of the country where the input city is located.\n\n"
+        "Guidelines:\n"
+        "1. First identify the country where the input city is located\n"
+        "2. Then provide the capital city of that country\n"
+        "3. Include an interesting historical or cultural fact about the capital\n"
+        "4. Be accurate and precise with geographical information\n"
+        "5. If the input city is itself the capital, still provide the information"),
+    ],
+)
+def test_clean_docstring(value: Union[str, None], expected: str):
+    assert clean_docstring(value) == expected
