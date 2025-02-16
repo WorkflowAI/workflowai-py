@@ -1,9 +1,9 @@
-import os
 from collections.abc import Callable, Iterable
 from typing import Any, Optional
 
 from typing_extensions import deprecated
 
+from workflowai import env
 from workflowai.core.client._types import AgentDecorator
 from workflowai.core.client.client import WorkflowAI as WorkflowAI
 from workflowai.core.domain import model
@@ -23,8 +23,8 @@ def _build_client(
     default_version: Optional[VersionReference] = None,
 ):
     return WorkflowAI(
-        endpoint=endpoint or os.getenv("WORKFLOWAI_API_URL"),
-        api_key=api_key or os.getenv("WORKFLOWAI_API_KEY", ""),
+        endpoint=endpoint or env.WORKFLOWAI_API_URL,
+        api_key=api_key or env.WORKFLOWAI_API_KEY,
         default_version=default_version,
     )
 
@@ -33,7 +33,7 @@ def _build_client(
 shared_client: WorkflowAI = _build_client()
 
 # The default model to use when running agents without a deployment
-DEFAULT_MODEL: "model.ModelOrStr" = os.getenv("WORKFLOWAI_DEFAULT_MODEL", "gemini-1.5-pro-latest")
+DEFAULT_MODEL: "model.ModelOrStr" = env.WORKFLOWAI_DEFAULT_MODEL
 
 
 def init(api_key: Optional[str] = None, url: Optional[str] = None, default_version: Optional[VersionReference] = None):
