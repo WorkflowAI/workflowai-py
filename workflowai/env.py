@@ -17,6 +17,6 @@ def _default_api_url():
     return "https://workflowai.com"
 
 
-WORKFLOWAI_APP_URL = os.getenv("WORKFLOWAI_APP_URL", _default_api_url())
+WORKFLOWAI_APP_URL = os.getenv("WORKFLOWAI_APP_URL", _default_api_url)
 
 WORKFLOWAI_API_KEY = os.getenv("WORKFLOWAI_API_KEY", "")
