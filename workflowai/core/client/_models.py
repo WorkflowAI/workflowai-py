@@ -156,3 +156,36 @@ class CreateAgentRequest(BaseModel):
 class CreateAgentResponse(BaseModel):
     id: str
     schema_id: int
+
+
+class ModelMetadata(BaseModel):
+    """Metadata for a model."""
+    provider_name: str = Field(description="Name of the model provider")
+    price_per_input_token_usd: Optional[float] = Field(None, description="Cost per input token in USD")
+    price_per_output_token_usd: Optional[float] = Field(None, description="Cost per output token in USD")
+    release_date: Optional[str] = Field(None, description="Release date of the model")
+    context_window_tokens: Optional[int] = Field(None, description="Size of the context window in tokens")
+    quality_index: Optional[float] = Field(None, description="Quality index of the model")
+
+
+class ModelInfo(BaseModel):
+    """Information about a model."""
+    id: str = Field(description="Unique identifier for the model")
+    name: str = Field(description="Display name of the model")
+    icon_url: Optional[str] = Field(None, description="URL for the model's icon")
+    modes: list[str] = Field(default_factory=list, description="Supported modes for this model")
+    is_not_supported_reason: Optional[str] = Field(
+        None,
+        description="Reason why the model is not supported, if applicable",
+    )
+    average_cost_per_run_usd: Optional[float] = Field(None, description="Average cost per run in USD")
+    is_latest: bool = Field(default=False, description="Whether this is the latest version of the model")
+    metadata: Optional[ModelMetadata] = Field(None, description="Additional metadata about the model")
+    is_default: bool = Field(default=False, description="Whether this is the default model")
+    providers: list[str] = Field(default_factory=list, description="List of providers that offer this model")
+
+
+class ListModelsResponse(BaseModel):
+    """Response from the list models API endpoint."""
+    items: list[ModelInfo] = Field(description="List of available models")
+    count: Optional[int] = Field(None, description="Total number of models")

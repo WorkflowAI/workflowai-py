@@ -1,5 +1,6 @@
 import importlib.metadata
 import json
+from unittest.mock import AsyncMock
 
 import httpx
 import pytest
@@ -13,6 +14,7 @@ from tests.models.hello_task import (
 )
 from tests.utils import fixtures_json
 from workflowai.core.client._api import APIClient
+from workflowai.core.client._models import ListModelsResponse, ModelInfo, ModelMetadata
 from workflowai.core.client.agent import Agent
 from workflowai.core.client.client import (
     WorkflowAI,
@@ -367,3 +369,138 @@ class TestSanitizeVersion:
     def test_version_with_models_and_version(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
         # If version is explcitly provided then it takes priority and we log a warning
         assert agent._sanitize_version({"version": "staging", "model": "gemini-1.5-pro-latest"}) == "staging"  # pyright: ignore [reportPrivateUsage]
+
+
+@pytest.mark.asyncio
+async def test_list_models(agent: Agent[HelloTaskInput, HelloTaskOutput]):
+    """Test that list_models correctly fetches and returns available models."""
+    # Mock the get method of the API client with the new response structure
+    mock_response = ListModelsResponse(
+        items=[
+            ModelInfo(
+                id="gpt-4",
+                name="GPT-4",
+                icon_url="https://example.com/gpt4.png",
+                modes=["chat"],
+                is_not_supported_reason=None,
+                average_cost_per_run_usd=0.01,
+                is_latest=True,
+                metadata=ModelMetadata(
+                    provider_name="OpenAI",
+                    price_per_input_token_usd=0.0001,
+                    price_per_output_token_usd=0.0002,
+                    release_date="2024-01-01",
+                    context_window_tokens=128000,
+                    quality_index=0.95,
+                ),
+                is_default=True,
+                providers=["openai"],
+            ),
+            ModelInfo(
+                id="claude-3",
+                name="Claude 3",
+                icon_url="https://example.com/claude3.png",
+                modes=["chat"],
+                is_not_supported_reason=None,
+                average_cost_per_run_usd=0.015,
+                is_latest=True,
+                metadata=ModelMetadata(
+                    provider_name="Anthropic",
+                    price_per_input_token_usd=0.00015,
+                    price_per_output_token_usd=0.00025,
+                    release_date="2024-03-01",
+                    context_window_tokens=200000,
+                    quality_index=0.98,
+                ),
+                is_default=False,
+                providers=["anthropic"],
+            ),
+        ],
+        count=2,
+    )
+    agent.api.get = AsyncMock(return_value=mock_response)
+
+    # Call the method
+    models = await agent.list_models()
+
+    # Verify the API was called correctly
+    agent.api.get.assert_called_once_with(
+        "/v1/_/agents/123/schemas/1/models",
+        returns=ListModelsResponse,
+    )
+
+    # Verify we get back the full ModelInfo objects
+    assert len(models) == 2
+    assert isinstance(models[0], ModelInfo)
+    assert models[0].id == "gpt-4"
+    assert models[0].name == "GPT-4"
+    assert models[0].modes == ["chat"]
+    assert models[0].metadata is not None
+    assert models[0].metadata.provider_name == "OpenAI"
+
+    assert isinstance(models[1], ModelInfo)
+    assert models[1].id == "claude-3"
+    assert models[1].name == "Claude 3"
+    assert models[1].modes == ["chat"]
+    assert models[1].metadata is not None
+    assert models[1].metadata.provider_name == "Anthropic"
+
+
+@pytest.mark.asyncio
+async def test_list_models_registers_if_needed(
+    agent_no_schema: Agent[HelloTaskInput, HelloTaskOutput],
+    httpx_mock: HTTPXMock,
+):
+    """Test that list_models registers the agent if it hasn't been registered yet."""
+    # Mock the registration response
+    httpx_mock.add_response(
+        url="http://localhost:8000/v1/_/agents",
+        json={"id": "123", "schema_id": 2},
+    )
+
+    # Mock the models response with the new structure
+    httpx_mock.add_response(
+        url="http://localhost:8000/v1/_/agents/123/schemas/2/models",
+        json={
+            "items": [
+                {
+                    "id": "gpt-4",
+                    "name": "GPT-4",
+                    "icon_url": "https://example.com/gpt4.png",
+                    "modes": ["chat"],
+                    "is_not_supported_reason": None,
+                    "average_cost_per_run_usd": 0.01,
+                    "is_latest": True,
+                    "metadata": {
+                        "provider_name": "OpenAI",
+                        "price_per_input_token_usd": 0.0001,
+                        "price_per_output_token_usd": 0.0002,
+                        "release_date": "2024-01-01",
+                        "context_window_tokens": 128000,
+                        "quality_index": 0.95,
+                    },
+                    "is_default": True,
+                    "providers": ["openai"],
+                },
+            ],
+            "count": 1,
+        },
+    )
+
+    # Call the method
+    models = await agent_no_schema.list_models()
+
+    # Verify both API calls were made
+    reqs = httpx_mock.get_requests()
+    assert len(reqs) == 2
+    assert reqs[0].url == "http://localhost:8000/v1/_/agents"
+    assert reqs[1].url == "http://localhost:8000/v1/_/agents/123/schemas/2/models"
+
+    # Verify we get back the full ModelInfo object
+    assert len(models) == 1
+    assert isinstance(models[0], ModelInfo)
+    assert models[0].id == "gpt-4"
+    assert models[0].name == "GPT-4"
+    assert models[0].modes == ["chat"]
+    assert models[0].metadata is not None
+    assert models[0].metadata.provider_name == "OpenAI"

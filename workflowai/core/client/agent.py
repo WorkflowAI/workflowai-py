@@ -11,6 +11,8 @@ from workflowai.core.client._api import APIClient
 from workflowai.core.client._models import (
     CreateAgentRequest,
     CreateAgentResponse,
+    ListModelsResponse,
+    ModelInfo,
     ReplyRequest,
     RunRequest,
     RunResponse,
@@ -469,3 +471,22 @@ class Agent(Generic[AgentInput, AgentOutput]):
     def _sanitize_validator(cls, kwargs: RunParams[AgentOutput], default: OutputValidator[AgentOutput]):
         validator = kwargs.pop("validator", default)
         return validator, cast(BaseRunParams, kwargs)
+
+    async def list_models(self) -> list[ModelInfo]:
+        """Fetch the list of available models from the API for this agent.
+
+        Returns:
+            list[ModelInfo]: List of available models with their full information.
+
+        Raises:
+            ValueError: If the agent has not been registered (schema_id is None).
+        """
+        if not self.schema_id:
+            self.schema_id = await self.register()
+
+        response = await self.api.get(
+            # The "_" refers to the currently authenticated tenant's namespace
+            f"/v1/_/agents/{self.agent_id}/schemas/{self.schema_id}/models",
+            returns=ListModelsResponse,
+        )
+        return response.items
