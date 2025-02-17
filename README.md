@@ -198,6 +198,64 @@ async def analyze_call_feedback(input: CallFeedbackInput) -> CallFeedbackOutput:
 > a newer version of the same model with the same or a lower price so calling the api with
 > a retired model will always work.
 
+### Using templated instructions
+
+You can use [Jinja2](https://jinja.palletsprojects.com/)-style templating in your agent's instructions (docstring) to make them dynamic based on input values. The template variables are automatically populated from the fields in your input model.
+
+```python
+class CodeReviewInput(BaseModel):
+    language: str = Field(description="Programming language of the code")
+    style_guide: str = Field(description="Style guide to follow")
+    is_production: bool = Field(description="Whether this is a production review")
+    focus_areas: list[str] = Field(description="Areas to focus on during review", default_factory=list)
+
+class CodeReviewOutput(BaseModel):
+    """Output from a code review."""
+    issues: list[str] = Field(
+        default_factory=list,
+        description="List of identified issues or suggestions for improvement"
+    )
+    compliments: list[str] = Field(
+        default_factory=list,
+        description="List of positive aspects and good practices found in the code"
+    )
+    summary: str = Field(
+        description="A brief summary of the code review findings"
+    )
+
+@workflowai.agent(id="code-review")
+async def review_code(review_input: CodeReviewInput) -> CodeReviewOutput:
+    """
+    You are a code reviewer for {{ language }} code.
+    Please review according to the {{ style_guide }} style guide.
+
+    {% if is_production %}
+    This is a PRODUCTION review - be extra thorough and strict.
+    {% else %}
+    This is a development review - focus on maintainability.
+    {% endif %}
+
+    {% if focus_areas %}
+    Key areas to focus on:
+    {% for area in focus_areas %}
+    {{ loop.index }}. {{ area }}
+    {% endfor %}
+    {% endif %}
+    """
+    ...
+```
+
+The template uses [Jinja2](https://jinja.palletsprojects.com/) syntax and supports common templating features including:
+
+- Variable substitution: `{{ variable }}`
+- Conditionals: `{% if condition %}...{% endif %}`
+- Loops: `{% for item in items %}...{% endfor %}`
+- Loop indices: `{{ loop.index }}`
+
+See the [Jinja2 documentation](https://jinja.palletsprojects.com/) for the full template syntax and capabilities.
+
+We recommend using ChatGPT or CursorAI to help generate the template.
+
 ### Version from code or deployments
 
 Setting a docstring or a model in the agent decorator signals the client that the agent parameters are
