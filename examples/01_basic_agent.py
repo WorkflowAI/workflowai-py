@@ -67,7 +67,7 @@ async def main():
     # Example 2: Using Tokyo
     print("\nExample 2: Using Tokyo")
     print("-" * 50)
-    run = await get_capital_info.runCityInput(city="Tokyo"))
+    run = await get_capital_info.run(CityInput(city="Tokyo"))
     print(run)
 
 
