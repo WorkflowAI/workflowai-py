@@ -123,6 +123,9 @@ async def review_code(review_input: CodeReviewInput) -> Run[CodeReviewOutput]:
     2. Style guide violations
     3. Security issues (if any)
     4. Suggested improvements
+
+    The code is:
+    {{ code }}
     """
     ...
 
