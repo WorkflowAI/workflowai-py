@@ -19,6 +19,8 @@ from workflowai.core.utils._iter import safe_map_list
 
 
 class RunRequest(BaseModel):
+    id: Optional[str] = Field(default=None, description="A cliend defined ID. Must be a UUID7")
+
     task_input: dict[str, Any]
 
     version: Union[str, int, dict[str, Any]]

@@ -1,8 +1,8 @@
 from datetime import date, datetime, time
+from zoneinfo import ZoneInfo
 
 import pytest
 from pydantic import BaseModel
-from zoneinfo import ZoneInfo
 
 from .local_date_time import DatetimeLocal
 

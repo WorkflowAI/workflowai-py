@@ -1,10 +1,10 @@
-import uuid
 from collections.abc import Iterable
 from typing import Any, Generic, Optional, Protocol
 
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 from typing_extensions import Unpack
 
+from workflowai import env
 from workflowai.core import _common_types
 from workflowai.core.client import _types
 from workflowai.core.domain.errors import BaseError
@@ -21,10 +21,7 @@ class Run(BaseModel, Generic[AgentOutput]):
     been evaluated
     """
 
-    id: str = Field(
-        default_factory=lambda: str(uuid.uuid4()),
-        description="The unique identifier of the run. This is a UUIDv7.",
-    )
+    id: str
     agent_id: str
     schema_id: int
     output: AgentOutput
@@ -114,7 +111,7 @@ class Run(BaseModel, Generic[AgentOutput]):
 
         # Add run information if available
         if self.cost_usd is not None:
-            output.append(f"Cost: $ {self.cost_usd}")
+            output.append(f"Cost: $ {self.cost_usd:.5f}")
         if self.duration_seconds is not None:
             output.append(f"Latency: {self.duration_seconds:.2f}s")
 
@@ -123,6 +120,10 @@ class Run(BaseModel, Generic[AgentOutput]):
     def __str__(self) -> str:
         """Return a string representation of the run."""
         return self.format_output()
+
+    @property
+    def run_url(self):
+        return f"{env.WORKFLOWAI_APP_URL}/agents/{self.agent_id}/runs/{self.id}"
 
 
 class _AgentBase(Protocol, Generic[AgentOutput]):

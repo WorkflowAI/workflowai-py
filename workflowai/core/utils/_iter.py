@@ -1,5 +1,5 @@
-from collections.abc import Iterator
-from typing import Callable, Iterable, Optional
+from collections.abc import Iterable, Iterator
+from typing import Callable, Optional
 
 from workflowai.core._logger import logger
 from workflowai.core.utils._vars import T, U

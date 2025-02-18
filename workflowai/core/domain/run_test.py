@@ -1,4 +1,4 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from pydantic import BaseModel
@@ -67,7 +67,29 @@ def test_format_output() -> None:
   "message": "hello"
 }
 ==================================================
-Cost: $ 0.001
+Cost: $ 0.00100
+Latency: 1.23s"""
+
+    assert run.format_output() == expected
+
+
+def test_format_output_very_low_cost() -> None:
+    run = Run[_TestOutput](
+        id="test-id",
+        agent_id="agent-1",
+        schema_id=1,
+        output=_TestOutput(message="hello"),
+        duration_seconds=1.23,
+        cost_usd=4.97625e-05,
+    )
+
+    expected = """\nOutput:
+==================================================
+{
+  "message": "hello"
+}
+==================================================
+Cost: $ 0.00005
 Latency: 1.23s"""
 
     assert run.format_output() == expected
@@ -92,3 +114,9 @@ def test_format_output_no_cost_latency() -> None:
 =================================================="""
 
     assert run.format_output() == expected
+
+
+class TestRunURL:
+    @patch("workflowai.env.WORKFLOWAI_APP_URL", "https://workflowai.hello")
+    def test_run_url(self, run1: Run[_TestOutput]):
+        assert run1.run_url == "https://workflowai.hello/agents/agent-1/runs/test-id"

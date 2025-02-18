@@ -3,6 +3,7 @@ import json
 
 import httpx
 import pytest
+from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 from pytest_httpx import HTTPXMock, IteratorStream
 
 from tests.models.hello_task import (
@@ -18,6 +19,7 @@ from workflowai.core.client.client import (
 )
 from workflowai.core.domain.errors import WorkflowAIError
 from workflowai.core.domain.run import Run
+from workflowai.core.domain.version_properties import VersionProperties
 
 
 @pytest.fixture
@@ -55,7 +57,7 @@ class TestRun:
     async def test_success(self, httpx_mock: HTTPXMock, agent: Agent[HelloTaskInput, HelloTaskOutput]):
         httpx_mock.add_response(json=fixtures_json("task_run.json"))
 
-        task_run = await agent.run(task_input=HelloTaskInput(name="Alice"))
+        task_run = await agent.run(HelloTaskInput(name="Alice"))
 
         assert task_run.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
         assert task_run.agent_id == "123"
@@ -83,7 +85,7 @@ class TestRun:
             ),
         )
 
-        chunks = [chunk async for chunk in agent.stream(task_input=HelloTaskInput(name="Alice"))]
+        chunks = [chunk async for chunk in agent.stream(HelloTaskInput(name="Alice"))]
 
         outputs = [chunk.output for chunk in chunks]
         assert outputs == [
@@ -117,7 +119,7 @@ class TestRun:
             ),
         )
 
-        chunks = [chunk async for chunk in agent_not_optional.stream(task_input=HelloTaskInput(name="Alice"))]
+        chunks = [chunk async for chunk in agent_not_optional.stream(HelloTaskInput(name="Alice"))]
 
         messages = [chunk.output.message for chunk in chunks]
         assert messages == ["", "hel", "hello", "hello"]
@@ -140,7 +142,7 @@ class TestRun:
         httpx_mock.add_response(json=fixtures_json("task_run.json"))
 
         await agent.run(
-            task_input=HelloTaskInput(name="Alice"),
+            HelloTaskInput(name="Alice"),
             version="dev",
         )
 
@@ -158,7 +160,7 @@ class TestRun:
     async def test_success_with_headers(self, httpx_mock: HTTPXMock, agent: Agent[HelloTaskInput, HelloTaskOutput]):
         httpx_mock.add_response(json=fixtures_json("task_run.json"))
 
-        task_run = await agent.run(task_input=HelloTaskInput(name="Alice"))
+        task_run = await agent.run(HelloTaskInput(name="Alice"))
 
         assert task_run.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
 
@@ -196,7 +198,7 @@ class TestRun:
             json=fixtures_json("task_run.json"),
         )
 
-        task_run = await agent.run(task_input=HelloTaskInput(name="Alice"), max_retry_count=5)
+        task_run = await agent.run(HelloTaskInput(name="Alice"), max_retry_count=5)
 
         assert task_run.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
 
@@ -212,7 +214,7 @@ class TestRun:
         httpx_mock.add_exception(httpx.ConnectError("arg"))
         httpx_mock.add_response(json=fixtures_json("task_run.json"))
 
-        task_run = await agent.run(task_input=HelloTaskInput(name="Alice"), max_retry_count=5)
+        task_run = await agent.run(HelloTaskInput(name="Alice"), max_retry_count=5)
         assert task_run.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
 
     async def test_max_retries(self, httpx_mock: HTTPXMock, agent: Agent[HelloTaskInput, HelloTaskOutput]):
@@ -220,7 +222,7 @@ class TestRun:
         httpx_mock.add_exception(httpx.ConnectError("arg"), is_reusable=True)
 
         with pytest.raises(WorkflowAIError):
-            await agent.run(task_input=HelloTaskInput(name="Alice"), max_retry_count=5)
+            await agent.run(HelloTaskInput(name="Alice"), max_retry_count=5)
 
         reqs = httpx_mock.get_requests()
         assert len(reqs) == 5
@@ -239,7 +241,7 @@ class TestRun:
             json=run_response,
         )
 
-        out = await agent_no_schema.run(task_input=HelloTaskInput(name="Alice"))
+        out = await agent_no_schema.run(HelloTaskInput(name="Alice"))
         assert out.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
 
         run_response["id"] = "8f635b73-f403-47ee-bff9-18320616c6cc"
@@ -248,7 +250,7 @@ class TestRun:
             url="http://localhost:8000/v1/_/agents/123/schemas/2/run",
             json=run_response,
         )
-        out2 = await agent_no_schema.run(task_input=HelloTaskInput(name="Alice"))
+        out2 = await agent_no_schema.run(HelloTaskInput(name="Alice"))
         assert out2.id == "8f635b73-f403-47ee-bff9-18320616c6cc"
 
         reqs = httpx_mock.get_requests()
@@ -256,3 +258,112 @@ class TestRun:
         assert reqs[0].url == "http://localhost:8000/v1/_/agents"
         assert reqs[1].url == "http://localhost:8000/v1/_/agents/123/schemas/2/run"
         assert reqs[2].url == "http://localhost:8000/v1/_/agents/123/schemas/2/run"
+
+        register_body = json.loads(reqs[0].content)
+        assert register_body["input_schema"] == {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+            },
+            "required": ["name"],
+        }
+        assert register_body["output_schema"] == {
+            "type": "object",
+            "properties": {
+                "message": {"type": "string"},
+            },
+            "required": ["message"],
+        }
+
+    async def test_with_alias(self, httpx_mock: HTTPXMock, api_client: APIClient):
+        class AliasInput(BaseModel):
+            name: str = Field(alias="name_alias")
+            aliased_ser: str = Field(serialization_alias="aliased_ser_alias")
+            aliased_val: str = Field(validation_alias="aliased_val_alias")
+
+        class AliasOutput(BaseModel):
+            message: str = Field(alias="message_alias")
+            aliased_ser: str = Field(serialization_alias="aliased_ser_alias")
+            aliased_val: str = Field(validation_alias="aliased_val_alias")
+
+        agent = Agent(agent_id="123", input_cls=AliasInput, output_cls=AliasOutput, api=api_client)
+
+        httpx_mock.add_response(url="http://localhost:8000/v1/_/agents", json={"id": "123", "schema_id": 2})
+
+        httpx_mock.add_response(
+            url="http://localhost:8000/v1/_/agents/123/schemas/2/run",
+            json={
+                "id": "1",
+                # task output should be compatible with the output schema below
+                "task_output": {
+                    "message_alias": "1",
+                    "aliased_ser": "2",
+                    "aliased_val_alias": "3",
+                },
+            },
+        )
+
+        out2 = await agent.run(
+            # Using model validate instead of constructing directly, since pyright does not
+            # Understand asymmetric aliases
+            AliasInput.model_validate({"name_alias": "1", "aliased_ser": "2", "aliased_val_alias": "3"}),
+        )
+        assert out2.output.message == "1"
+        assert out2.output.aliased_ser == "2"
+        assert out2.output.aliased_val == "3"
+
+        register_req = httpx_mock.get_request(url="http://localhost:8000/v1/_/agents")
+        assert register_req
+        register_body = json.loads(register_req.content)
+        assert register_body["input_schema"] == {
+            "type": "object",
+            "properties": {
+                "name_alias": {"type": "string"},
+                "aliased_ser_alias": {"type": "string"},
+                "aliased_val": {"type": "string"},
+            },
+            "required": ["name_alias", "aliased_ser_alias", "aliased_val"],
+        }
+        assert register_body["output_schema"] == {
+            "type": "object",
+            "properties": {
+                "message_alias": {"type": "string"},
+                "aliased_ser": {"type": "string"},
+                "aliased_val_alias": {"type": "string"},
+            },
+            "required": ["message_alias", "aliased_ser", "aliased_val_alias"],
+        }
+
+        run_req = httpx_mock.get_request(url="http://localhost:8000/v1/_/agents/123/schemas/2/run")
+        assert run_req
+        # Task input should be compatible with the input schema
+        assert json.loads(run_req.content)["task_input"] == {
+            "name_alias": "1",
+            "aliased_ser_alias": "2",
+            "aliased_val": "3",
+        }
+
+
+class TestSanitizeVersion:
+    def test_string_version(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        assert agent._sanitize_version({"version": "production"}) == "production"  # pyright: ignore [reportPrivateUsage]
+
+    def test_default_version(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        assert agent._sanitize_version({}) == "production"  # pyright: ignore [reportPrivateUsage]
+
+    def test_version_properties(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        assert agent._sanitize_version({"version": VersionProperties(temperature=0.7)}) == {  # pyright: ignore [reportPrivateUsage]
+            "temperature": 0.7,
+            "model": "gemini-1.5-pro-latest",
+        }
+
+    def test_version_properties_with_model(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        # When the default version is used and we pass the model, the model has priority
+        assert agent.version == "production", "sanity"
+        assert agent._sanitize_version({"model": "gemini-1.5-pro-latest"}) == {  # pyright: ignore [reportPrivateUsage]
+            "model": "gemini-1.5-pro-latest",
+        }
+
+    def test_version_with_models_and_version(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        # If version is explcitly provided then it takes priority and we log a warning
+        assert agent._sanitize_version({"version": "staging", "model": "gemini-1.5-pro-latest"}) == "staging"  # pyright: ignore [reportPrivateUsage]
