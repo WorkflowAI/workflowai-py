@@ -13,7 +13,7 @@ class WorkflowAI:
     def __init__(
         self,
         api_key: str,
-        endpoint: Optional[str] = None,
+        url: Optional[str] = None,
         default_version: Optional[VersionReference] = None,
     ):
         self.additional_headers = {
@@ -21,7 +21,7 @@ class WorkflowAI:
             "x-workflowai-language": "python",
             "x-workflowai-version": importlib.metadata.version("workflowai"),
         }
-        self.api = APIClient(endpoint or "https://run.workflowai.com", api_key, self.additional_headers)
+        self.api = APIClient(url or "https://run.workflowai.com", api_key, self.additional_headers)
         self.default_version: VersionReference = default_version or global_default_version_reference()
 
     def task(

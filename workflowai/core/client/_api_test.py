@@ -11,7 +11,7 @@ from workflowai.core.domain.errors import WorkflowAIError
 
 class TestAPIClientExtractError:
     def test_extract_error(self):
-        client = APIClient(endpoint="test_endpoint", api_key="test_api_key")
+        client = APIClient(url="test_url", api_key="test_api_key")
 
         # Test valid JSON error response
         response = httpx.Response(
@@ -33,7 +33,7 @@ class TestAPIClientExtractError:
         assert error.response == response
 
     def test_extract_partial_output(self):
-        client = APIClient(endpoint="test_endpoint", api_key="test_api_key")
+        client = APIClient(url="test_url", api_key="test_api_key")
 
         # Test valid JSON error response
         response = httpx.Response(
@@ -57,7 +57,7 @@ class TestAPIClientExtractError:
         assert error.response == response
 
     def test_extract_error_invalid_json(self):
-        client = APIClient(endpoint="test_endpoint", api_key="test_api_key")
+        client = APIClient(url="test_url", api_key="test_api_key")
 
         # Test invalid JSON response
         invalid_data = b"Invalid JSON data"
@@ -71,7 +71,7 @@ class TestAPIClientExtractError:
         assert e.value.response == response
 
     def test_extract_error_with_custom_error(self):
-        client = APIClient(endpoint="test_endpoint", api_key="test_api_key")
+        client = APIClient(url="test_url", api_key="test_api_key")
 
         # Test with provided exception
         invalid_data = "{'detail': 'Not Found'}"
@@ -88,7 +88,7 @@ class TestAPIClientExtractError:
 
 @pytest.fixture
 def client() -> APIClient:
-    return APIClient(endpoint="https://blabla.com", api_key="test_api_key")
+    return APIClient(url="https://blabla.com", api_key="test_api_key")
 
 
 class _TestInputModel(BaseModel):

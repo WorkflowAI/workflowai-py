@@ -25,7 +25,7 @@ from workflowai.core.domain.version_properties import VersionProperties
 
 @pytest.fixture
 def api_client():
-    return WorkflowAI(endpoint="http://localhost:8000", api_key="test").api
+    return WorkflowAI(url="http://localhost:8000", api_key="test").api
 
 
 @pytest.fixture
