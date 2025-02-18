@@ -46,7 +46,7 @@ You can override the shared client by calling the init function.
 import workflowai
 
 workflowai.init(
-    url=..., # defaults to WORKFLOWAI_API_URL env var or https://api.workflowai.com
+    url=..., # defaults to WORKFLOWAI_API_URL env var or https://run.workflowai.com (our [globally distributed, highly available endpoint](https://docs.workflowai.com/workflowai-cloud/reliability))
     api_key=..., # defaults to WORKFLOWAI_API_KEY env var
 )
 ```
@@ -408,7 +408,7 @@ image = Image(content_type='image/jpeg', data='<base 64 encoded data>')
 image = Image(url="https://example.com/image.jpg")
 ```
 
-An example of using image as input is available in [city_identifier.py](./examples/images/city_identifier.py).
+An example of using image as input is available in [07_image_agent.py](./examples/07_image_agent.py).
 
 ### Files (PDF, .txt, ...)
 
