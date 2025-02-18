@@ -1,3 +1,4 @@
+from workflowai.core.fields.audio import Audio as Audio
 from workflowai.core.fields.chat_message import ChatMessage as ChatMessage
 from workflowai.core.fields.email_address import EmailAddressStr as EmailAddressStr
 from workflowai.core.fields.file import File as File
