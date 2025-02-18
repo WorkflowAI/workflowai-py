@@ -4,6 +4,7 @@ from typing import Any, Generic, Optional, Protocol
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 from typing_extensions import Unpack
 
+from workflowai import env
 from workflowai.core import _common_types
 from workflowai.core.client import _types
 from workflowai.core.domain.errors import BaseError
@@ -119,6 +120,10 @@ class Run(BaseModel, Generic[AgentOutput]):
     def __str__(self) -> str:
         """Return a string representation of the run."""
         return self.format_output()
+
+    @property
+    def run_url(self):
+        return f"{env.WORKFLOWAI_APP_URL}/agents/{self.agent_id}/runs/{self.id}"
 
 
 class _AgentBase(Protocol, Generic[AgentOutput]):
