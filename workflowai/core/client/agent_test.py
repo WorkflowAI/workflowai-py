@@ -1,6 +1,5 @@
 import importlib.metadata
 import json
-from unittest.mock import AsyncMock
 
 import httpx
 import pytest
@@ -14,7 +13,7 @@ from tests.models.hello_task import (
 )
 from tests.utils import fixtures_json
 from workflowai.core.client._api import APIClient
-from workflowai.core.client._models import ListModelsResponse, ModelInfo, ModelMetadata
+from workflowai.core.client._models import ModelInfo
 from workflowai.core.client.agent import Agent
 from workflowai.core.client.client import (
     WorkflowAI,
@@ -372,62 +371,63 @@ class TestSanitizeVersion:
 
 
 @pytest.mark.asyncio
-async def test_list_models(agent: Agent[HelloTaskInput, HelloTaskOutput]):
+async def test_list_models(agent: Agent[HelloTaskInput, HelloTaskOutput], httpx_mock: HTTPXMock):
     """Test that list_models correctly fetches and returns available models."""
-    # Mock the get method of the API client with the new response structure
-    mock_response = ListModelsResponse(
-        items=[
-            ModelInfo(
-                id="gpt-4",
-                name="GPT-4",
-                icon_url="https://example.com/gpt4.png",
-                modes=["chat"],
-                is_not_supported_reason=None,
-                average_cost_per_run_usd=0.01,
-                is_latest=True,
-                metadata=ModelMetadata(
-                    provider_name="OpenAI",
-                    price_per_input_token_usd=0.0001,
-                    price_per_output_token_usd=0.0002,
-                    release_date="2024-01-01",
-                    context_window_tokens=128000,
-                    quality_index=0.95,
-                ),
-                is_default=True,
-                providers=["openai"],
-            ),
-            ModelInfo(
-                id="claude-3",
-                name="Claude 3",
-                icon_url="https://example.com/claude3.png",
-                modes=["chat"],
-                is_not_supported_reason=None,
-                average_cost_per_run_usd=0.015,
-                is_latest=True,
-                metadata=ModelMetadata(
-                    provider_name="Anthropic",
-                    price_per_input_token_usd=0.00015,
-                    price_per_output_token_usd=0.00025,
-                    release_date="2024-03-01",
-                    context_window_tokens=200000,
-                    quality_index=0.98,
-                ),
-                is_default=False,
-                providers=["anthropic"],
-            ),
-        ],
-        count=2,
+    # Mock the HTTP response instead of the API client method
+    httpx_mock.add_response(
+        url="http://localhost:8000/v1/_/agents/123/schemas/1/models",
+        json={
+            "items": [
+                {
+                    "id": "gpt-4",
+                    "name": "GPT-4",
+                    "icon_url": "https://example.com/gpt4.png",
+                    "modes": ["chat"],
+                    "is_not_supported_reason": None,
+                    "average_cost_per_run_usd": 0.01,
+                    "is_latest": True,
+                    "metadata": {
+                        "provider_name": "OpenAI",
+                        "price_per_input_token_usd": 0.0001,
+                        "price_per_output_token_usd": 0.0002,
+                        "release_date": "2024-01-01",
+                        "context_window_tokens": 128000,
+                        "quality_index": 0.95,
+                    },
+                    "is_default": True,
+                    "providers": ["openai"],
+                },
+                {
+                    "id": "claude-3",
+                    "name": "Claude 3",
+                    "icon_url": "https://example.com/claude3.png",
+                    "modes": ["chat"],
+                    "is_not_supported_reason": None,
+                    "average_cost_per_run_usd": 0.015,
+                    "is_latest": True,
+                    "metadata": {
+                        "provider_name": "Anthropic",
+                        "price_per_input_token_usd": 0.00015,
+                        "price_per_output_token_usd": 0.00025,
+                        "release_date": "2024-03-01",
+                        "context_window_tokens": 200000,
+                        "quality_index": 0.98,
+                    },
+                    "is_default": False,
+                    "providers": ["anthropic"],
+                },
+            ],
+            "count": 2,
+        },
     )
-    agent.api.get = AsyncMock(return_value=mock_response)
 
     # Call the method
     models = await agent.list_models()
 
-    # Verify the API was called correctly
-    agent.api.get.assert_called_once_with(
-        "/v1/_/agents/123/schemas/1/models",
-        returns=ListModelsResponse,
-    )
+    # Verify the HTTP request was made correctly
+    request = httpx_mock.get_request()
+    assert request is not None, "Expected an HTTP request to be made"
+    assert request.url == "http://localhost:8000/v1/_/agents/123/schemas/1/models"
 
     # Verify we get back the full ModelInfo objects
     assert len(models) == 2

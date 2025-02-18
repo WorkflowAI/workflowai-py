@@ -1,4 +1,4 @@
-from typing import Any, Literal, Optional, Union
+from typing import Any, Generic, Literal, Optional, TypeVar, Union
 
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 from typing_extensions import NotRequired, TypedDict
@@ -185,7 +185,13 @@ class ModelInfo(BaseModel):
     providers: list[str] = Field(default_factory=list, description="List of providers that offer this model")
 
 
-class ListModelsResponse(BaseModel):
+T = TypeVar("T")
+
+class Page(BaseModel, Generic[T]):
+    """A generic paginated response."""
+    items: list[T] = Field(description="List of items in this page")
+    count: Optional[int] = Field(None, description="Total number of items available")
+
+
+class ListModelsResponse(Page[ModelInfo]):
     """Response from the list models API endpoint."""
-    items: list[ModelInfo] = Field(description="List of available models")
-    count: Optional[int] = Field(None, description="Total number of models")
