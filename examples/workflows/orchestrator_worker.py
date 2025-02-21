@@ -134,7 +134,7 @@ async def implement_feature(feature_request: str) -> FeatureImplementationResult
 if __name__ == "__main__":
     # Example feature request
     feature_request = """
-    Add a new user authentication endpoint that:
+    Add a new user authentication url that:
     1. Accepts username/password
     2. Validates credentials
     3. Returns a JWT token

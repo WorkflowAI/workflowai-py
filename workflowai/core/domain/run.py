@@ -7,6 +7,7 @@ from typing_extensions import Unpack
 from workflowai import env
 from workflowai.core import _common_types
 from workflowai.core.client import _types
+from workflowai.core.domain.completion import Completion
 from workflowai.core.domain.errors import BaseError
 from workflowai.core.domain.task import AgentOutput
 from workflowai.core.domain.tool_call import ToolCall, ToolCallRequest, ToolCallResult
@@ -90,6 +91,7 @@ class Run(BaseModel, Generic[AgentOutput]):
         1. The output as a nicely formatted JSON object
         2. The cost with $ prefix (if available)
         3. The latency with 2 decimal places and 's' suffix (if available)
+        4. The run URL for viewing in the web UI
 
         Example:
             Output:
@@ -100,6 +102,7 @@ class Run(BaseModel, Generic[AgentOutput]):
             ==================================================
             Cost: $ 0.001
             Latency: 1.23s
+            URL: https://workflowai.com/_/agents/agent-1/runs/test-id
         """
         # Format the output string
         output = [
@@ -115,6 +118,9 @@ class Run(BaseModel, Generic[AgentOutput]):
         if self.duration_seconds is not None:
             output.append(f"Latency: {self.duration_seconds:.2f}s")
 
+        # Always add the run URL
+        output.append(f"URL: {self.run_url}")
+
         return "\n".join(output)
 
     def __str__(self) -> str:
@@ -123,7 +129,24 @@ class Run(BaseModel, Generic[AgentOutput]):
 
     @property
     def run_url(self):
-        return f"{env.WORKFLOWAI_APP_URL}/agents/{self.agent_id}/runs/{self.id}"
+        return f"{env.WORKFLOWAI_APP_URL}/_/agents/{self.agent_id}/runs/{self.id}"
+
+    async def fetch_completions(self) -> list[Completion]:
+        """Fetch the completions for this run.
+
+        Returns:
+            CompletionsResponse: The completions response containing a list of completions
+            with their messages, responses and usage information.
+
+        Raises:
+            ValueError: If the agent is not set or if the run id is not set.
+        """
+        if not self._agent:
+            raise ValueError("Agent is not set")
+        if not self.id:
+            raise ValueError("Run id is not set")
+
+        return await self._agent.fetch_completions(self.id)
 
 
 class _AgentBase(Protocol, Generic[AgentOutput]):
@@ -136,3 +159,5 @@ class _AgentBase(Protocol, Generic[AgentOutput]):
     ) -> "Run[AgentOutput]":
         """Reply to a run. Either a user_message or tool_results must be provided."""
         ...
+
+    async def fetch_completions(self, run_id: str) -> list[Completion]: ...

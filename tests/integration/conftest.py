@@ -12,7 +12,7 @@ from workflowai.core.client.client import WorkflowAI
 
 @pytest.fixture(scope="module", autouse=True)
 def init_client():
-    with patch("workflowai.shared_client", new=WorkflowAI(api_key="test", endpoint="https://run.workflowai.dev")):
+    with patch("workflowai.shared_client", new=WorkflowAI(api_key="test", url="https://run.workflowai.dev")):
         yield
 
 

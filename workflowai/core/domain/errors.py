@@ -169,5 +169,21 @@ class WorkflowAIError(Exception):
 
         return None
 
+    @property
+    def code(self) -> Optional[ErrorCode]:
+        return self.error.code
+
+    @property
+    def status_code(self) -> Optional[int]:
+        return self.error.status_code
+
+    @property
+    def message(self) -> str:
+        return self.error.message
+
+    @property
+    def details(self) -> Optional[dict[str, Any]]:
+        return self.error.details
+
 
 class InvalidGenerationError(WorkflowAIError): ...

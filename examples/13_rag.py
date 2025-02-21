@@ -2,7 +2,7 @@
 This example demonstrates how to create a RAG-enabled chatbot that:
 1. Uses a search tool to find relevant information from a knowledge base
 2. Incorporates search results into its responses
-3. Maintains conversation context
+3. Maintains context through conversation using .reply
 4. Provides well-structured, informative responses
 
 Note: WorkflowAI does not manage the RAG implementation (yet). You need to provide your own
@@ -11,20 +11,11 @@ function to demonstrate the pattern.
 """
 
 import asyncio
-from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
 import workflowai
-from workflowai import Model, Run
-
-
-class Role(str, Enum):
-    """Enum representing possible message roles."""
-
-    USER = "user"
-    ASSISTANT = "assistant"
+from workflowai import Model
 
 
 class SearchResult(BaseModel):
@@ -79,38 +70,25 @@ async def search_faq(query: str) -> list[SearchResult]:
     ]
 
 
-class Message(BaseModel):
-    """Model representing a chat message."""
+class AssistantMessage(BaseModel):
+    """Model representing a message from the assistant."""
 
-    role: Role
     content: str = Field(
         description="The content of the message",
     )
-
-
-class AssistantMessage(Message):
-    """Model representing a message from the assistant."""
-
-    role: Role = Role.ASSISTANT
-    content: str = ""
 
 
 class ChatbotOutput(BaseModel):
     """Output model for the chatbot response."""
 
     assistant_message: AssistantMessage = Field(
-        default_factory=AssistantMessage,
         description="The chatbot's response message",
     )
 
 
 class ChatInput(BaseModel):
-    """Input model containing the user's message and conversation history."""
+    """Input model containing the user's message."""
 
-    conversation_history: Optional[list[Message]] = Field(
-        default=None,
-        description="Previous messages in the conversation, if any",
-    )
     user_message: str = Field(
         description="The current message from the user",
     )
@@ -124,7 +102,7 @@ class ChatInput(BaseModel):
     # The agent will automatically handle calling the tool and incorporating the results.
     tools=[search_faq],
 )
-async def chat_agent(chat_input: ChatInput) -> Run[ChatbotOutput]:
+async def chat_agent(chat_input: ChatInput) -> ChatbotOutput:
     """
     Act as a knowledgeable assistant that uses search to find and incorporate relevant information.
 
@@ -165,15 +143,27 @@ async def chat_agent(chat_input: ChatInput) -> Run[ChatbotOutput]:
 
 
 async def main():
-    # Example: Question about return policy
-    print("\nExample: Question about return policy")
+    # Example 1: Initial question about return policy
+    print("\nExample 1: Question about return policy")
     print("-" * 50)
 
-    chat_input = ChatInput(
-        user_message="What is your return policy? Can I return items I bought online?",
+    run = await chat_agent.run(
+        ChatInput(user_message="What is your return policy? Can I return items I bought online?"),
     )
+    print(run)
 
-    run = await chat_agent(chat_input)
+    # Example 2: Follow-up question about shipping
+    print("\nExample 2: Follow-up about shipping")
+    print("-" * 50)
+
+    run = await run.reply(user_message="How long does shipping usually take?")
+    print(run)
+
+    # Example 3: Specific question about refund processing
+    print("\nExample 3: Question about refunds")
+    print("-" * 50)
+
+    run = await run.reply(user_message="Once I return an item, how long until I get my refund?")
     print(run)
 
 

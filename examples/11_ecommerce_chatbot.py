@@ -2,25 +2,17 @@
 This example demonstrates how to create an e-commerce chatbot that:
 1. Understands customer queries about products
 2. Provides helpful responses with product recommendations
-3. Maintains context through conversation
+3. Maintains context through conversation using .reply
 4. Returns structured product recommendations
 """
 
 import asyncio
-from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, Field
 
 import workflowai
-from workflowai import Model, Run
-
-
-class Role(str, Enum):
-    """Enum representing possible message roles."""
-
-    USER = "user"
-    ASSISTANT = "assistant"
+from workflowai import Model
 
 
 class Product(BaseModel):
@@ -56,28 +48,16 @@ class Product(BaseModel):
     )
 
 
-class Message(BaseModel):
-    """Model representing a chat message."""
+class AssistantMessage(BaseModel):
+    """Model representing a message from the assistant."""
 
-    role: Role = Field()
     content: str = Field(
         description="The content of the message",
-        examples=[
-            "I'm looking for noise-cancelling headphones for travel",
-            "Based on your requirements, here are some great headphone options...",
-        ],
     )
     recommended_products: Optional[list[Product]] = Field(
         default=None,
         description="Product recommendations included with this message, if any",
     )
-
-
-class AssistantMessage(Message):
-    """Model representing a message from the assistant."""
-
-    role: Role = Role.ASSISTANT
-    content: str = ""
 
 
 class ChatbotOutput(BaseModel):
@@ -89,12 +69,8 @@ class ChatbotOutput(BaseModel):
 
 
 class ChatInput(BaseModel):
-    """Input model containing the user's message and conversation history."""
+    """Input model containing the user's message."""
 
-    conversation_history: Optional[list[Message]] = Field(
-        default=None,
-        description="Previous messages in the conversation, if any",
-    )
     user_message: str = Field(
         description="The current message from the user",
     )
@@ -104,7 +80,7 @@ class ChatInput(BaseModel):
     id="ecommerce-chatbot",
     model=Model.LLAMA_3_3_70B,
 )
-async def get_product_recommendations(chat_input: ChatInput) -> Run[ChatbotOutput]:
+async def get_product_recommendations(chat_input: ChatInput) -> ChatbotOutput:
     """
     Act as a knowledgeable e-commerce shopping assistant.
 
@@ -142,63 +118,34 @@ async def main():
     print("\nExample 1: Looking for headphones")
     print("-" * 50)
 
-    chat_input = ChatInput(
-        user_message="I'm looking for noise-cancelling headphones for travel. My budget is around $300.",
+    run = await get_product_recommendations.run(
+        ChatInput(user_message="I'm looking for noise-cancelling headphones for travel. My budget is around $300."),
     )
-
-    run = await get_product_recommendations(chat_input)
     print(run)
 
-    # Example 2: Follow-up question with conversation history
+    # Example 2: Follow-up question using reply
     print("\nExample 2: Follow-up about battery life")
     print("-" * 50)
 
-    chat_input = ChatInput(
-        user_message="Which one has the best battery life?",
-        conversation_history=[
-            Message(
-                role=Role.USER,
-                content="I'm looking for noise-cancelling headphones for travel. My budget is around $300.",
-            ),
-            run.output.assistant_message,
-        ],
-    )
-
-    run = await get_product_recommendations(chat_input)
+    run = await run.reply(user_message="Which one has the best battery life?")
     print(run)
 
     # Example 3: Specific question about a previously recommended product
     print("\nExample 3: Question about a specific product")
     print("-" * 50)
 
-    chat_input = ChatInput(
-        user_message="Tell me more about the noise cancellation features of the first headphone you recommended.",
-        conversation_history=[
-            Message(
-                role=Role.USER,
-                content="I'm looking for noise-cancelling headphones for travel. My budget is around $300.",
-            ),
-            run.output.assistant_message,
-            Message(
-                role=Role.USER,
-                content="Which one has the best battery life?",
-            ),
-            run.output.assistant_message,
-        ],
+    run = await run.reply(
+        user_message=(
+            "Tell me more about the noise cancellation features of the first headphone you recommended."
+        ),
     )
-
-    run = await get_product_recommendations(chat_input)
     print(run)
 
     # Example 4: Different product category
     print("\nExample 4: Looking for a TV")
     print("-" * 50)
 
-    chat_input = ChatInput(
-        user_message="I need a good TV for gaming. My budget is $1000.",
-    )
-
-    run = await get_product_recommendations(chat_input)
+    run = await run.reply(user_message="I need a good TV for gaming. My budget is $1000.")
     print(run)
 
 

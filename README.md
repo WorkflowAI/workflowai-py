@@ -46,7 +46,7 @@ You can override the shared client by calling the init function.
 import workflowai
 
 workflowai.init(
-    url=..., # defaults to WORKFLOWAI_API_URL env var or https://api.workflowai.com
+    url=..., # defaults to WORKFLOWAI_API_URL env var or https://run.workflowai.com (our [globally distributed, highly available endpoint](https://docs.workflowai.com/workflowai-cloud/reliability))
     api_key=..., # defaults to WORKFLOWAI_API_KEY env var
 )
 ```
@@ -184,7 +184,9 @@ for point in run.negative_points:
 
 WorkflowAI supports a long list of models. The source of truth for models we support is on [workflowai.com](https://workflowai.com). The [Model enum](./workflowai/core/domain/model.py) is a good indication of what models are supported at the time of the sdk release, although it may be missing some models since new ones are added all the time.
 
-You can set the model explicitly in the agent decorator:
+You can specify the model in two ways:
+
+1. In the agent decorator:
 
 ```python
 from workflowai import Model
@@ -194,9 +196,80 @@ async def analyze_call_feedback(input: CallFeedbackInput) -> CallFeedbackOutput:
     ...
 ```
 
+2. As a function parameter when calling the agent:
+
+```python
+@workflowai.agent(id="analyze-call-feedback")
+async def analyze_call_feedback(input: CallFeedbackInput) -> CallFeedbackOutput:
+    ...
+
+# Call with specific model
+result = await analyze_call_feedback(input_data, model=Model.GPT_4O_LATEST)
+```
+
+This flexibility allows you to either fix the model in the agent definition or dynamically choose different models at runtime.
+
 > Models do not become invalid on WorkflowAI. When a model is retired, it will be replaced dynamically by
 > a newer version of the same model with the same or a lower price so calling the api with
 > a retired model will always work.
+
+### Using templated instructions
+
+You can use [Jinja2](https://jinja.palletsprojects.com/)-style templating in your agent's instructions (docstring) to make them dynamic based on input values. The template variables are automatically populated from the fields in your input model.
+
+```python
+class CodeReviewInput(BaseModel):
+    language: str = Field(description="Programming language of the code")
+    style_guide: str = Field(description="Style guide to follow")
+    is_production: bool = Field(description="Whether this is a production review")
+    focus_areas: list[str] = Field(description="Areas to focus on during review", default_factory=list)
+
+class CodeReviewOutput(BaseModel):
+    """Output from a code review."""
+    issues: list[str] = Field(
+        default_factory=list,
+        description="List of identified issues or suggestions for improvement"
+    )
+    compliments: list[str] = Field(
+        default_factory=list,
+        description="List of positive aspects and good practices found in the code"
+    )
+    summary: str = Field(
+        description="A brief summary of the code review findings"
+    )
+
+@workflowai.agent(id="code-review")
+async def review_code(review_input: CodeReviewInput) -> CodeReviewOutput:
+    """
+    You are a code reviewer for {{ language }} code.
+    Please review according to the {{ style_guide }} style guide.
+
+    {% if is_production %}
+    This is a PRODUCTION review - be extra thorough and strict.
+    {% else %}
+    This is a development review - focus on maintainability.
+    {% endif %}
+
+    {% if focus_areas %}
+    Key areas to focus on:
+    {% for area in focus_areas %}
+    {{ loop.index }}. {{ area }}
+    {% endfor %}
+    {% endif %}
+    """
+    ...
+```
+
+The template uses [Jinja2](https://jinja.palletsprojects.com/) syntax and supports common templating features including:
+
+- Variable substitution: `{{ variable }}`
+- Conditionals: `{% if condition %}...{% endif %}`
+- Loops: `{% for item in items %}...{% endfor %}`
+- Loop indices: `{{ loop.index }}`
+
+See the [Jinja2 documentation](https://jinja.palletsprojects.com/) for the full template syntax and capabilities.
+
+We recommend using ChatGPT or CursorAI to help generate the template.
 
 ### Version from code or deployments
 
@@ -335,7 +408,7 @@ image = Image(content_type='image/jpeg', data='<base 64 encoded data>')
 image = Image(url="https://example.com/image.jpg")
 ```
 
-An example of using image as input is available in [city_identifier.py](./examples/images/city_identifier.py).
+An example of using image as input is available in [07_image_agent.py](./examples/07_image_agent.py).
 
 ### Files (PDF, .txt, ...)
 

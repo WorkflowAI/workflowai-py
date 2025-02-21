@@ -9,8 +9,11 @@ from typing_extensions import Unpack
 from workflowai.core._common_types import BaseRunParams, OutputValidator, VersionRunParams
 from workflowai.core.client._api import APIClient
 from workflowai.core.client._models import (
+    CompletionsResponse,
     CreateAgentRequest,
     CreateAgentResponse,
+    ListModelsResponse,
+    ModelInfo,
     ReplyRequest,
     RunRequest,
     RunResponse,
@@ -22,6 +25,7 @@ from workflowai.core.client._utils import (
     intolerant_validator,
     tolerant_validator,
 )
+from workflowai.core.domain.completion import Completion
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import AgentInput, AgentOutput
@@ -94,7 +98,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
         self.schema_id = schema_id
         self.input_cls = input_cls
         self.output_cls = output_cls
-        self.version: VersionReference = version or global_default_version_reference()
+        self.version = version
         self._api = (lambda: api) if isinstance(api, APIClient) else api
         self._tools = self.build_tools(tools) if tools else None
 
@@ -116,24 +120,27 @@ class Agent(Generic[AgentInput, AgentOutput]):
         schema_id: int
 
     def _sanitize_version(self, params: VersionRunParams) -> Union[str, int, dict[str, Any]]:
-        version = params.get("version")
+        """Combine a version requested at runtime and the version requested at build time."""
+        version = params.get("version", self.version)
         model = params.get("model")
         instructions = params.get("instructions")
         temperature = params.get("temperature")
 
-        has_property_overrides = bool(model or instructions or temperature)
+        has_property_overrides = bool(model or instructions or temperature or self._tools)
 
-        if not version:
-            # If versions is not specified, we fill with the default agent version only if
-            # there are no additional properties
-            version = self.version if not has_property_overrides else VersionProperties()
+        if version and not isinstance(version, VersionProperties):
+            if not has_property_overrides and not self._tools:
+                return version
+            # In the case where the version requested a build time was a remote version
+            # (either an ID or an environment), we use an empty template for the version
+            logger.warning("Overriding remove version with a local one")
+            version = VersionProperties()
 
-        if not isinstance(version, VersionProperties):
-            if has_property_overrides or self._tools:
-                logger.warning("Property overrides are ignored when version is not a VersionProperties")
-            return version
+        if not version and not has_property_overrides:
+            g = global_default_version_reference()
+            return g.model_dump(by_alias=True, exclude_unset=True) if isinstance(g, VersionProperties) else g
 
-        dumped = version.model_dump(by_alias=True, exclude_unset=True)
+        dumped = version.model_dump(by_alias=True, exclude_unset=True) if version else {}
 
         if not dumped.get("model"):
             # We always provide a default model since it is required by the API
@@ -469,3 +476,37 @@ class Agent(Generic[AgentInput, AgentOutput]):
     def _sanitize_validator(cls, kwargs: RunParams[AgentOutput], default: OutputValidator[AgentOutput]):
         validator = kwargs.pop("validator", default)
         return validator, cast(BaseRunParams, kwargs)
+
+    async def list_models(self) -> list[ModelInfo]:
+        """Fetch the list of available models from the API for this agent.
+
+        Returns:
+            list[ModelInfo]: List of available models with their full information.
+
+        Raises:
+            ValueError: If the agent has not been registered (schema_id is None).
+        """
+        if not self.schema_id:
+            self.schema_id = await self.register()
+
+        response = await self.api.get(
+            # The "_" refers to the currently authenticated tenant's namespace
+            f"/v1/_/agents/{self.agent_id}/schemas/{self.schema_id}/models",
+            returns=ListModelsResponse,
+        )
+        return response.items
+
+    async def fetch_completions(self, run_id: str) -> list[Completion]:
+        """Fetch the completions for a run.
+
+        Args:
+            run_id (str): The id of the run to fetch completions for.
+
+        Returns:
+            CompletionsResponse: The completions for the run.
+        """
+        raw = await self.api.get(
+            f"/v1/_/agents/{self.agent_id}/runs/{run_id}/completions",
+            returns=CompletionsResponse,
+        )
+        return raw.completions

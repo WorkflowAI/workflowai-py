@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from .env import _default_api_url  # pyright: ignore[reportPrivateUsage]
+from .env import _default_app_url  # pyright: ignore[reportPrivateUsage]
 
 
 @pytest.mark.parametrize(
@@ -15,6 +15,6 @@ from .env import _default_api_url  # pyright: ignore[reportPrivateUsage]
         (None, "https://workflowai.com"),
     ],
 )
-def test_default_api_url(api_url: Optional[str], expected: str):
+def test_default_app_url(api_url: Optional[str], expected: str):
     with patch("workflowai.env.WORKFLOWAI_API_URL", api_url):
-        assert _default_api_url() == expected
+        assert _default_app_url() == expected
