@@ -3,8 +3,11 @@ from unittest.mock import Mock, patch
 import pytest
 from pydantic import BaseModel
 
-from workflowai.core.client._api import APIClient
-from workflowai.core.domain.run import Completion, CompletionsResponse, CompletionUsage, Message, Run
+from workflowai.core.domain.completion import Completion, CompletionUsage, Message
+from workflowai.core.domain.run import (
+    Run,
+    _AgentBase,  # pyright: ignore [reportPrivateUsage]
+)
 from workflowai.core.domain.version import Version
 from workflowai.core.domain.version_properties import VersionProperties
 
@@ -14,8 +17,14 @@ class _TestOutput(BaseModel):
 
 
 @pytest.fixture
-def run1() -> Run[_TestOutput]:
-    return Run[_TestOutput](
+def mock_agent() -> Mock:
+    mock = Mock(spec=_AgentBase)
+    return mock
+
+
+@pytest.fixture
+def run1(mock_agent: Mock) -> Run[_TestOutput]:
+    run = Run[_TestOutput](
         id="run-id",
         agent_id="agent-id",
         schema_id=1,
@@ -27,6 +36,8 @@ def run1() -> Run[_TestOutput]:
         tool_calls=[],
         tool_call_requests=[],
     )
+    run._agent = mock_agent  # pyright: ignore [reportPrivateUsage]
+    return run
 
 
 @pytest.fixture
@@ -134,56 +145,40 @@ class TestRunURL:
 class TestFetchCompletions:
     """Tests for the fetch_completions method of the Run class."""
 
-    # Test the successful case of fetching completions:
-    # 1. Verifies that the API client is called with the correct URL and parameters
-    # 2. Verifies that the response is properly parsed into CompletionsResponse
-    # 3. Checks that all fields (messages, response, usage) are correctly populated
-    # 4. Ensures the completion contains the expected conversation history (system, user, assistant)
-    async def test_fetch_completions_success(self, run1: Run[_TestOutput]):
-        # Create a mock API client
-        mock_api = Mock(spec=APIClient)
-        mock_api.get.return_value = CompletionsResponse(
-            completions=[
-                Completion(
-                    messages=[
-                        Message(role="system", content="You are a helpful assistant"),
-                        Message(role="user", content="Hello"),
-                        Message(role="assistant", content="Hi there!"),
-                    ],
-                    response="Hi there!",
-                    usage=CompletionUsage(
-                        completion_token_count=3,
-                        completion_cost_usd=0.001,
-                        reasoning_token_count=10,
-                        prompt_token_count=20,
-                        prompt_token_count_cached=0,
-                        prompt_cost_usd=0.002,
-                        prompt_audio_token_count=0,
-                        prompt_audio_duration_seconds=0,
-                        prompt_image_count=0,
-                        model_context_window_size=32000,
-                    ),
+    # Test that the underlying agent is called with the proper run id
+    async def test_fetch_completions_success(self, run1: Run[_TestOutput], mock_agent: Mock):
+        mock_agent.fetch_completions.return_value = [
+            Completion(
+                messages=[
+                    Message(role="system", content="You are a helpful assistant"),
+                    Message(role="user", content="Hello"),
+                    Message(role="assistant", content="Hi there!"),
+                ],
+                response="Hi there!",
+                usage=CompletionUsage(
+                    completion_token_count=3,
+                    completion_cost_usd=0.001,
+                    reasoning_token_count=10,
+                    prompt_token_count=20,
+                    prompt_token_count_cached=0,
+                    prompt_cost_usd=0.002,
+                    prompt_audio_token_count=0,
+                    prompt_audio_duration_seconds=0,
+                    prompt_image_count=0,
+                    model_context_window_size=32000,
                 ),
-            ],
-        )
-
-        # Create a mock agent with the mock API client
-        mock_agent = Mock()
-        mock_agent.api = mock_api
-        run1._agent = mock_agent  # pyright: ignore [reportPrivateUsage]
+            ),
+        ]
 
         # Call fetch_completions
         completions = await run1.fetch_completions()
 
         # Verify the API was called correctly
-        mock_api.get.assert_called_once_with(
-            "/v1/_/agents/agent-id/runs/run-id/completions",
-            returns=CompletionsResponse,
-        )
+        mock_agent.fetch_completions.assert_called_once_with("run-id")
 
         # Verify the response
-        assert len(completions.completions) == 1
-        completion = completions.completions[0]
+        assert len(completions) == 1
+        completion = completions[0]
         assert len(completion.messages) == 3
         assert completion.messages[0].role == "system"
         assert completion.messages[0].content == "You are a helpful assistant"
