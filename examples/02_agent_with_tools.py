@@ -9,12 +9,12 @@ It showcases:
 
 import asyncio
 from datetime import date, datetime
-
-from pydantic import BaseModel, Field
 from zoneinfo import ZoneInfo
 
+from pydantic import BaseModel, Field
+
 import workflowai
-from workflowai import Model, Run
+from workflowai import Model
 
 
 def get_current_date() -> str:
@@ -65,7 +65,7 @@ class HistoricalEventOutput(BaseModel):
     model=Model.GEMINI_1_5_FLASH_LATEST,
     tools=[get_current_date, calculate_days_between],
 )
-async def analyze_historical_event(event_input: HistoricalEventInput) -> Run[HistoricalEventOutput]:
+async def analyze_historical_event(event_input: HistoricalEventInput) -> HistoricalEventOutput:
     """
     Find information about historical events and calculate days since they occurred.
 
@@ -88,7 +88,7 @@ async def main():
     # Example: Query about the moon landing
     print("\nExample: First Moon Landing")
     print("-" * 50)
-    result = await analyze_historical_event(
+    result = await analyze_historical_event.run(
         HistoricalEventInput(query="When was the first moon landing?"),
     )
     print(result.output)
@@ -99,7 +99,7 @@ async def main():
     # Example: Query about World War II
     print("\nExample: End of World War II")
     print("-" * 50)
-    result = await analyze_historical_event(
+    result = await analyze_historical_event.run(
         HistoricalEventInput(query="When did World War II end?"),
     )
     print(result.output)
