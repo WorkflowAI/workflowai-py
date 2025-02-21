@@ -1,5 +1,6 @@
 import importlib.metadata
 import json
+from unittest.mock import Mock, patch
 
 import httpx
 import pytest
@@ -346,28 +347,62 @@ class TestRun:
 
 
 class TestSanitizeVersion:
-    def test_string_version(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
-        assert agent._sanitize_version({"version": "production"}) == "production"  # pyright: ignore [reportPrivateUsage]
-
-    def test_default_version(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+    def test_global_default(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        """Test that the global default version is used when no version is provided"""
+        assert agent.version is None, "sanity"
         assert agent._sanitize_version({}) == "production"  # pyright: ignore [reportPrivateUsage]
 
+    @patch("workflowai.core.client.agent.global_default_version_reference")
+    def test_global_default_with_properties(
+        self,
+        mock_global_default: Mock,
+        agent: Agent[HelloTaskInput, HelloTaskOutput],
+    ):
+        """Check that a dict is returned when the global default version is a VersionProperties"""
+        mock_global_default.return_value = VersionProperties(model="gpt-4o")
+        assert agent._sanitize_version({}) == {  # pyright: ignore [reportPrivateUsage]
+            "model": "gpt-4o",
+        }
+
+    def test_string_version(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        """Check that a string is returned when the version is a string"""
+        assert agent._sanitize_version({"version": "production"}) == "production"  # pyright: ignore [reportPrivateUsage]
+
+    def test_override_remove_version(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        """Check that a remote version is overridden by a local one"""
+        agent.version = "staging"
+        assert agent._sanitize_version({"model": "gpt-4o-latest"}) == {  # pyright: ignore [reportPrivateUsage]
+            "model": "gpt-4o-latest",
+        }
+
     def test_version_properties(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        """Check that a dict is returned when the version is a VersionProperties"""
         assert agent._sanitize_version({"version": VersionProperties(temperature=0.7)}) == {  # pyright: ignore [reportPrivateUsage]
             "temperature": 0.7,
             "model": "gemini-1.5-pro-latest",
         }
 
     def test_version_properties_with_model(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
-        # When the default version is used and we pass the model, the model has priority
-        assert agent.version == "production", "sanity"
+        """When the default version is used and we pass the model, the model has priority"""
+        assert agent.version is None, "sanity"
         assert agent._sanitize_version({"model": "gemini-1.5-pro-latest"}) == {  # pyright: ignore [reportPrivateUsage]
             "model": "gemini-1.5-pro-latest",
         }
 
     def test_version_with_models_and_version(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
-        # If version is explcitly provided then it takes priority and we log a warning
-        assert agent._sanitize_version({"version": "staging", "model": "gemini-1.5-pro-latest"}) == "staging"  # pyright: ignore [reportPrivateUsage]
+        """If the runtime version is a remote version but a model is passed, we use an empty template for the version"""
+        assert agent._sanitize_version({"version": "staging", "model": "gemini-1.5-pro-latest"}) == {  # pyright: ignore [reportPrivateUsage]
+            "model": "gemini-1.5-pro-latest",
+        }
+
+    def test_only_model_privider(self, agent: Agent[HelloTaskInput, HelloTaskOutput]):
+        """Test that when an agent has instructions we use the instructions when overriding the model"""
+        agent.version = VersionProperties(model="gpt-4o", instructions="You are a helpful assistant.")
+        sanitized = agent._sanitize_version({"model": "gemini-1.5-pro-latest"})  # pyright: ignore [reportPrivateUsage]
+        assert sanitized == {
+            "model": "gemini-1.5-pro-latest",
+            "instructions": "You are a helpful assistant.",
+        }
 
 
 @pytest.mark.asyncio

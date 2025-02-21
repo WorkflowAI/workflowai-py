@@ -123,7 +123,7 @@ class Run(BaseModel, Generic[AgentOutput]):
 
     @property
     def run_url(self):
-        return f"{env.WORKFLOWAI_APP_URL}/agents/{self.agent_id}/runs/{self.id}"
+        return f"{env.WORKFLOWAI_APP_URL}/_/agents/{self.agent_id}/runs/{self.id}"
 
 
 class _AgentBase(Protocol, Generic[AgentOutput]):
