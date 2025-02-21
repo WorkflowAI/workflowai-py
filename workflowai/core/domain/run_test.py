@@ -3,7 +3,8 @@ from unittest.mock import Mock, patch
 import pytest
 from pydantic import BaseModel
 
-from workflowai.core.domain.run import Run
+from workflowai.core.client._api import APIClient
+from workflowai.core.domain.run import Completion, CompletionsResponse, CompletionUsage, Message, Run
 from workflowai.core.domain.version import Version
 from workflowai.core.domain.version_properties import VersionProperties
 
@@ -120,3 +121,86 @@ class TestRunURL:
     @patch("workflowai.env.WORKFLOWAI_APP_URL", "https://workflowai.hello")
     def test_run_url(self, run1: Run[_TestOutput]):
         assert run1.run_url == "https://workflowai.hello/agents/agent-1/runs/test-id"
+
+
+class TestFetchCompletions:
+    """Tests for the fetch_completions method of the Run class."""
+
+    # Test the successful case of fetching completions:
+    # 1. Verifies that the API client is called with the correct URL and parameters
+    # 2. Verifies that the response is properly parsed into CompletionsResponse
+    # 3. Checks that all fields (messages, response, usage) are correctly populated
+    # 4. Ensures the completion contains the expected conversation history (system, user, assistant)
+    async def test_fetch_completions_success(self, run1: Run[_TestOutput]):
+        # Create a mock API client
+        mock_api = Mock(spec=APIClient)
+        mock_api.get.return_value = CompletionsResponse(
+            completions=[
+                Completion(
+                    messages=[
+                        Message(role="system", content="You are a helpful assistant"),
+                        Message(role="user", content="Hello"),
+                        Message(role="assistant", content="Hi there!"),
+                    ],
+                    response="Hi there!",
+                    usage=CompletionUsage(
+                        completion_token_count=3,
+                        completion_cost_usd=0.001,
+                        reasoning_token_count=10,
+                        prompt_token_count=20,
+                        prompt_token_count_cached=0,
+                        prompt_cost_usd=0.002,
+                        prompt_audio_token_count=0,
+                        prompt_audio_duration_seconds=0,
+                        prompt_image_count=0,
+                        model_context_window_size=32000,
+                    ),
+                ),
+            ],
+        )
+
+        # Create a mock agent with the mock API client
+        mock_agent = Mock()
+        mock_agent.api = mock_api
+        run1._agent = mock_agent  # pyright: ignore [reportPrivateUsage]
+
+        # Call fetch_completions
+        completions = await run1.fetch_completions()
+
+        # Verify the API was called correctly
+        mock_api.get.assert_called_once_with(
+            "/v1/_/agents/agent-1/runs/test-id/completions",
+            returns=CompletionsResponse,
+        )
+
+        # Verify the response
+        assert len(completions.completions) == 1
+        completion = completions.completions[0]
+        assert len(completion.messages) == 3
+        assert completion.messages[0].role == "system"
+        assert completion.messages[0].content == "You are a helpful assistant"
+        assert completion.response == "Hi there!"
+        assert completion.usage.completion_token_count == 3
+        assert completion.usage.completion_cost_usd == 0.001
+
+    # Test that fetch_completions fails appropriately when the agent is not set:
+    # 1. This is a common error case that occurs when a Run object is created without an agent
+    # 2. The method should fail fast with a clear error message before attempting any API calls
+    # 3. This protects users from confusing errors that would occur if we tried to use the API client
+    async def test_fetch_completions_no_agent(self, run1: Run[_TestOutput]):
+        run1._agent = None  # pyright: ignore [reportPrivateUsage]
+        with pytest.raises(ValueError, match="Agent is not set"):
+            await run1.fetch_completions()
+
+    # Test that fetch_completions fails appropriately when the run ID is not set:
+    # 1. The run ID is required to construct the API endpoint URL
+    # 2. Without it, we can't make a valid API request
+    # 3. This validates that we fail fast with a clear error message
+    # 4. This should never happen in practice (as Run objects always have an ID),
+    #    but we test it for completeness and to ensure robust error handling
+    async def test_fetch_completions_no_id(self, run1: Run[_TestOutput]):
+        mock_agent = Mock()
+        run1._agent = mock_agent  # pyright: ignore [reportPrivateUsage]
+        run1.id = ""  # Empty ID
+        with pytest.raises(ValueError, match="Run id is not set"):
+            await run1.fetch_completions()
