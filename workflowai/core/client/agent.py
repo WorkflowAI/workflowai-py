@@ -9,6 +9,7 @@ from typing_extensions import Unpack
 from workflowai.core._common_types import BaseRunParams, OutputValidator, VersionRunParams
 from workflowai.core.client._api import APIClient
 from workflowai.core.client._models import (
+    CompletionsResponse,
     CreateAgentRequest,
     CreateAgentResponse,
     ListModelsResponse,
@@ -24,6 +25,7 @@ from workflowai.core.client._utils import (
     intolerant_validator,
     tolerant_validator,
 )
+from workflowai.core.domain.completion import Completion
 from workflowai.core.domain.errors import BaseError, WorkflowAIError
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import AgentInput, AgentOutput
@@ -493,3 +495,18 @@ class Agent(Generic[AgentInput, AgentOutput]):
             returns=ListModelsResponse,
         )
         return response.items
+
+    async def fetch_completions(self, run_id: str) -> list[Completion]:
+        """Fetch the completions for a run.
+
+        Args:
+            run_id (str): The id of the run to fetch completions for.
+
+        Returns:
+            CompletionsResponse: The completions for the run.
+        """
+        raw = await self.api.get(
+            f"/v1/_/agents/{self.agent_id}/runs/{run_id}/completions",
+            returns=CompletionsResponse,
+        )
+        return raw.completions

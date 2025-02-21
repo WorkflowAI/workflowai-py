@@ -7,6 +7,7 @@ from typing_extensions import Unpack
 from workflowai import env
 from workflowai.core import _common_types
 from workflowai.core.client import _types
+from workflowai.core.domain.completion import Completion
 from workflowai.core.domain.errors import BaseError
 from workflowai.core.domain.task import AgentOutput
 from workflowai.core.domain.tool_call import ToolCall, ToolCallRequest, ToolCallResult
@@ -130,6 +131,23 @@ class Run(BaseModel, Generic[AgentOutput]):
     def run_url(self):
         return f"{env.WORKFLOWAI_APP_URL}/_/agents/{self.agent_id}/runs/{self.id}"
 
+    async def fetch_completions(self) -> list[Completion]:
+        """Fetch the completions for this run.
+
+        Returns:
+            CompletionsResponse: The completions response containing a list of completions
+            with their messages, responses and usage information.
+
+        Raises:
+            ValueError: If the agent is not set or if the run id is not set.
+        """
+        if not self._agent:
+            raise ValueError("Agent is not set")
+        if not self.id:
+            raise ValueError("Run id is not set")
+
+        return await self._agent.fetch_completions(self.id)
+
 
 class _AgentBase(Protocol, Generic[AgentOutput]):
     async def reply(
@@ -141,3 +159,5 @@ class _AgentBase(Protocol, Generic[AgentOutput]):
     ) -> "Run[AgentOutput]":
         """Reply to a run. Either a user_message or tool_results must be provided."""
         ...
+
+    async def fetch_completions(self, run_id: str) -> list[Completion]: ...

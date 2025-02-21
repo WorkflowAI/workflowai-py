@@ -19,6 +19,7 @@ from workflowai.core.client.agent import Agent
 from workflowai.core.client.client import (
     WorkflowAI,
 )
+from workflowai.core.domain.completion import Completion, CompletionUsage, Message
 from workflowai.core.domain.errors import WorkflowAIError
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.version_properties import VersionProperties
@@ -539,3 +540,31 @@ async def test_list_models_registers_if_needed(
     assert models[0].modes == ["chat"]
     assert models[0].metadata is not None
     assert models[0].metadata.provider_name == "OpenAI"
+
+
+class TestFetchCompletions:
+    async def test_fetch_completions(self, agent: Agent[HelloTaskInput, HelloTaskOutput], httpx_mock: HTTPXMock):
+        """Test that fetch_completions correctly fetches and returns completions."""
+        # Mock the HTTP response instead of the API client method
+        httpx_mock.add_response(
+            url="http://localhost:8000/v1/_/agents/123/runs/1/completions",
+            json=fixtures_json("completions.json"),
+        )
+
+        completions = await agent.fetch_completions("1")
+        assert completions == [
+            Completion(
+                messages=[
+                    Message(role="system", content="I am instructions"),
+                    Message(role="user", content="I am user message"),
+                ],
+                response="This is a test response",
+                usage=CompletionUsage(
+                    completion_token_count=222,
+                    completion_cost_usd=0.00013319999999999999,
+                    prompt_token_count=1230,
+                    prompt_cost_usd=0.00018449999999999999,
+                    model_context_window_size=1048576,
+                ),
+            ),
+        ]

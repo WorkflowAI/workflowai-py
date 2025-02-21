@@ -5,6 +5,7 @@ from typing_extensions import NotRequired, TypedDict
 
 from workflowai.core._common_types import OutputValidator
 from workflowai.core.domain.cache_usage import CacheUsage
+from workflowai.core.domain.completion import Completion
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import AgentOutput
 from workflowai.core.domain.tool_call import ToolCall as DToolCall
@@ -160,6 +161,7 @@ class CreateAgentResponse(BaseModel):
 
 class ModelMetadata(BaseModel):
     """Metadata for a model."""
+
     provider_name: str = Field(description="Name of the model provider")
     price_per_input_token_usd: Optional[float] = Field(None, description="Cost per input token in USD")
     price_per_output_token_usd: Optional[float] = Field(None, description="Cost per output token in USD")
@@ -170,6 +172,7 @@ class ModelMetadata(BaseModel):
 
 class ModelInfo(BaseModel):
     """Information about a model."""
+
     id: str = Field(description="Unique identifier for the model")
     name: str = Field(description="Display name of the model")
     icon_url: Optional[str] = Field(None, description="URL for the model's icon")
@@ -187,11 +190,19 @@ class ModelInfo(BaseModel):
 
 T = TypeVar("T")
 
+
 class Page(BaseModel, Generic[T]):
     """A generic paginated response."""
+
     items: list[T] = Field(description="List of items in this page")
     count: Optional[int] = Field(None, description="Total number of items available")
 
 
 class ListModelsResponse(Page[ModelInfo]):
     """Response from the list models API endpoint."""
+
+
+class CompletionsResponse(BaseModel):
+    """Response from the completions API endpoint."""
+
+    completions: list[Completion]
