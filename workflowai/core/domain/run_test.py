@@ -15,8 +15,8 @@ class _TestOutput(BaseModel):
 @pytest.fixture
 def run1() -> Run[_TestOutput]:
     return Run[_TestOutput](
-        id="test-id",
-        agent_id="agent-1",
+        id="run-id",
+        agent_id="agent-id",
         schema_id=1,
         output=_TestOutput(message="test output"),
         duration_seconds=1.0,
@@ -51,10 +51,12 @@ class TestRunEquality:
 # 1. The output as a JSON object
 # 2. The cost with $ prefix and correct precision
 # 3. The latency with 2 decimal places and 's' suffix
-def test_format_output() -> None:
+# 4. The run URL
+@patch("workflowai.env.WORKFLOWAI_APP_URL", "https://workflowai.hello")
+def test_format_output_full():
     run = Run[_TestOutput](
-        id="test-id",
-        agent_id="agent-1",
+        id="run-id",
+        agent_id="agent-id",
         schema_id=1,
         output=_TestOutput(message="hello"),
         duration_seconds=1.23,
@@ -68,15 +70,17 @@ def test_format_output() -> None:
 }
 ==================================================
 Cost: $ 0.00100
-Latency: 1.23s"""
+Latency: 1.23s
+URL: https://workflowai.hello/_/agents/agent-id/runs/run-id"""
 
     assert run.format_output() == expected
 
 
-def test_format_output_very_low_cost() -> None:
+@patch("workflowai.env.WORKFLOWAI_APP_URL", "https://workflowai.hello")
+def test_format_output_very_low_cost():
     run = Run[_TestOutput](
-        id="test-id",
-        agent_id="agent-1",
+        id="run-id",
+        agent_id="agent-id",
         schema_id=1,
         output=_TestOutput(message="hello"),
         duration_seconds=1.23,
@@ -90,7 +94,8 @@ def test_format_output_very_low_cost() -> None:
 }
 ==================================================
 Cost: $ 0.00005
-Latency: 1.23s"""
+Latency: 1.23s
+URL: https://workflowai.hello/_/agents/agent-id/runs/run-id"""
 
     assert run.format_output() == expected
 
@@ -98,10 +103,12 @@ Latency: 1.23s"""
 # Test that format_output works correctly when cost and latency are not provided:
 # 1. The output is still formatted as a JSON object
 # 2. No cost or latency lines are included in the output
-def test_format_output_no_cost_latency() -> None:
+# 3. The run URL is still included
+@patch("workflowai.env.WORKFLOWAI_APP_URL", "https://workflowai.hello")
+def test_format_output_no_cost_latency():
     run = Run[_TestOutput](
-        id="test-id",
-        agent_id="agent-1",
+        id="run-id",
+        agent_id="agent-id",
         schema_id=1,
         output=_TestOutput(message="hello"),
     )
@@ -111,7 +118,8 @@ def test_format_output_no_cost_latency() -> None:
 {
   "message": "hello"
 }
-=================================================="""
+==================================================
+URL: https://workflowai.hello/_/agents/agent-id/runs/run-id"""
 
     assert run.format_output() == expected
 
@@ -119,4 +127,4 @@ def test_format_output_no_cost_latency() -> None:
 class TestRunURL:
     @patch("workflowai.env.WORKFLOWAI_APP_URL", "https://workflowai.hello")
     def test_run_url(self, run1: Run[_TestOutput]):
-        assert run1.run_url == "https://workflowai.hello/_/agents/agent-1/runs/test-id"
+        assert run1.run_url == "https://workflowai.hello/_/agents/agent-id/runs/run-id"

@@ -90,6 +90,7 @@ class Run(BaseModel, Generic[AgentOutput]):
         1. The output as a nicely formatted JSON object
         2. The cost with $ prefix (if available)
         3. The latency with 2 decimal places and 's' suffix (if available)
+        4. The run URL for viewing in the web UI
 
         Example:
             Output:
@@ -100,6 +101,7 @@ class Run(BaseModel, Generic[AgentOutput]):
             ==================================================
             Cost: $ 0.001
             Latency: 1.23s
+            URL: https://workflowai.com/_/agents/agent-1/runs/test-id
         """
         # Format the output string
         output = [
@@ -114,6 +116,9 @@ class Run(BaseModel, Generic[AgentOutput]):
             output.append(f"Cost: $ {self.cost_usd:.5f}")
         if self.duration_seconds is not None:
             output.append(f"Latency: {self.duration_seconds:.2f}s")
+
+        # Always add the run URL
+        output.append(f"URL: {self.run_url}")
 
         return "\n".join(output)
 
