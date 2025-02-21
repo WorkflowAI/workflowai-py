@@ -181,7 +181,8 @@ class Run(BaseModel, Generic[AgentOutput]):
 
 
 class _AgentBase(Protocol, Generic[AgentOutput]):
-    api: APIClient
+    @property
+    def api(self) -> APIClient: ...
 
     async def reply(
         self,
