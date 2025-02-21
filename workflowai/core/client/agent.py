@@ -96,7 +96,7 @@ class Agent(Generic[AgentInput, AgentOutput]):
         self.schema_id = schema_id
         self.input_cls = input_cls
         self.output_cls = output_cls
-        self.version: VersionReference = version or global_default_version_reference()
+        self.version = version
         self._api = (lambda: api) if isinstance(api, APIClient) else api
         self._tools = self.build_tools(tools) if tools else None
 
@@ -118,24 +118,27 @@ class Agent(Generic[AgentInput, AgentOutput]):
         schema_id: int
 
     def _sanitize_version(self, params: VersionRunParams) -> Union[str, int, dict[str, Any]]:
-        version = params.get("version")
+        """Combine a version requested at runtime and the version requested at build time."""
+        version = params.get("version", self.version)
         model = params.get("model")
         instructions = params.get("instructions")
         temperature = params.get("temperature")
 
-        has_property_overrides = bool(model or instructions or temperature)
+        has_property_overrides = bool(model or instructions or temperature or self._tools)
 
-        if not version:
-            # If versions is not specified, we fill with the default agent version only if
-            # there are no additional properties
-            version = self.version if not has_property_overrides else VersionProperties()
+        if version and not isinstance(version, VersionProperties):
+            if not has_property_overrides and not self._tools:
+                return version
+            # In the case where the version requested a build time was a remote version
+            # (either an ID or an environment), we use an empty template for the version
+            logger.warning("Overriding remove version with a local one")
+            version = VersionProperties()
 
-        if not isinstance(version, VersionProperties):
-            if has_property_overrides or self._tools:
-                logger.warning("Property overrides are ignored when version is not a VersionProperties")
-            return version
+        if not version and not has_property_overrides:
+            g = global_default_version_reference()
+            return g.model_dump(by_alias=True, exclude_unset=True) if isinstance(g, VersionProperties) else g
 
-        dumped = version.model_dump(by_alias=True, exclude_unset=True)
+        dumped = version.model_dump(by_alias=True, exclude_unset=True) if version else {}
 
         if not dumped.get("model"):
             # We always provide a default model since it is required by the API
