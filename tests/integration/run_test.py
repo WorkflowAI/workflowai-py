@@ -1,6 +1,7 @@
 import json
 from collections.abc import AsyncIterator
 
+import pytest
 from pydantic import BaseModel
 
 import workflowai
@@ -150,6 +151,8 @@ async def test_auto_register(test_client: IntTestClient):
 
 
 async def test_run_with_tool(test_client: IntTestClient):
+    """Test a round trip with a tool call request and a reply."""
+
     class _SayHelloToolInput(BaseModel):
         name: str
 
@@ -158,6 +161,10 @@ async def test_run_with_tool(test_client: IntTestClient):
 
     def say_hello(tool_input: _SayHelloToolInput) -> _SayHelloToolOutput:
         return _SayHelloToolOutput(message=f"Hello {tool_input.name}")
+
+    # Sanity check to make sure that CityToCapitalTaskOutput.capital is a field required by pydantic
+    with pytest.raises(AttributeError):
+        _ = CityToCapitalTaskOutput.model_construct(None).capital
 
     @workflowai.agent(id="city-to-capital", tools=[say_hello])
     async def city_to_capital(task_input: CityToCapitalTaskInput) -> CityToCapitalTaskOutput:
