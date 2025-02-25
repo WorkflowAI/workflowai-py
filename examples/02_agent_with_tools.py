@@ -88,24 +88,18 @@ async def main():
     # Example: Query about the moon landing
     print("\nExample: First Moon Landing")
     print("-" * 50)
-    result = await analyze_historical_event.run(
+    run = await analyze_historical_event.run(
         HistoricalEventInput(query="When was the first moon landing?"),
     )
-    print(result.output)
-    print("-" * 50)
-    print(f"Cost: ${result.cost_usd}")
-    print(f"Latency: {result.duration_seconds:.2f}s")
+    print(run)
 
     # Example: Query about World War II
     print("\nExample: End of World War II")
     print("-" * 50)
-    result = await analyze_historical_event.run(
+    run = await analyze_historical_event.run(
         HistoricalEventInput(query="When did World War II end?"),
     )
-    print(result.output)
-    print("-" * 50)
-    print(f"Cost: ${result.cost_usd}")
-    print(f"Latency: {result.duration_seconds:.2f}s")
+    print(run)
 
 
 if __name__ == "__main__":
