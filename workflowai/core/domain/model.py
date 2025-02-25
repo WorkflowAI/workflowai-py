@@ -72,6 +72,8 @@ class Model(str, Enum):
     # --------------------------------------------------------------------------
     # Claude Models
     # --------------------------------------------------------------------------
+    CLAUDE_3_7_SONNET_LATEST = "claude-3-7-sonnet-latest"
+    CLAUDE_3_7_SONNET_20250219 = "claude-3-7-sonnet-20250219"
     CLAUDE_3_5_SONNET_LATEST = "claude-3-5-sonnet-latest"
     CLAUDE_3_5_SONNET_20241022 = "claude-3-5-sonnet-20241022"
     CLAUDE_3_5_SONNET_20240620 = "claude-3-5-sonnet-20240620"
