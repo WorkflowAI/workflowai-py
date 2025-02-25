@@ -35,7 +35,7 @@ class APIClient:
                 "Authorization": f"Bearer {self.api_key}",
                 **source_headers,
             },
-            timeout=120.0,
+            timeout=180.0,
         ) as client:
             try:
                 yield client
