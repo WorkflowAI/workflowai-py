@@ -543,8 +543,8 @@ Tools allow enhancing an agent's capabilities by allowing it to call external fu
 
 WorkflowAI hosts a few tools:
 
-- `@browser-text` allows fetching the content of a web page
-- `@search` allows performing a web search
+- `@browser-text` allows fetching the text content of a web page
+- `@search-google` allows performing a web search
 
 Hosted tools tend to be faster because there is no back and forth between the client and the WorkflowAI API. Instead,
 if a tool call is needed, the WorkflowAI API will call it within a single request.
@@ -557,7 +557,7 @@ To use a tool, simply add it's handles to the instructions (the function docstri
 @workflowai.agent()
 async def analyze_call_feedback(input: CallFeedbackInput) -> CallFeedbackOutput:
     """
-    You can use @search and @browser-text to retrieve information about the name.
+    You can use @search-google and @browser-text to retrieve information about the name.
     """
     ...
 ```
