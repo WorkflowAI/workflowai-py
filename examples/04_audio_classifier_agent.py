@@ -114,7 +114,7 @@ async def main():
     )
 
     # Example 2: Using a URL instead of base64 (commented out)
-    # audio = File(
+    # audio = Audio(
     #     url="https://example.com/audio/call.mp3"
     # )
 
