@@ -14,12 +14,12 @@ from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableT
 
 import workflowai
 from workflowai import Model, Run
-from workflowai.fields import File
+from workflowai.fields import Audio
 
 
 class AudioInput(BaseModel):
     """Input containing the audio file to analyze."""
-    audio: File = Field(
+    audio: Audio = Field(
         description="The audio recording to analyze for spam/robocall detection",
     )
 
@@ -108,7 +108,7 @@ async def main():
     with open(audio_path, "rb") as f:  # noqa: ASYNC230
         audio_data = f.read()
 
-    audio = File(
+    audio = Audio(
         content_type="audio/mp3",
         data=base64.b64encode(audio_data).decode(),
     )
