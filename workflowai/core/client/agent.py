@@ -12,6 +12,7 @@ from workflowai.core.client._models import (
     CompletionsResponse,
     CreateAgentRequest,
     CreateAgentResponse,
+    ListModelsRequest,
     ListModelsResponse,
     ModelInfo,
     ReplyRequest,
@@ -486,12 +487,22 @@ class Agent(Generic[AgentInput, AgentOutput]):
         Raises:
             ValueError: If the agent has not been registered (schema_id is None).
         """
+
         if not self.schema_id:
             self.schema_id = await self.register()
 
-        response = await self.api.get(
+        data = ListModelsRequest()
+        if self.version and isinstance(self.version, VersionProperties):
+            data.instructions = self.version.instructions
+
+        if self._tools:
+            for _ in self._tools.values():
+                data.requires_tools = True
+
+        response = await self.api.post(
             # The "_" refers to the currently authenticated tenant's namespace
             f"/v1/_/agents/{self.agent_id}/schemas/{self.schema_id}/models",
+            data=data,
             returns=ListModelsResponse,
         )
         return response.items

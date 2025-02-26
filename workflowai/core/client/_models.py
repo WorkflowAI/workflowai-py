@@ -202,6 +202,11 @@ class ListModelsResponse(Page[ModelInfo]):
     """Response from the list models API endpoint."""
 
 
+class ListModelsRequest(BaseModel):
+    instructions: Optional[str] = Field(default=None, description="Used to detect internal tools")
+    requires_tools: Optional[bool] = Field(default=False, description="Whether the agent uses external tools")
+
+
 class CompletionsResponse(BaseModel):
     """Response from the completions API endpoint."""
 
