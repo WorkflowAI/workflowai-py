@@ -204,7 +204,7 @@ class ListModelsResponse(Page[ModelInfo]):
 
 class ListModelsRequest(BaseModel):
     instructions: Optional[str] = Field(default=None, description="Used to detect internal tools")
-    requires_tools: Optional[bool] = Field(default=False, description="Whether the agent uses external tools")
+    requires_tools: Optional[bool] = Field(default=None, description="Whether the agent uses external tools")
 
 
 class CompletionsResponse(BaseModel):
