@@ -141,26 +141,13 @@ class TestRunURL:
     # during the execution of the decorated test function. The original value is restored
     # after the test completes.
 
+    # To check what happens in different environemnt configurations, see env_test.py
+
     # Here we patch WORKFLOWAI_APP_URL to test the direct app URL case
     @patch("workflowai.env.WORKFLOWAI_APP_URL", "https://workflowai.hello")
     def test_run_url(self, run1: Run[_TestOutput]):
         # The patched value is only active during this test method
         assert run1.run_url == "https://workflowai.hello/_/agents/agent-id/runs/run-id"
-
-    # Here we patch WORKFLOWAI_API_URL to test URL derivation from API URL
-    @patch("workflowai.env.WORKFLOWAI_API_URL", "https://api.workflowai.dev")
-    def test_run_url_empty_env(self, run1: Run[_TestOutput]):
-        # When WORKFLOWAI_API_URL is set to api.workflowai.dev, the app URL should be workflowai.dev
-        # The patch is scoped only to this test method
-        assert run1.run_url == "https://workflowai.dev/_/agents/agent-id/runs/run-id"
-
-    # Multiple patches can be stacked - they are applied from bottom to top
-    # Both patches are only active for the duration of this test method
-    @patch("workflowai.env.WORKFLOWAI_API_URL", None)
-    @patch("workflowai.env.WORKFLOWAI_APP_URL", None)
-    def test_run_url_no_api_url(self, run1: Run[_TestOutput]):
-        # When WORKFLOWAI_API_URL is not set, the app URL should default to workflowai.com
-        assert run1.run_url == "https://workflowai.com/_/agents/agent-id/runs/run-id"
 
 
 class TestFetchCompletions:
