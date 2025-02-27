@@ -12,6 +12,7 @@ from workflowai.core.client._models import (
     CompletionsResponse,
     CreateAgentRequest,
     CreateAgentResponse,
+    ListModelsRequest,
     ListModelsResponse,
     ModelInfo,
     ReplyRequest,
@@ -477,7 +478,11 @@ class Agent(Generic[AgentInput, AgentOutput]):
         validator = kwargs.pop("validator", default)
         return validator, cast(BaseRunParams, kwargs)
 
-    async def list_models(self) -> list[ModelInfo]:
+    async def list_models(
+        self,
+        instructions: Optional[str] = None,
+        requires_tools: Optional[bool] = None,
+    ) -> list[ModelInfo]:
         """Fetch the list of available models from the API for this agent.
 
         Returns:
@@ -486,12 +491,22 @@ class Agent(Generic[AgentInput, AgentOutput]):
         Raises:
             ValueError: If the agent has not been registered (schema_id is None).
         """
+
         if not self.schema_id:
             self.schema_id = await self.register()
 
-        response = await self.api.get(
+        request_data = ListModelsRequest(instructions=instructions, requires_tools=requires_tools)
+
+        if instructions is None and self.version and isinstance(self.version, VersionProperties):
+            request_data.instructions = self.version.instructions
+
+        if requires_tools is None and self._tools:
+            request_data.requires_tools = True
+
+        response = await self.api.post(
             # The "_" refers to the currently authenticated tenant's namespace
             f"/v1/_/agents/{self.agent_id}/schemas/{self.schema_id}/models",
+            data=request_data,
             returns=ListModelsResponse,
         )
         return response.items
