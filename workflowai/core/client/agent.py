@@ -478,7 +478,11 @@ class Agent(Generic[AgentInput, AgentOutput]):
         validator = kwargs.pop("validator", default)
         return validator, cast(BaseRunParams, kwargs)
 
-    async def list_models(self) -> list[ModelInfo]:
+    async def list_models(
+        self,
+        instructions: Optional[str] = None,
+        requires_tools: Optional[bool] = None,
+    ) -> list[ModelInfo]:
         """Fetch the list of available models from the API for this agent.
 
         Returns:
@@ -491,18 +495,18 @@ class Agent(Generic[AgentInput, AgentOutput]):
         if not self.schema_id:
             self.schema_id = await self.register()
 
-        data = ListModelsRequest()
-        if self.version and isinstance(self.version, VersionProperties):
-            data.instructions = self.version.instructions
+        request_data = ListModelsRequest(instructions=instructions, requires_tools=requires_tools)
 
-        if self._tools:
-            for _ in self._tools.values():
-                data.requires_tools = True
+        if instructions is None and self.version and isinstance(self.version, VersionProperties):
+            request_data.instructions = self.version.instructions
+
+        if requires_tools is None and self._tools:
+            request_data.requires_tools = True
 
         response = await self.api.post(
             # The "_" refers to the currently authenticated tenant's namespace
             f"/v1/_/agents/{self.agent_id}/schemas/{self.schema_id}/models",
-            data=data,
+            data=request_data,
             returns=ListModelsResponse,
         )
         return response.items

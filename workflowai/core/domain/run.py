@@ -150,6 +150,9 @@ class Run(BaseModel, Generic[AgentOutput]):
 
 
 class _AgentBase(Protocol, Generic[AgentOutput]):
+    # TODO: fix circular dep
+    from workflowai.core.client._models import ModelInfo
+
     async def reply(
         self,
         run_id: str,
@@ -161,3 +164,5 @@ class _AgentBase(Protocol, Generic[AgentOutput]):
         ...
 
     async def fetch_completions(self, run_id: str) -> list[Completion]: ...
+
+    async def list_models(self) -> list[ModelInfo]: ...
