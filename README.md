@@ -3,6 +3,7 @@
 [![WorkflowAI](./examples/assets/readme-header.png)](https://workflowai.com)
 
 [![PyPI version](https://img.shields.io/pypi/v/workflowai.svg)](https://pypi.org/project/workflowai/)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Official SDK from [WorkflowAI](https://workflowai.com) for Python.
 
@@ -21,13 +22,13 @@ This SDK is designed for Python teams who prefer code-first development. It prov
 pip install workflowai
 ```
 
-## Get started
+## Get Started
 
-Follow the steps from https://docs.workflowai.com/python-sdk/get-started
+Follow the steps in our [Getting Started Guide](https://docs.workflowai.com/python-sdk/get-started).
 
 ## Documentation
 
-Available at [https://docs.workflowai.com/python-sdk/get-started](https://docs.workflowai.com/python-sdk/get-started).
+Complete documentation is available at [docs.workflowai.com/python-sdk](https://docs.workflowai.com/python-sdk).
 
 ## Example
 
