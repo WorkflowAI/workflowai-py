@@ -1,10 +1,11 @@
-from typing import Any, Literal, Optional, Union
+from typing import Any, Generic, Literal, Optional, TypeVar, Union
 
 from pydantic import BaseModel, Field  # pyright: ignore [reportUnknownVariableType]
 from typing_extensions import NotRequired, TypedDict
 
 from workflowai.core._common_types import OutputValidator
 from workflowai.core.domain.cache_usage import CacheUsage
+from workflowai.core.domain.completion import Completion
 from workflowai.core.domain.run import Run
 from workflowai.core.domain.task import AgentOutput
 from workflowai.core.domain.tool_call import ToolCall as DToolCall
@@ -156,3 +157,57 @@ class CreateAgentRequest(BaseModel):
 class CreateAgentResponse(BaseModel):
     id: str
     schema_id: int
+
+
+class ModelMetadata(BaseModel):
+    """Metadata for a model."""
+
+    provider_name: str = Field(description="Name of the model provider")
+    price_per_input_token_usd: Optional[float] = Field(None, description="Cost per input token in USD")
+    price_per_output_token_usd: Optional[float] = Field(None, description="Cost per output token in USD")
+    release_date: Optional[str] = Field(None, description="Release date of the model")
+    context_window_tokens: Optional[int] = Field(None, description="Size of the context window in tokens")
+    quality_index: Optional[float] = Field(None, description="Quality index of the model")
+
+
+class ModelInfo(BaseModel):
+    """Information about a model."""
+
+    id: str = Field(description="Unique identifier for the model")
+    name: str = Field(description="Display name of the model")
+    icon_url: Optional[str] = Field(None, description="URL for the model's icon")
+    modes: list[str] = Field(default_factory=list, description="Supported modes for this model")
+    is_not_supported_reason: Optional[str] = Field(
+        None,
+        description="Reason why the model is not supported, if applicable",
+    )
+    average_cost_per_run_usd: Optional[float] = Field(None, description="Average cost per run in USD")
+    is_latest: bool = Field(default=False, description="Whether this is the latest version of the model")
+    metadata: Optional[ModelMetadata] = Field(None, description="Additional metadata about the model")
+    is_default: bool = Field(default=False, description="Whether this is the default model")
+    providers: list[str] = Field(default_factory=list, description="List of providers that offer this model")
+
+
+T = TypeVar("T")
+
+
+class Page(BaseModel, Generic[T]):
+    """A generic paginated response."""
+
+    items: list[T] = Field(description="List of items in this page")
+    count: Optional[int] = Field(None, description="Total number of items available")
+
+
+class ListModelsResponse(Page[ModelInfo]):
+    """Response from the list models API endpoint."""
+
+
+class ListModelsRequest(BaseModel):
+    instructions: Optional[str] = Field(default=None, description="Used to detect internal tools")
+    requires_tools: Optional[bool] = Field(default=None, description="Whether the agent uses external tools")
+
+
+class CompletionsResponse(BaseModel):
+    """Response from the completions API endpoint."""
+
+    completions: list[Completion]

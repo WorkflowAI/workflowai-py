@@ -18,12 +18,12 @@ from workflowai.core.domain.version_reference import (
 
 
 def _build_client(
-    endpoint: Optional[str] = None,
+    url: Optional[str] = None,
     api_key: Optional[str] = None,
     default_version: Optional[VersionReference] = None,
 ):
     return WorkflowAI(
-        endpoint=endpoint or env.WORKFLOWAI_API_URL,
+        url=url or env.WORKFLOWAI_API_URL,
         api_key=api_key or env.WORKFLOWAI_API_KEY,
         default_version=default_version,
     )
@@ -40,7 +40,7 @@ def init(api_key: Optional[str] = None, url: Optional[str] = None, default_versi
     """Create a new workflowai client
 
     Args:
-        url (Optional[str], optional): The API endpoint to use.
+        url (Optional[str], optional): The API url to use.
             If not provided, the env variable WORKFLOWAI_API_URL is used. Otherwise defaults to https://api.workflowai.com
         api_key (Optional[str], optional): _description_. If not provided, the env variable WORKFLOWAI_API_KEY is used.
         default_version (Optional[VersionReference], optional): The default version to use for tasks. If not provided,

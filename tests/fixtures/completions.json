@@ -1,0 +1,24 @@
+{
+  "completions": [
+    {
+      "messages": [
+        {
+          "role": "system",
+          "content": "I am instructions"
+        },
+        {
+          "role": "user",
+          "content": "I am user message"
+        }
+      ],
+      "response": "This is a test response",
+      "usage": {
+        "completion_token_count": 222,
+        "completion_cost_usd": 0.00013319999999999999,
+        "prompt_token_count": 1230,
+        "prompt_cost_usd": 0.00018449999999999999,
+        "model_context_window_size": 1048576
+      }
+    }
+  ]
+}

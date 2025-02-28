@@ -22,6 +22,9 @@ class Model(str, Enum):
     GPT_4O_2024_05_13 = "gpt-4o-2024-05-13"
     GPT_4O_MINI_LATEST = "gpt-4o-mini-latest"
     GPT_4O_MINI_2024_07_18 = "gpt-4o-mini-2024-07-18"
+    O3_MINI_LATEST_HIGH_REASONING_EFFORT = "o3-mini-latest-high"
+    O3_MINI_LATEST_MEDIUM_REASONING_EFFORT = "o3-mini-latest-medium"
+    O3_MINI_LATEST_LOW_REASONING_EFFORT = "o3-mini-latest-low"
     O3_MINI_2025_01_31_HIGH_REASONING_EFFORT = "o3-mini-2025-01-31-high"
     O3_MINI_2025_01_31_MEDIUM_REASONING_EFFORT = "o3-mini-2025-01-31-medium"
     O3_MINI_2025_01_31_LOW_REASONING_EFFORT = "o3-mini-2025-01-31-low"
@@ -69,6 +72,8 @@ class Model(str, Enum):
     # --------------------------------------------------------------------------
     # Claude Models
     # --------------------------------------------------------------------------
+    CLAUDE_3_7_SONNET_LATEST = "claude-3-7-sonnet-latest"
+    CLAUDE_3_7_SONNET_20250219 = "claude-3-7-sonnet-20250219"
     CLAUDE_3_5_SONNET_LATEST = "claude-3-5-sonnet-latest"
     CLAUDE_3_5_SONNET_20241022 = "claude-3-5-sonnet-20241022"
     CLAUDE_3_5_SONNET_20240620 = "claude-3-5-sonnet-20240620"

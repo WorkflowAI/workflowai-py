@@ -5,6 +5,7 @@ import pytest
 from freezegun import freeze_time
 
 from workflowai.core.domain.errors import (
+    BaseError,
     WorkflowAIError,
     _retry_after_to_delay_seconds,  # pyright: ignore [reportPrivateUsage]
 )
@@ -33,3 +34,52 @@ def test_workflow_ai_error_404():
 )
 def test_retry_after_to_delay_seconds(retry_after: Optional[str], expected: Optional[float]):
     assert _retry_after_to_delay_seconds(retry_after) == expected
+
+
+def test_workflow_ai_error_code():
+    error = WorkflowAIError(
+        response=Mock(),
+        error=BaseError(
+            message="test",
+            status_code=404,
+            code="object_not_found",
+        ),
+    )
+    assert error.code == "object_not_found"
+
+
+def test_workflow_ai_error_status_code():
+    error = WorkflowAIError(
+        response=Mock(),
+        error=BaseError(
+            message="test",
+            status_code=404,
+            code="object_not_found",
+        ),
+    )
+    assert error.status_code == 404
+
+
+def test_workflow_ai_error_message():
+    error = WorkflowAIError(
+        response=Mock(),
+        error=BaseError(
+            message="test",
+            status_code=404,
+            code="object_not_found",
+        ),
+    )
+    assert error.message == "test"
+
+
+def test_workflow_ai_error_details():
+    error = WorkflowAIError(
+        response=Mock(),
+        error=BaseError(
+            message="test",
+            status_code=404,
+            code="object_not_found",
+            details={"test": "test"},
+        ),
+    )
+    assert error.details == {"test": "test"}

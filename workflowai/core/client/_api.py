@@ -16,26 +16,26 @@ _logger = logging.getLogger("WorkflowAI")
 
 
 class APIClient:
-    def __init__(self, endpoint: str, api_key: str, source_headers: Optional[dict[str, str]] = None):
-        self.endpoint = endpoint
+    def __init__(self, url: str, api_key: str, source_headers: Optional[dict[str, str]] = None):
+        self.url = url
         self.api_key = api_key
         self.source_headers = source_headers or {}
 
-    def _get_endpoint(self, run: bool = False):
+    def _get_url(self, run: bool = False):
         if run:
-            return self.endpoint
-        return self.endpoint.replace("https://run.", "https://api.")
+            return self.url
+        return self.url.replace("https://run.", "https://api.")
 
     @asynccontextmanager
     async def _client(self, run: bool = False):
         source_headers = self.source_headers or {}
         async with httpx.AsyncClient(
-            base_url=self._get_endpoint(run),
+            base_url=self._get_url(run),
             headers={
                 "Authorization": f"Bearer {self.api_key}",
                 **source_headers,
             },
-            timeout=120.0,
+            timeout=180.0,
         ) as client:
             try:
                 yield client
@@ -164,12 +164,15 @@ class APIClient:
         returns: type[_M],
         run: bool = False,
     ) -> AsyncIterator[_M]:
-        async with self._client(run=run) as client, client.stream(
-            method,
-            path,
-            content=data.model_dump_json(exclude_none=True),
-            headers={"Content-Type": "application/json"},
-        ) as response:
+        async with (
+            self._client(run=run) as client,
+            client.stream(
+                method,
+                path,
+                content=data.model_dump_json(exclude_none=True),
+                headers={"Content-Type": "application/json"},
+            ) as response,
+        ):
             if not response.is_success:
                 # We need to read the response to get the error message
                 await response.aread()
